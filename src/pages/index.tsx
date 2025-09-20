@@ -38,7 +38,9 @@ const formatEthBalance = (weiHex: string) => {
     const fraction = etherFraction.toString().padStart(18, "0").slice(0, 4);
     const trimmedFraction = fraction.replace(/0+$/, "");
 
-    return `${etherWhole.toString()}${trimmedFraction ? `.${trimmedFraction}` : ""}`;
+    return `${etherWhole.toString()}${
+      trimmedFraction ? `.${trimmedFraction}` : ""
+    }`;
   } catch (error) {
     console.error("ETH 잔액 포맷 실패", error);
     return "0";
@@ -68,7 +70,9 @@ export default function Home() {
 
   const [showPredictionModal, setShowPredictionModal] = useState(false);
   const [betAmount, setBetAmount] = useState(100);
-  const [priceRange, setPriceRange] = useState<[number, number]>([95000, 99000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    95000, 99000,
+  ]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -88,35 +92,32 @@ export default function Home() {
   const providerRef = useRef<EthereumProvider | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchWalletBalance = useCallback(
-    async (address: string) => {
-      const provider = providerRef.current;
+  const fetchWalletBalance = useCallback(async (address: string) => {
+    const provider = providerRef.current;
 
-      if (!provider) {
-        return;
+    if (!provider) {
+      return;
+    }
+
+    setWalletBalance(null);
+    setIsFetchingBalance(true);
+
+    try {
+      const balanceHex = (await provider.request({
+        method: "eth_getBalance",
+        params: [address, "latest"],
+      })) as string;
+
+      setWalletBalance(formatEthBalance(balanceHex));
+    } catch (error) {
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("지갑 잔액 조회 실패", error);
       }
-
       setWalletBalance(null);
-      setIsFetchingBalance(true);
-
-      try {
-        const balanceHex = (await provider.request({
-          method: "eth_getBalance",
-          params: [address, "latest"],
-        })) as string;
-
-        setWalletBalance(formatEthBalance(balanceHex));
-      } catch (error) {
-        if (!isIgnorableWalletConnectError(error)) {
-          console.error("지갑 잔액 조회 실패", error);
-        }
-        setWalletBalance(null);
-      } finally {
-        setIsFetchingBalance(false);
-      }
-    },
-    []
-  );
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  }, []);
 
   const handleAccountsChanged = useCallback(
     (accounts: string[]) => {
@@ -230,7 +231,13 @@ export default function Home() {
     } finally {
       setIsConnecting(false);
     }
-  }, [fetchWalletBalance, handleAccountsChanged, handleDisconnect, isConnecting, walletAddress]);
+  }, [
+    fetchWalletBalance,
+    handleAccountsChanged,
+    handleDisconnect,
+    isConnecting,
+    walletAddress,
+  ]);
 
   const disconnectWallet = useCallback(async () => {
     const provider = providerRef.current;
