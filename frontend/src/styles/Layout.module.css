@@ -13,9 +13,8 @@
 }
 
 .headerContent {
-  max-width: 1200px;
-  margin: 0.5rem auto;
-  padding: 0 2rem;
+  margin: 0.5rem 0;
+  padding: 1rem 96px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -69,9 +68,9 @@
 }
 
 .navLink.active {
-  background: #51D5EB;
-  color: #080e12;
-  filter: brightness(1.2);
+  background: transparent;
+  color: #51D5EB;
+  font-weight: 700;
 }
 
 .headerActions {
@@ -192,7 +191,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .headerContent {
-    padding: 0 1rem;
+    padding: 1rem 1rem;
   }
 
   .navigation {

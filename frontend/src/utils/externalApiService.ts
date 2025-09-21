@@ -242,8 +242,8 @@ interface NewsItem {
 }
 
 // Fetch business news from US sources using direct API call
-export const fetchBusinessNews = async (): Promise<NewsItem[]> => {
-  const cacheKey = 'business-news';
+export const fetchBusinessNews = async (page: number = 1, pageSize: number = 10): Promise<{articles: NewsItem[], totalResults: number}> => {
+  const cacheKey = `business-news-${page}-${pageSize}`;
   const cached = getCachedData(cacheKey);
   if (cached) return cached;
 
@@ -252,7 +252,8 @@ export const fetchBusinessNews = async (): Promise<NewsItem[]> => {
       params: {
         category: 'business',
         country: 'us',
-        pageSize: 15,
+        page: page,
+        pageSize: pageSize,
         apiKey: 'bafa12b94eda4fbbbcd02b62dc589a99'
       }
     });
@@ -263,7 +264,6 @@ export const fetchBusinessNews = async (): Promise<NewsItem[]> => {
 
     const newsItems: NewsItem[] = response.data.articles
       .filter((article: any) => article.title && article.description && article.title !== '[Removed]')
-      .slice(0, 10)
       .map((article: any, index: number) => {
         const publishedDate = new Date(article.publishedAt);
         return {
@@ -286,8 +286,13 @@ export const fetchBusinessNews = async (): Promise<NewsItem[]> => {
         };
       });
 
-    setCachedData(cacheKey, newsItems);
-    return newsItems;
+    const result = {
+      articles: newsItems,
+      totalResults: response.data.totalResults || 0
+    };
+
+    setCachedData(cacheKey, result);
+    return result;
   } catch (error) {
     console.error('Failed to fetch business news:', error);
     return getFallbackNews();
@@ -295,19 +300,22 @@ export const fetchBusinessNews = async (): Promise<NewsItem[]> => {
 };
 
 // Fallback news data
-const getFallbackNews = (): NewsItem[] => [
-  {
-    id: "fallback-1",
-    title: "Market Update: Business News Unavailable",
-    summary: "Unable to fetch latest business news. Please check your connection.",
-    timestamp: new Date().toLocaleDateString(),
-    timeAgo: "now",
-    source: "System",
-    category: "market",
-    marketImpact: {
-      btc: 0,
-      eth: 0,
-      overall: "neutral"
+const getFallbackNews = (): {articles: NewsItem[], totalResults: number} => ({
+  articles: [
+    {
+      id: "fallback-1",
+      title: "Market Update: Business News Unavailable",
+      summary: "Unable to fetch latest business news. Please check your connection.",
+      timestamp: new Date().toLocaleDateString(),
+      timeAgo: "now",
+      source: "System",
+      category: "market",
+      marketImpact: {
+        btc: 0,
+        eth: 0,
+        overall: "neutral"
+      }
     }
-  }
-];
+  ],
+  totalResults: 1
+});

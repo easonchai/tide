@@ -9,6 +9,8 @@ import { useHyperliquidCandles } from "@/hooks/useHyperliquidCandles";
 import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 import { InfoClient, HttpTransport } from "@nktkas/hyperliquid";
 import { MarketResponseDTO, CreateMarketDTO } from "@/types/market";
+import PriceLineChart from "@/components/PriceLineChart";
+import { fetchCryptoPrices } from "@/utils/externalApiService";
 
 // Destructure apiService
 const { market } = apiService;
@@ -104,6 +106,7 @@ export default function Home() {
   // Markets state
   const [markets, setMarkets] = useState<Market[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Market | null>(null);
+  const [cryptoPrices, setCryptoPrices] = useState<any>(null);
 
   const trackColors = useMemo(() => {
     if (
@@ -142,10 +145,45 @@ export default function Home() {
     void fetchMarkets();
   }, [fetchMarkets]);
 
+  // Fetch crypto prices once on mount
+  useEffect(() => {
+    const loadCryptoPrices = async () => {
+      try {
+        const prices = await fetchCryptoPrices();
+        setCryptoPrices(prices);
+      } catch (error) {
+        console.error('Failed to fetch crypto prices:', error);
+      }
+    };
+    
+    loadCryptoPrices();
+  }, []);
+
   // Extract price from question text
   const extractPriceFromQuestion = (question: string): number => {
     const match = question.match(/\$([\d,]+)/);
     return match ? parseInt(match[1].replace(/,/g, "")) : 0;
+  };
+
+  // Extract coin symbol from question and map to Hyperliquid pair ID
+  const getCoinPairFromQuestion = (question: string): string => {
+    const questionLower = question.toLowerCase();
+    
+    if (questionLower.includes('bitcoin') || questionLower.includes('btc')) {
+      return '@1'; // BTC/USDC pair
+    }
+    if (questionLower.includes('ethereum') || questionLower.includes('eth')) {
+      return '@0'; // ETH/USDC pair  
+    }
+    if (questionLower.includes('hype')) {
+      return '@107'; // HYPE/USDC pair
+    }
+    if (questionLower.includes('solana') || questionLower.includes('sol')) {
+      return '@2'; // SOL/USDC pair
+    }
+    
+    // Default to HYPE if no match found
+    return '@107';
   };
 
   // Format volume from wei to k Vol format
@@ -155,6 +193,30 @@ export default function Home() {
     const ethVolume = numVolume / 1e18;
     // Always show in k units (divide by 1000)
     return `${(ethVolume / 1000).toFixed(1)}k`;
+  };
+
+  // Get current price from market data or real-time prices
+  const getCurrentPrice = (market: Market): string => {
+    if (market.resolutionOutcome) {
+      return parseFloat(market.resolutionOutcome).toLocaleString();
+    }
+    
+    // Use real-time prices for active markets
+    if (cryptoPrices) {
+      const questionLower = market.question.toLowerCase();
+      if (questionLower.includes('bitcoin') || questionLower.includes('btc')) {
+        return cryptoPrices.bitcoin?.price ? Math.round(cryptoPrices.bitcoin.price).toLocaleString() : "0";
+      }
+      if (questionLower.includes('ethereum') || questionLower.includes('eth')) {
+        return cryptoPrices.ethereum?.price ? Math.round(cryptoPrices.ethereum.price).toLocaleString() : "0";
+      }
+      if (questionLower.includes('hype')) {
+        return cryptoPrices.hyperliquid?.price ? cryptoPrices.hyperliquid.price.toFixed(3) : "0";
+      }
+    }
+    
+    // Final fallback to extracting from question
+    return extractPriceFromQuestion(market.question).toLocaleString();
   };
 
   // Market distribution data
@@ -255,10 +317,7 @@ export default function Home() {
                       <div className={styles.priceInfo}>
                         <div className={styles.priceContainer}>
                           <span className={styles.price}>
-                            $
-                            {extractPriceFromQuestion(
-                              marketItem.question
-                            ).toLocaleString()}
+                            ${getCurrentPrice(marketItem)}
                           </span>
                         </div>
                       </div>
@@ -268,6 +327,11 @@ export default function Home() {
                           ${formatVolume(marketItem.volume)} Vol
                         </p>
                       </div>
+                    </div>
+
+                    {/* Chart Section */}
+                    <div className={styles.chartSection}>
+                      <PriceLineChart coin={marketItem.token} />
                     </div>
 
                     {/* Predict and Quick Bet Buttons */}

@@ -1,0 +1,36 @@
+.chartWrapper {
+  width: 100%;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #112b32; /* deep teal background similar to reference */
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.centerWrapper {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #112b32;
+}
+
+.chartContainer {
+  width: 100%;
+  aspect-ratio: 1.5 / 1;
+  background-color: #112b32;
+  overflow: hidden;
+  position: relative;
+}
+
+.chartContainer :global(.recharts-responsive-container) {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
