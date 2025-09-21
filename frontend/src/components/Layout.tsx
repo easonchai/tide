@@ -1,7 +1,8 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useWallet } from "@/contexts/WalletContext";
+import TopUpModal from "@/components/TopUpModal";
 import styles from "@/styles/Layout.module.css";
 
 interface LayoutProps {
@@ -19,9 +20,11 @@ export default function Layout({
   description = "Realtime crypto markets overview"
 }: LayoutProps) {
   const router = useRouter();
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
+  
   const {
     walletAddress,
-    walletBalance,
+    hyperliquidBalance,
     isConnecting,
     connectError,
     showDisconnectTooltip,
@@ -80,9 +83,9 @@ export default function Layout({
             <div className={styles.headerActions}>
               {walletAddress && (
                 <div className={styles.walletBalance}>
-                  {walletBalance
-                      ? `$${(parseFloat(walletBalance) * 2500).toFixed(0)}` // Approximate ETH to USD
-                      : "$0"}
+                  {hyperliquidBalance !== null
+                      ? `$${hyperliquidBalance.toFixed(2)} USDC`
+                      : "$0.00 USDC"}
                 </div>
               )}
               <div className={styles.connectWrapper} ref={connectWrapperRef}>
@@ -140,6 +143,21 @@ export default function Layout({
                       className={styles.disconnectAction}
                       onClick={() => {
                         setShowDisconnectTooltip(false);
+                        setShowTopUpModal(true);
+                      }}
+                      style={{
+                        background: '#51D5EB',
+                        color: '#0E1B24',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      Top Up Wallet
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.disconnectAction}
+                      onClick={() => {
+                        setShowDisconnectTooltip(false);
                         void disconnectWallet();
                       }}
                     >
@@ -154,6 +172,15 @@ export default function Layout({
 
         {children}
       </div>
+
+      {/* Top Up Modal */}
+      {walletAddress && (
+        <TopUpModal
+          isOpen={showTopUpModal}
+          onClose={() => setShowTopUpModal(false)}
+          walletAddress={walletAddress}
+        />
+      )}
     </>
   );
 }

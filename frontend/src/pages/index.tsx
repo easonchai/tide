@@ -165,27 +165,6 @@ export default function Home() {
     return match ? parseInt(match[1].replace(/,/g, "")) : 0;
   };
 
-  // Extract coin symbol from question and map to Hyperliquid pair ID
-  const getCoinPairFromQuestion = (question: string): string => {
-    const questionLower = question.toLowerCase();
-    
-    if (questionLower.includes('bitcoin') || questionLower.includes('btc')) {
-      return '@1'; // BTC/USDC pair
-    }
-    if (questionLower.includes('ethereum') || questionLower.includes('eth')) {
-      return '@0'; // ETH/USDC pair  
-    }
-    if (questionLower.includes('hype')) {
-      return '@107'; // HYPE/USDC pair
-    }
-    if (questionLower.includes('solana') || questionLower.includes('sol')) {
-      return '@2'; // SOL/USDC pair
-    }
-    
-    // Default to HYPE if no match found
-    return '@107';
-  };
-
   // Format volume from wei to k Vol format
   const formatVolume = (volume: string | number): string => {
     const numVolume = typeof volume === "string" ? parseFloat(volume) : volume;
@@ -197,13 +176,14 @@ export default function Home() {
 
   // Get current price from market data or real-time prices
   const getCurrentPrice = (market: Market): string => {
-    if (market.resolutionOutcome) {
+    if (market.resolutionOutcome && market.resolutionOutcome !== "null" && market.resolutionOutcome !== null) {
       return parseFloat(market.resolutionOutcome).toLocaleString();
     }
     
     // Use real-time prices for active markets
     if (cryptoPrices) {
       const questionLower = market.question.toLowerCase();
+      
       if (questionLower.includes('bitcoin') || questionLower.includes('btc')) {
         return cryptoPrices.bitcoin?.price ? Math.round(cryptoPrices.bitcoin.price).toLocaleString() : "0";
       }
@@ -211,7 +191,11 @@ export default function Home() {
         return cryptoPrices.ethereum?.price ? Math.round(cryptoPrices.ethereum.price).toLocaleString() : "0";
       }
       if (questionLower.includes('hype')) {
-        return cryptoPrices.hyperliquid?.price ? cryptoPrices.hyperliquid.price.toFixed(3) : "0";
+        const hypePrice = cryptoPrices.hyperliquid?.price;
+        if (hypePrice && !isNaN(hypePrice) && isFinite(hypePrice)) {
+          return hypePrice.toFixed(3);
+        }
+        return "0";
       }
     }
     

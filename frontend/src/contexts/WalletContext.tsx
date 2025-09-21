@@ -2,6 +2,7 @@ import { createContext, useContext, useCallback, useEffect, useRef, useState, Re
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
 import type { AxiosError } from "axios";
 import { apiService } from "@/utils/apiService";
+import { HttpTransport, InfoClient } from '@nktkas/hyperliquid';
 
 // Extend Window interface for MetaMask
 declare global {
@@ -18,8 +19,10 @@ declare global {
 interface WalletContextType {
   walletAddress: string | null;
   walletBalance: string | null;
+  hyperliquidBalance: number | null;
   isConnecting: boolean;
   isFetchingBalance: boolean;
+  isFetchingHyperliquidBalance: boolean;
   connectError: string | null;
   showDisconnectTooltip: boolean;
   setShowDisconnectTooltip: (show: boolean | ((prev: boolean) => boolean)) => void;
@@ -103,7 +106,9 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  const [hyperliquidBalance, setHyperliquidBalance] = useState<number | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+  const [isFetchingHyperliquidBalance, setIsFetchingHyperliquidBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
 
   const providerRef = useRef<EthereumProvider | any | null>(null);
@@ -164,6 +169,26 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
   }, []);
 
+  const fetchHyperliquidBalance = useCallback(async (address: string) => {
+    setHyperliquidBalance(null);
+    setIsFetchingHyperliquidBalance(true);
+
+    try {
+      const transport = new HttpTransport({ isTestnet: true });
+      const infoClient = new InfoClient({ transport });
+      
+      const state = await infoClient.clearinghouseState({ user: address as `0x${string}` });
+      const balance = parseFloat(state.withdrawable || '0');
+      
+      setHyperliquidBalance(balance);
+    } catch (error) {
+      console.error("Failed to fetch Hyperliquid balance", error);
+      setHyperliquidBalance(null);
+    } finally {
+      setIsFetchingHyperliquidBalance(false);
+    }
+  }, []);
+
   const handleAccountsChanged = useCallback(
     (accounts: string[]) => {
       const nextAccount = accounts?.[0] ?? null;
@@ -172,18 +197,21 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       if (nextAccount) {
         void registerUser(nextAccount);
         void fetchWalletBalance(nextAccount);
+        void fetchHyperliquidBalance(nextAccount);
       } else {
         setWalletBalance(null);
+        setHyperliquidBalance(null);
       }
 
       setShowDisconnectTooltip(false);
     },
-    [fetchWalletBalance, registerUser]
+    [fetchWalletBalance, fetchHyperliquidBalance, registerUser]
   );
 
   const handleDisconnect = useCallback(() => {
     setWalletAddress(null);
     setWalletBalance(null);
+    setHyperliquidBalance(null);
     setShowDisconnectTooltip(false);
     providerRef.current = null;
   }, []);
@@ -349,6 +377,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       providerRef.current = null;
       setWalletAddress(null);
       setWalletBalance(null);
+      setHyperliquidBalance(null);
       setConnectError(null);
       setShowDisconnectTooltip(false);
       clearWalletConnectStorage();
@@ -397,6 +426,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
             setWalletAddress(accounts[0]);
             void registerUser(accounts[0]);
             void fetchWalletBalance(accounts[0]);
+            void fetchHyperliquidBalance(accounts[0]);
           }
         } catch (error) {
           console.log("No existing MetaMask connection found");
@@ -405,13 +435,15 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     };
 
     checkExistingConnection();
-  }, [handleAccountsChanged, handleDisconnect, registerUser, fetchWalletBalance]);
+  }, [handleAccountsChanged, handleDisconnect, registerUser, fetchWalletBalance, fetchHyperliquidBalance]);
 
   const value: WalletContextType = {
     walletAddress,
     walletBalance,
+    hyperliquidBalance,
     isConnecting,
     isFetchingBalance,
+    isFetchingHyperliquidBalance,
     connectError,
     showDisconnectTooltip,
     setShowDisconnectTooltip,
