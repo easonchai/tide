@@ -1,0 +1,215 @@
+/* Page Wrapper */
+.pageWrapper {
+  min-height: 100vh;
+  background: #0E1B24;
+}
+
+/* Header Styles */
+.header {
+  background: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0.5rem auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.flexCompacted {
+  display: flex;
+  gap: 2rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #51D5EB;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+}
+
+.brandText {
+  height: 24px;
+  width: auto;
+}
+
+.navigation {
+  display: flex;
+  align-items: center; 
+  gap: 0.5rem;
+}
+
+.navLink {
+  color: #9ca3af;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.navLink:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 500;
+}
+
+.navLink.active {
+  background: #51D5EB;
+  color: #080e12;
+  filter: brightness(1.2);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.walletBalance {
+  background: #51D5EB;
+  color: #0E1B24;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0;
+}
+
+.connectWrapper {
+  position: relative;
+}
+
+.connectButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #0E1B24;
+  color: #51D5EB;
+  border: 1px solid #51D5EB;
+  border-radius: 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.connectButton:hover {
+  background: rgba(81, 213, 235, 0.1);
+}
+
+.connectButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.connectButtonConnected {
+  background: #0E1B24;
+  border-color: #51D5EB;
+  color: #51D5EB;
+}
+
+.connectButtonConnected:hover {
+  background: rgba(81, 213, 235, 0.1);
+}
+
+.connectError {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: #dc2626;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.disconnectTooltip {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  min-width: 200px;
+}
+
+.disconnectLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.disconnectAddress {
+  display: block;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.disconnectAction {
+  width: 100%;
+  padding: 0.5rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.disconnectAction:hover {
+  background: #b91c1c;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .headerContent {
+    padding: 0 1rem;
+  }
+
+  .navigation {
+    gap: 1rem;
+  }
+
+  .navLink {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .brandName {
+    font-size: 1.25rem;
+  }
+
+  .connectButton {
+    padding: 0.5rem 0.75rem;
+    min-width: 100px;
+  }
+}
