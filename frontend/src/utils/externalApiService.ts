@@ -167,11 +167,54 @@ const getCategoryFromTitle = (title: string): "fed" | "crypto" | "market" | "reg
   }
 };
 
-const generateMockImpact = () => ({
-  btc: Math.round(((Math.random() - 0.5) * 4) * 100) / 100, // Random between -2 and 2, rounded to 2 decimals
-  eth: Math.round(((Math.random() - 0.5) * 4) * 100) / 100,
-  overall: Math.random() > 0.5 ? 'positive' as const : 'negative' as const
-});
+const generateSmartImpact = (title: string, description: string) => {
+  const text = (title + ' ' + description).toLowerCase();
+  
+  // Check if news is crypto-related
+  const isCryptoRelated = text.includes('bitcoin') || text.includes('crypto') || text.includes('ethereum') || 
+    text.includes('blockchain') || text.includes('digital currency') || text.includes('coinbase') || 
+    text.includes('binance') || text.includes('ftx');
+  
+  // Check if news is finance/market related
+  const isFinanceRelated = text.includes('fed') || text.includes('federal reserve') || text.includes('interest rate') || 
+    text.includes('inflation') || text.includes('stock market') || text.includes('nasdaq') || text.includes('dow') ||
+    text.includes('s&p') || text.includes('treasury') || text.includes('economy') || text.includes('gdp');
+  
+  // Check if news is tech-related (could affect crypto)
+  const isTechRelated = text.includes('tech') || text.includes('ai') || text.includes('artificial intelligence') ||
+    text.includes('tesla') || text.includes('apple') || text.includes('google') || text.includes('microsoft');
+  
+  // Generate impact based on relevance
+  if (isCryptoRelated) {
+    // High impact for crypto news
+    return {
+      btc: Math.round(((Math.random() - 0.5) * 6) * 100) / 100, // -3 to +3
+      eth: Math.round(((Math.random() - 0.5) * 6) * 100) / 100,
+      overall: Math.random() > 0.5 ? 'positive' as const : 'negative' as const
+    };
+  } else if (isFinanceRelated) {
+    // Medium impact for finance news
+    return {
+      btc: Math.round(((Math.random() - 0.5) * 3) * 100) / 100, // -1.5 to +1.5
+      eth: Math.round(((Math.random() - 0.5) * 3) * 100) / 100,
+      overall: Math.random() > 0.5 ? 'positive' as const : 'negative' as const
+    };
+  } else if (isTechRelated) {
+    // Low impact for tech news
+    return {
+      btc: Math.round(((Math.random() - 0.5) * 2) * 100) / 100, // -1 to +1
+      eth: Math.round(((Math.random() - 0.5) * 2) * 100) / 100,
+      overall: Math.random() > 0.5 ? 'positive' as const : 'neutral' as const
+    };
+  } else {
+    // No impact for unrelated news
+    return {
+      btc: 0,
+      eth: 0,
+      overall: 'neutral' as const
+    };
+  }
+};
 
 
 const getFallbackPrices = () => ({
@@ -180,3 +223,91 @@ const getFallbackPrices = () => ({
   solana: { price: 0, change24h: 0, marketCap: 0 },
   hyperliquid: { price: 0, change24h: 0, marketCap: 0 }
 });
+
+interface NewsItem {
+  id: string;
+  title: string;
+  summary: string;
+  timestamp: string;
+  timeAgo: string;
+  source: string;
+  category: "fed" | "crypto" | "market" | "regulation";
+  url?: string;
+  sourceUrl?: string;
+  marketImpact: {
+    btc: number;
+    eth: number;
+    overall: "positive" | "negative" | "neutral";
+  };
+}
+
+// Fetch business news from US sources using direct API call
+export const fetchBusinessNews = async (): Promise<NewsItem[]> => {
+  const cacheKey = 'business-news';
+  const cached = getCachedData(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await axios.get('https://newsapi.org/v2/top-headlines', {
+      params: {
+        category: 'business',
+        country: 'us',
+        pageSize: 15,
+        apiKey: 'bafa12b94eda4fbbbcd02b62dc589a99'
+      }
+    });
+
+    if (response.data.status !== 'ok') {
+      throw new Error('NewsAPI request failed');
+    }
+
+    const newsItems: NewsItem[] = response.data.articles
+      .filter((article: any) => article.title && article.description && article.title !== '[Removed]')
+      .slice(0, 10)
+      .map((article: any, index: number) => {
+        const publishedDate = new Date(article.publishedAt);
+        return {
+          id: `news-${index}-${Date.now()}`,
+          title: article.title,
+          summary: extractFirstSentence(article.description),
+          timestamp: publishedDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          }),
+          timeAgo: getTimeAgo(publishedDate),
+          source: article.source.name,
+          category: getCategoryFromTitle(article.title),
+          url: article.urlToImage || undefined,
+          sourceUrl: article.url,
+          marketImpact: generateSmartImpact(article.title, article.description)
+        };
+      });
+
+    setCachedData(cacheKey, newsItems);
+    return newsItems;
+  } catch (error) {
+    console.error('Failed to fetch business news:', error);
+    return getFallbackNews();
+  }
+};
+
+// Fallback news data
+const getFallbackNews = (): NewsItem[] => [
+  {
+    id: "fallback-1",
+    title: "Market Update: Business News Unavailable",
+    summary: "Unable to fetch latest business news. Please check your connection.",
+    timestamp: new Date().toLocaleDateString(),
+    timeAgo: "now",
+    source: "System",
+    category: "market",
+    marketImpact: {
+      btc: 0,
+      eth: 0,
+      overall: "neutral"
+    }
+  }
+];

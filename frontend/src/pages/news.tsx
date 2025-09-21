@@ -1,7 +1,7 @@
 import Head from "next/head";
 import React, { useEffect, useState } from "react";
 import styles from "@/styles/News.module.css";
-import { fetchCryptoPrices } from "@/utils/externalApiService";
+import { fetchCryptoPrices, fetchBusinessNews } from "@/utils/externalApiService";
 
 interface NewsItem {
   id: string;
@@ -12,6 +12,7 @@ interface NewsItem {
   source: string;
   category: "fed" | "crypto" | "market" | "regulation";
   url?: string;
+  sourceUrl?: string;
   marketImpact: {
     btc: number;
     eth: number;
@@ -113,30 +114,38 @@ const mockNews: NewsItem[] = [
 ];
 
 export default function News() {
-  const newsData = mockNews;
+  const [newsData, setNewsData] = useState<NewsItem[]>(mockNews);
   const [pricesData, setPricesData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadPrices = async () => {
+    const loadData = async () => {
       try {
-        const prices = await fetchCryptoPrices();
-        setPricesData(prices);
+        const [newsResponse, pricesResponse] = await Promise.all([
+          fetchBusinessNews(),
+          fetchCryptoPrices()
+        ]);
+        
+        setNewsData(newsResponse);
+        setPricesData(pricesResponse);
       } catch (error) {
-        console.error('Failed to load prices:', error);
-        // Keep fallback prices
+        console.error('Failed to load data:', error);
+        // Keep fallback data
         setPricesData({
           bitcoin: { price: 96582, change24h: 2.34 },
           ethereum: { price: 3421, change24h: 1.89 },
           solana: { price: 180, change24h: 1.2 },
           hyperliquid: { price: 25.42, change24h: 0.5 }
         });
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadPrices();
+    loadData();
     
-    // Refresh prices every 5 minutes
-    const interval = setInterval(loadPrices, 5 * 60 * 1000);
+    // Refresh data every 5 minutes
+    const interval = setInterval(loadData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -270,7 +279,12 @@ export default function News() {
         <main className={styles.main}>
           {/* Single Column News Feed */}
           <div className={styles.newsFeed}>
-            {newsData.map((item) => (
+            {loading ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
+                Loading latest business news...
+              </div>
+            ) : (
+              newsData.map((item) => (
               <article key={item.id} className={styles.newsCard}>
                 {/* News Image */}
                 {item.url && (
@@ -299,7 +313,22 @@ export default function News() {
                     </div>
                   </div>
 
-                  <h3 className={styles.newsTitle}>{item.title}</h3>
+                  <h3 className={styles.newsTitle}>
+                    {item.sourceUrl ? (
+                      <a 
+                        href={item.sourceUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ color: 'inherit', textDecoration: 'none' }}
+                        onMouseEnter={(e) => (e.target as HTMLElement).style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => (e.target as HTMLElement).style.textDecoration = 'none'}
+                      >
+                        {item.title}
+                      </a>
+                    ) : (
+                      item.title
+                    )}
+                  </h3>
                   <p className={styles.newsSummary}>{item.summary}</p>
 
                   <div className={styles.cardFooter}>
@@ -325,7 +354,8 @@ export default function News() {
                   </div>
                 </div>
               </article>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Market Summary */}
