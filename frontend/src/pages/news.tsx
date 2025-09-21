@@ -1,5 +1,5 @@
-import Head from "next/head";
 import React, { useEffect, useState } from "react";
+import Layout from "@/components/Layout";
 import styles from "@/styles/News.module.css";
 import { fetchCryptoPrices, fetchBusinessNews } from "@/utils/externalApiService";
 
@@ -173,109 +173,11 @@ export default function News() {
   };
 
   return (
-    <>
-      <Head>
-        <title>Crypto News - Tide Markets</title>
-        <meta name="description" content="Latest crypto market news and reactions" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
+    <Layout 
+      title="Crypto News - Tide Markets" 
+      description="Latest crypto market news and reactions"
+    >
       <div className={styles.container}>
-        {/* Header */}
-        <header className={styles.header}>
-          <div className={styles.headerContent}>
-            <div className={styles.brand}>
-              <div className={styles.logo}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M3 12L9 6L15 12L21 6"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M3 18L9 12L15 18L21 12"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <span className={styles.brandName}>Tide</span>
-            </div>
-
-            <nav className={styles.navigation}>
-              <a href="/" className={styles.navLink}>
-                Markets
-              </a>
-              <a href="#" className={styles.navLink}>
-                Portfolio
-              </a>
-              <a href="/news" className={`${styles.navLink} ${styles.active}`}>
-                News
-              </a>
-              <a href="#" className={styles.navLink}>
-                Analytics
-              </a>
-            </nav>
-
-            <div className={styles.headerActions}>
-              <div className={styles.walletInfo}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M21 12V7H5a2 2 0 01-2-2V5a2 2 0 012-2h14v4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M3 5v14a2 2 0 002 2h16v-5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle
-                    cx="16"
-                    cy="12"
-                    r="2"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </div>
-              <div className={styles.connectWrapper}>
-                <button
-                  type="button"
-                  className={styles.connectButton}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="7"
-                      r="4"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                  <span>Connect</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
         <main className={styles.main}>
           {/* Single Column News Feed */}
           <div className={styles.newsFeed}>
@@ -422,6 +324,6 @@ export default function News() {
           </div>
         </main>
       </div>
-    </>
+    </Layout>
   );
 }

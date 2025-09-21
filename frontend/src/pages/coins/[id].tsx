@@ -1,8 +1,5 @@
-import Head from "next/head";
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/router";
-import Header from "@/component/header";
+import Layout from "@/components/Layout";
 import { useQuery } from "@tanstack/react-query";
 import {
   LineChart,
@@ -12,79 +9,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   ReferenceLine,
 } from "recharts";
 import { Range, Direction } from "react-range";
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import React from "react";
-import type { EthereumProvider } from "@walletconnect/ethereum-provider";
-import type { AxiosError } from "axios";
 
 import { betOnPriceRange } from "@/utils/lmsr";
 import { apiService } from "@/utils/apiService";
 import styles from "@/styles/CoinDetail.module.css";
-import headerStyles from "@/styles/Home.module.css";
+import { useWallet } from "@/contexts/WalletContext";
 
 const shortenAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
-
-const isIgnorableWalletConnectError = (error: unknown) => {
-  const message =
-    typeof error === "string"
-      ? error
-      : (error as Error | undefined)?.message ?? "";
-
-  if (!message) {
-    return false;
-  }
-
-  return [
-    "Record was recently deleted",
-    "No matching key",
-    "Pending session not found",
-    "session topic doesn't exist",
-  ].some((fragment) => message.includes(fragment));
-};
-
-const formatEthBalance = (weiHex: string) => {
-  try {
-    const wei = BigInt(weiHex);
-    const etherWhole = wei / 10n ** 18n;
-    const etherFraction = wei % 10n ** 18n;
-
-    if (etherFraction === 0n) {
-      return etherWhole.toString();
-    }
-
-    const fraction = etherFraction.toString().padStart(18, "0").slice(0, 4);
-    const trimmedFraction = fraction.replace(/0+$/, "");
-
-    return `${etherWhole.toString()}${
-      trimmedFraction ? `.${trimmedFraction}` : ""
-    }`;
-  } catch (error) {
-    console.error("ETH 잔액 포맷 실패", error);
-    return "0";
-  }
-};
-
-const clearWalletConnectStorage = () => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    const storage = window.localStorage;
-
-    Object.keys(storage)
-      .filter((key) => key.startsWith("wc@"))
-      .forEach((key) => storage.removeItem(key));
-  } catch (error) {
-    console.warn("WalletConnect 스토리지 초기화 실패", error);
-  }
-};
 
 type ChartPoint = {
   time: string;
@@ -141,40 +78,13 @@ const percentageFormatter = new Intl.NumberFormat("en-US", {
 export default function CoinDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const [shares, setShares] = useState(1);
   const [amountInput, setAmountInput] = useState("100");
-
-  // Wallet states
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState<string | null>(null);
-  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
-  const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
-  const providerRef = useRef<EthereumProvider | null>(null);
-  const connectWrapperRef = useRef<HTMLDivElement | null>(null);
+  const { walletAddress, connectWallet } = useWallet();
 
   // Market positions states
   const [marketPositions, setMarketPositions] = useState<any[]>([]);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [positionsError, setPositionsError] = useState<string | null>(null);
-
-  const registerUser = useCallback(async (address: string) => {
-    try {
-      await apiService.user.create({ address });
-    } catch (error) {
-      const axiosError = error as AxiosError | undefined;
-      const status = axiosError?.response?.status;
-
-      if (status === 409) {
-        return;
-      }
-
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("사용자 등록 실패", error);
-      }
-    }
-  }, []);
 
   // Fetch market positions data
   const fetchMarketPositions = useCallback(async (slug: string) => {
@@ -307,171 +217,15 @@ export default function CoinDetail() {
     });
   }, []);
 
-  const fetchWalletBalance = useCallback(async (address: string) => {
-    const provider = providerRef.current;
 
-    if (!provider) {
-      return;
-    }
 
-    setWalletBalance(null);
-    setIsFetchingBalance(true);
 
-    try {
-      const balanceHex = (await provider.request({
-        method: "eth_getBalance",
-        params: [address, "latest"],
-      })) as string;
 
-      setWalletBalance(formatEthBalance(balanceHex));
-    } catch (error) {
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("지갑 잔액 조회 실패", error);
-      }
-      setWalletBalance(null);
-    } finally {
-      setIsFetchingBalance(false);
-    }
-  }, []);
-
-  const handleAccountsChanged = useCallback(
-    (accounts: string[]) => {
-      const nextAccount = accounts?.[0] ?? null;
-      setWalletAddress(nextAccount);
-
-      if (nextAccount) {
-        void registerUser(nextAccount);
-        void fetchWalletBalance(nextAccount);
-      } else {
-        setWalletBalance(null);
-      }
-
-      setShowDisconnectTooltip(false);
-    },
-    [fetchWalletBalance, registerUser]
-  );
-
-  const handleDisconnect = useCallback(() => {
-    setWalletAddress(null);
-    setWalletBalance(null);
-    setShowDisconnectTooltip(false);
-    providerRef.current = null;
-  }, []);
-
-  const connectWallet = useCallback(async () => {
-    if (isConnecting || walletAddress) {
-      return;
-    }
-
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-
-    if (!projectId) {
-      setConnectError("WalletConnect 프로젝트 ID가 설정되어 있지 않습니다.");
-      return;
-    }
-
-    setShowDisconnectTooltip(false);
-    setIsConnecting(true);
-    setConnectError(null);
-
-    try {
-      if (!providerRef.current) {
-        const { EthereumProvider } = await import(
-          "@walletconnect/ethereum-provider"
-        );
-
-        const provider = await EthereumProvider.init({
-          projectId,
-          showQrModal: true,
-          chains: [1],
-          optionalChains: [137, 42161, 10],
-          methods: ["eth_sendTransaction", "personal_sign"],
-          optionalMethods: [
-            "eth_accounts",
-            "eth_requestAccounts",
-            "eth_sign",
-            "eth_signTypedData",
-            "eth_getBalance",
-          ],
-          events: ["chainChanged", "accountsChanged"],
-          optionalEvents: ["disconnect"],
-        });
-
-        provider.on("accountsChanged", handleAccountsChanged);
-        provider.on("disconnect", handleDisconnect);
-
-        providerRef.current = provider;
-      }
-
-      let accounts: string[] = [];
-
-      if (!providerRef.current.connected) {
-        accounts =
-          ((await providerRef.current.connect().catch((error) => {
-            if (!isIgnorableWalletConnectError(error)) {
-              console.error("WalletConnect 연결 실패", error);
-              setConnectError("지갑 연결에 실패했습니다.");
-            }
-            throw error;
-          })) as string[]) ?? [];
-      } else {
-        accounts = (providerRef.current.accounts as string[]) ?? [];
-      }
-
-      const account = accounts?.[0];
-
-      if (account) {
-        setWalletAddress(account);
-        void registerUser(account);
-        void fetchWalletBalance(account);
-      }
-    } catch (error) {
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("WalletConnect 연결 실패", error);
-        setConnectError("지갑 연결에 실패했습니다.");
-      }
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [
-    fetchWalletBalance,
-    handleAccountsChanged,
-    handleDisconnect,
-    isConnecting,
-    registerUser,
-    walletAddress,
-  ]);
-
-  const disconnectWallet = useCallback(async () => {
-    const provider = providerRef.current;
-
-    if (!provider) {
-      return;
-    }
-
-    try {
-      if (provider.connected) {
-        await provider.disconnect();
-      }
-    } catch (error) {
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("WalletConnect 연결 해제 실패", error);
-      }
-    } finally {
-      handleDisconnect();
-      clearWalletConnectStorage();
-    }
-  }, [handleDisconnect]);
 
   // Price range slider state
   const [priceRange, setPriceRange] = useState<[number, number]>([
     114700, 116700,
   ]);
-  const step = 100;
   const domain: [number, number] = [110000, 120000];
 
   const { data, isLoading, isError } = useQuery({
@@ -540,85 +294,18 @@ export default function CoinDetail() {
     .filter((bin) => bin.price >= priceRange[0] && bin.price < priceRange[1])
     .map((bin) => bin.index);
 
-  // 각 bin별 probability 계산 (LMSR 기반)
-  const binProbabilities = bins.map((bin, index) => {
-    // LMSR 확률 계산: P_i = exp(q_i / b) / sum(exp(q_j / b))
-    const b = 100; // LMSR 파라미터
-    const totalExpQ = q.reduce((sum, qValue) => sum + Math.exp(qValue / b), 0);
-    const probability = Math.exp(q[index] / b) / totalExpQ;
-
-    return {
-      ...bin,
-      lmsrProbability: probability,
-      isSelected: selectedBins.includes(index),
-    };
-  });
-
   // Use LMSR calculation for accurate predictions
   const lmsrResult = betOnPriceRange(q, selectedBins, amount);
 
   const winProbability = lmsrResult.winProbability;
   const receiveIfWin = lmsrResult.receiveIfWin;
 
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: Array<{ value: number }>;
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className={styles.tooltip}>
-          <p className={styles.tooltipLabel}>{`Time: ${label}`}</p>
-          <p className={styles.tooltipValue}>
-            {`Price: ${currencyFormatter.format(payload[0].value)}`}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const ProbabilityTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: Array<{ value: number }>;
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className={styles.tooltip}>
-          <p
-            className={styles.tooltipLabel}
-          >{`Price: ${currencyFormatter.format(Number(label))}`}</p>
-          <p className={styles.tooltipValue}>
-            {`Probability: ${percentageFormatter.format(payload[0].value)}`}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
-    <>
-      <Head>
-        <title>{coin.name} Market - Tide Markets</title>
-        <meta
-          name="description"
-          content={`${coin.name} market analysis and prediction`}
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <Header currentPath="/coins" />
+    <Layout
+      title={`${coin.name} Market - Tide Markets`}
+      description={`${coin.name} market analysis and prediction`}
+    >
 
       <div className={styles.container}>
         {/* Event Details Section */}
@@ -932,6 +619,6 @@ export default function CoinDetail() {
           </button>
         </div>
       </div>
-    </>
+    </Layout>
   );
 }
