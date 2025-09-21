@@ -1,6 +1,6 @@
-# Scalar LMSR Prediction Market
+# CLMSR Market Maker System
 
-A decentralized prediction market contract implementing the Logarithmic Market Scoring Rule (LMSR) for scalar markets. Users can bet on price ranges with dynamic probability calculations and NFT-based position tracking.
+An on-chain market-maker system built around a core CLMSR engine with upgradeable core and position contracts and a Vault for custody with timelock.
 
 ## 🎯 Features
 
@@ -18,10 +18,9 @@ A decentralized prediction market contract implementing the Logarithmic Market S
 
 ### Core Components
 
-1. **ScalarLMSR Contract**: Main prediction market contract
-2. **Market Structure**: Defines price ranges, bucket sizes, and liquidity parameters
-3. **Position Tracking**: NFT-based position management
-4. **LMSR Calculations**: Fixed-point math for probability and pricing
+1. **CLMSRMarketCore (UUPS)**: Core logic and market state
+2. **CLMSRPosition (UUPS)**: ERC721 position tokens (core-authorized)
+3. **Vault**: Custody with timelocks and per-token fees
 
 ### Key Structures
 
@@ -94,13 +93,15 @@ forge test
 1. **Deploy to local network**
 
 ```bash
-forge script script/ScalarLMSR.s.sol --rpc-url http://localhost:8545 --broadcast
+export PRIVATE_KEY=YOUR_PRIVATE_KEY
+forge script script/DeployCLMSR.s.sol --rpc-url http://localhost:8545 --broadcast -vv
 ```
 
 2. **Deploy to testnet**
 
 ```bash
-forge script script/ScalarLMSR.s.sol --rpc-url <testnet-rpc> --private-key <private-key> --broadcast
+export PRIVATE_KEY=YOUR_PRIVATE_KEY
+forge script script/DeployCLMSR.s.sol --rpc-url <testnet-rpc> --broadcast -vv
 ```
 
 ## 📖 Usage Guide
@@ -108,27 +109,29 @@ forge script script/ScalarLMSR.s.sol --rpc-url <testnet-rpc> --private-key <priv
 ### 1. Creating a Market (Admin Only)
 
 ```solidity
-// Create a market for prices 100-130 with $1 buckets using USDC
-uint256 marketId = scalarLMSR.createMarket(
+// Create a market with tick spacing using USDC (6 decimals assumed)
+uint256 marketId = clmsrMarketCore.createMarket(
     100,    // minPrice
     130,    // maxPrice
-    1,      // bucketSize ($1 increments)
-    10000,  // liquidityParameter
-    address(usdc), // betToken: USDC address
-    250     // feePercentage: 2.5% (250 basis points)
+    1,      // tickSpacing
+    uint64(block.timestamp + 60),   // startTimestamp
+    uint64(block.timestamp + 3600), // endTimestamp
+    uint64(block.timestamp + 5400), // settlementTimestamp
+    1e18    // liquidityParameter (example)
 );
 ```
 
-### 2. Placing Bets
+### 2. Opening Positions
 
 ```solidity
-// User approves USDC and bets $5k on range 111-112
-usdc.approve(address(scalarLMSR), 5000 * 1e6);
-uint256 tokenId = scalarLMSR.placeBet(
+// User approves USDC and opens a position for one tick range [111,112)
+usdc.approve(address(clmsrMarketCore), 5_000 * 1e6);
+uint256 tokenId = clmsrMarketCore.openPosition(
     marketId,
-    111,     // startPrice
-    112,     // endPrice
-    5000 * 1e6 // amount in USDC (6 decimals)
+    111,     // lowerTick
+    112,     // upperTick (exclusive)
+    5_000,   // quantity (6-decimal integer)
+    10_000 * 1e6 // maxCost bound
 );
 
 // User bets $3k on range 114-118
@@ -141,49 +144,32 @@ uint256 tokenId2 = scalarLMSR.placeBet(
 );
 ```
 
-### 3. Checking Probabilities and Odds
+### 3. Query State
 
 ```solidity
-// Get current probability for a range
-uint256 probability = scalarLMSR.getProbability(marketId, 110, 115);
-
-// Get current odds for a range
-uint256 odds = scalarLMSR.getOdds(marketId, 110, 115);
-
-// Get effective price per share
-uint256 effectivePrice = scalarLMSR.getEffectivePrice(marketId, 110, 115, 1 ether);
+// Range sum across ticks
+uint256 sum = clmsrMarketCore.getRangeSum(marketId, 110, 115);
 ```
 
-### 4. Resolving Markets
+### 4. Settling Markets
 
 ```solidity
-// Admin resolves market with winning price 115
-scalarLMSR.resolveMarket(marketId, 115);
+// Admin settles with settlement value in 6 decimals
+clmsrMarketCore.settleMarket(marketId, 115 * 1e6);
 ```
 
-### 5. Claiming Winnings
+### 5. Claiming Payouts
 
 ```solidity
-// Users claim winnings based on their positions
-scalarLMSR.claimWinnings(tokenId);  // Will win if 115 is in range 111-112
-scalarLMSR.claimWinnings(tokenId2); // Will win if 115 is in range 114-118
+clmsrMarketCore.claimPayout(tokenId);
 ```
 
 ### 6. Fee Management (Admin Only)
 
 ```solidity
-// Check collected fees
-uint256 totalFees = scalarLMSR.getTotalFeesCollected(address(usdc));
-uint256 withdrawableFees = scalarLMSR.getWithdrawableFees(address(usdc));
-
-// Withdraw fees to admin address
-scalarLMSR.withdrawFees(address(usdc), 0, adminAddress); // 0 = withdraw all
-
-// Update market fee
-scalarLMSR.updateMarketFee(marketId, 500); // 5% fee
-
-// Set default fee for new markets
-scalarLMSR.setDefaultFeePercentage(300); // 3% default
+// Vault token fee management
+vault.addSupportedToken(address(usdc), 200); // 2%
+vault.withdrawFees(address(usdc), 0);
 ```
 
 ## 🔧 API Reference
