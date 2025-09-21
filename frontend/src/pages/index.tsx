@@ -476,6 +476,12 @@ export default function Home() {
             <a href="#" className={styles.navLink}>
               Portfolio
             </a>
+            <a href="/news" className={styles.navLink}>
+              News
+            </a>
+            <a href="#" className={styles.navLink}>
+              Analytics
+            </a>
           </nav>
 
           <div className={styles.headerActions}>
