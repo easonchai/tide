@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 import {CLMSRMarketCore} from "../src/CLMSR-Market-Maker/core/CLMSRMarketCore.sol";
-import {parseEther} from "viem";
 
 contract CreateSampleMarkets is Script {
     function run() external {
@@ -22,7 +21,7 @@ contract CreateSampleMarkets is Script {
         uint64 settlementTimestamp = uint64(endTimestamp + 1 hours); // settle 1h after end
 
         // Shared liquidity parameter
-        uint256 liquidityParameter = parseEther(100000);
+        uint256 liquidityParameter = 100000000000000000000000;
 
         // Ticks are scaled by 100 to represent 2 decimals (e.g., $110,000.00 -> 11,000,000)
         // BTC parameters (110k - 140k) ~ 300 buckets
