@@ -20,6 +20,7 @@ import { apiService } from "@/utils/apiService";
 import styles from "@/styles/CoinDetail.module.css";
 import { useWallet } from "@/contexts/WalletContext";
 import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
+import HedgeModal from "@/components/HedgeModal";
 
 const shortenAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -101,6 +102,9 @@ export default function CoinDetail() {
   const [marketPositions, setMarketPositions] = useState<any[]>([]);
   const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [positionsError, setPositionsError] = useState<string | null>(null);
+
+  // Hedge modal state
+  const [showHedgeModal, setShowHedgeModal] = useState(false);
 
   // Fetch market positions data
   const fetchMarketPositions = useCallback(async (slug: string) => {
@@ -835,6 +839,9 @@ export default function CoinDetail() {
               alert(
                 `Bet placed: $${amount} on price range $${priceRange[0]} - $${priceRange[1]}`
               );
+
+              // Show hedge modal after successful bet
+              setShowHedgeModal(true);
             }}
             disabled={!walletAddress || amount <= 0}
           >
@@ -842,6 +849,19 @@ export default function CoinDetail() {
           </button>
         </div>
       </div>
+
+      {/* Hedge Modal */}
+      {marketData && (
+        <HedgeModal
+          isOpen={showHedgeModal}
+          onClose={() => setShowHedgeModal(false)}
+          token={marketData.token || ''}
+          currentPrice={coin?.currentPrice || 0}
+          betAmount={amount}
+          priceRange={priceRange}
+          question={marketData.question || ''}
+        />
+      )}
     </Layout>
   );
 }
