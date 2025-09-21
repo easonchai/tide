@@ -7,11 +7,9 @@ export enum MarketStatus {
 
 export interface CreateMarketDTO {
   question: string;
-  address: string;
   tags?: string[];
   profileImage?: string;
   slug: string;
-  fee?: bigint;
   endDate?: string;
 }
 
@@ -20,19 +18,16 @@ export interface UpdateMarketDTO {
   status?: MarketStatus;
   tags?: string[];
   profileImage?: string;
-  fee?: bigint;
   endDate?: string;
 }
 
 export interface MarketResponseDTO {
   id: string;
   question: string;
-  address: string;
   status: MarketStatus;
   tags: string[];
   profileImage: string | null;
   slug: string;
-  fee: bigint;
   volume: string;
   endDate: string | null;
   createdAt: string;

@@ -7,7 +7,6 @@ import {
   IsDateString,
   Matches,
   IsUrl,
-  IsNumberString,
   IsEthereumAddress,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -28,13 +27,6 @@ export class CreateMarketDTO {
   @IsString()
   @IsNotEmpty()
   question: string;
-
-  @ApiProperty({
-    description: 'The unique address of the market',
-    example: '0x1234567890abcdef1234567890abcdef12345678',
-  })
-  @IsEthereumAddress()
-  address: string;
 
   @ApiProperty({
     description: 'Market tags',
@@ -66,15 +58,6 @@ export class CreateMarketDTO {
     message: 'Slug must contain only lowercase letters, numbers, and hyphens',
   })
   slug: string;
-
-  @ApiProperty({
-    description: 'Market fee in wei',
-    example: '20000000000000000',
-    required: false,
-  })
-  @IsOptional()
-  @Transform(({ value }) => BigInt(value))
-  fee?: bigint;
 
   @ApiProperty({
     description: 'Market end date',
@@ -127,15 +110,6 @@ export class UpdateMarketDTO {
   @IsOptional()
   @IsUrl({}, { message: 'Profile image must be a valid URL' })
   profileImage?: string;
-
-  @ApiProperty({
-    description: 'Market fee in wei',
-    example: '20000000000000000',
-    required: false,
-  })
-  @IsOptional()
-  @Transform(({ value }) => BigInt(value))
-  fee?: bigint;
 
   @ApiProperty({
     description: 'Market end date',

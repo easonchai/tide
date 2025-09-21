@@ -30,7 +30,6 @@ enum MarketStatus {
 model Market {
   id       String       @id @default(cuid())
   question String
-  address  String       @unique
   // creator       String
   status   MarketStatus @default(OPEN)
 
@@ -40,7 +39,6 @@ model Market {
 
   // collateralToken    String
   // oracle             String
-  fee BigInt @default(20000000000000000)
 
   endDate    DateTime?
   createdAt  DateTime  @default(now())
@@ -57,7 +55,7 @@ model NFTPosition {
   id        String @id @default(cuid())
   marketId  String
   userId    String
-  onChainId String
+  onChainId String?
 
   amount     BigInt
   payout     BigInt?

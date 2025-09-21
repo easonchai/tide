@@ -15,12 +15,6 @@ export class MarketResponseDTO {
   question: string;
 
   @ApiProperty({
-    description: 'The unique address of the market',
-    example: '0x1234567890abcdef1234567890abcdef12345678',
-  })
-  address: string;
-
-  @ApiProperty({
     description: 'Market status',
     enum: MarketStatus,
     example: MarketStatus.OPEN,
@@ -46,12 +40,6 @@ export class MarketResponseDTO {
     example: 'bitcoin-100k-2024',
   })
   slug: string;
-
-  @ApiProperty({
-    description: 'Market fee in wei',
-    example: '20000000000000000',
-  })
-  fee: bigint;
 
   @ApiProperty({
     description: 'Total trading volume for this market',
