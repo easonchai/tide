@@ -87,14 +87,41 @@ This drives real‑time price context and helps users place more informed bets o
 - Manual Oracle resolution endpoint pulls HyperCore prices and settles CLMSR markets on HyperEVM, with an automated version being planned for the future that uses a scheduler.
 
 ## Contracts (HyperEVM testnet 998)
-```text
-MockUSDC:               0x43c56b1d5be6170ff006d1634CCA2AC15092b50F
-CLMSRPosition Proxy:    0xCDFeF1ccEcc3935dB4824f876Bf4025C7e150076
-CLMSRPosition Implementation:     0xCd78daa5a2718E922C2b17f95375e02523433cdD
-CLMSRMarketCore Proxy:  0x59795AE595Eda5361504db12C7a250EE54bE079D
-CLMSRMarketCore Implementation:   0xdf3f2b3F0E74aD776A9A8abEe35791396ccfA990
-Vault:                  0x6666A67c36926c16f9587bb42D65ffB7E21e8d94
-```
+
+<table style="width: 100%; border-collapse: collapse;">
+  <thead>
+    <tr>
+      <th style="border: 2px solid #444; padding: 8px; text-align: left;">Contract</th>
+      <th style="border: 2px solid #444; padding: 8px; text-align: left;">Address</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border: 2px solid #444; padding: 8px;">MockUSDC</td>
+      <td style="border: 2px solid #444; padding: 8px;">0x43c56b1d5be6170ff006d1634CCA2AC15092b50F</td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid #444; padding: 8px;">CLMSRPosition Proxy</td>
+      <td style="border: 2px solid #444; padding: 8px;">0xCDFeF1ccEcc3935dB4824f876Bf4025C7e150076</td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid #444; padding: 8px;">CLMSRPosition Implementation</td>
+      <td style="border: 2px solid #444; padding: 8px;">0xCd78daa5a2718E922C2b17f95375e02523433cdD</td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid #444; padding: 8px;">CLMSRMarketCore Proxy</td>
+      <td style="border: 2px solid #444; padding: 8px;">0x59795AE595Eda5361504db12C7a250EE54bE079D</td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid #444; padding: 8px;">CLMSRMarketCore Implementation</td>
+      <td style="border: 2px solid #444; padding: 8px;">0xdf3f2b3F0E74aD776A9A8abEe35791396ccfA990</td>
+    </tr>
+    <tr>
+      <td style="border: 2px solid #444; padding: 8px;">Vault</td>
+      <td style="border: 2px solid #444; padding: 8px;">0x6666A67c36926c16f9587bb42D65ffB7E21e8d94</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Pitch deck
 - Link: [Tide Pitch Deck](https://www.figma.com/slides/xRDDtPnlwDsMZv6Hm52rjJ/Tide-Deck?node-id=1-15&t=ByNVARfWY3XZHISW-1)
