@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  address   String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  NFTPositions       NFTPosition[]
+  PerpetualPositions PerpetualPosition[]
+
+  @@index([address])
+}
+
+enum MarketStatus {
+  OPEN
+  CLOSED
+  RESOLVED
+  PAUSED
+}
+
+model Market {
+  id       String       @id @default(cuid())
+  question String
+  address  String       @unique
+  // creator       String
+  status   MarketStatus @default(OPEN)
+
+  marketSummary String?  @db.Text
+  rules         String?  @db.Text
+  tags          String[]
+  profileImage  String?
+  slug          String   @unique
+
+  // collateralToken    String
+  // oracle             String
+  fee BigInt @default(20000000000000000)
+
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  resolvedAt DateTime?
+
+  NFTPositions       NFTPosition[]
+  PerpetualPositions PerpetualPosition[]
+
+  @@index([slug])
+}
+
+model NFTPosition {
+  id       String @id @default(cuid())
+  marketId String
+  userId   String
+
+  amount     BigInt
+  payout     BigInt
+  lowerBound BigInt
+  upperBound BigInt
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([marketId])
+}
+
+model PerpetualPosition {
+  id       String @id @default(cuid())
+  marketId String
+  userId   String
+
+  amount BigInt
+  // TODO: Check hyperliquid for required attributes
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([marketId])
+}
