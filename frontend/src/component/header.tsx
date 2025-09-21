@@ -118,7 +118,6 @@ export default function Header({ currentPath }: HeaderProps) {
   useEffect(() => {
     const savedAddress = localStorage.getItem("walletAddress");
     if (savedAddress) {
-      console.log("Loading saved address from localStorage:", savedAddress);
       setWalletAddress(savedAddress);
       // 저장된 주소가 있으면 잔액도 가져오기
       void fetchWalletBalance(savedAddress);

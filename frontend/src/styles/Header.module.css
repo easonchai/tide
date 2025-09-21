@@ -17,6 +17,13 @@
   height: 80px;
 }
 
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-left: -30rem;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -41,12 +48,6 @@
   font-weight: 700;
   color: #51d5eb;
   letter-spacing: -0.025em;
-}
-
-.navigation {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
 }
 
 .navLink {
