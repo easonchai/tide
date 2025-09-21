@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { OracleService } from './oracle.service';
 import { OracleController } from './oracle.controller';
+import { BlockchainModule } from '../blockchain/blockchain.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot()],
+  imports: [BlockchainModule],
   providers: [OracleService],
   controllers: [OracleController],
 })
