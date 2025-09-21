@@ -33,6 +33,21 @@ export class MarketTransactionService {
   }
 
   /**
+   * Retrieves an NFT Position by unique identifier
+   * @param {Prisma.NFTPositionWhereUniqueInput} where - Unique market identifier (id)
+   * @returns {Promise<Market | null>} The market or null if not found
+   */
+  async getNFTPosition(
+    where: Prisma.NFTPositionWhereUniqueInput,
+  ): Promise<NFTPosition | null> {
+    const nftPosition = await this.prisma.nFTPosition.findUnique({
+      where,
+    });
+
+    return nftPosition;
+  }
+
+  /**
    * Closes an NFT position by setting the deletedAt timestamp and payout amount.
    * This method is used for multiple operations:
    * - Soft deleting positions
@@ -62,6 +77,94 @@ export class MarketTransactionService {
     } catch (error) {
       this.logger.error(
         `Failed to delete NFT position: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieves all active NFT positions for a specific user
+   * @param {string} userId - The user ID to get positions for
+   * @param {boolean} includeClosed - Whether to include closed positions (default: false)
+   * @returns {Promise<NFTPosition[]>} Array of NFT positions for the user
+   */
+  async getNFTPositionsByUser(
+    userId: string,
+    includeClosed: boolean = false,
+  ): Promise<NFTPosition[]> {
+    this.logger.log(`Getting NFT positions for user: ${userId}`);
+    try {
+      const whereClause: Prisma.NFTPositionWhereInput = {
+        userId,
+      };
+
+      if (!includeClosed) {
+        whereClause.deletedAt = null;
+      }
+
+      const nftPositions = await this.prisma.nFTPosition.findMany({
+        where: whereClause,
+        include: {
+          market: true,
+          user: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      this.logger.log(
+        `Found ${nftPositions.length} NFT positions for user: ${userId}`,
+      );
+      return nftPositions;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get NFT positions for user: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieves all active NFT positions for a specific market
+   * @param {string} marketId - The market ID to get positions for
+   * @param {boolean} includeClosed - Whether to include closed positions (default: false)
+   * @returns {Promise<NFTPosition[]>} Array of NFT positions for the market
+   */
+  async getNFTPositionsByMarket(
+    marketId: string,
+    includeClosed: boolean = false,
+  ): Promise<NFTPosition[]> {
+    this.logger.log(`Getting NFT positions for market: ${marketId}`);
+    try {
+      const whereClause: Prisma.NFTPositionWhereInput = {
+        marketId,
+      };
+
+      if (!includeClosed) {
+        whereClause.deletedAt = null;
+      }
+
+      const nftPositions = await this.prisma.nFTPosition.findMany({
+        where: whereClause,
+        include: {
+          market: true,
+          user: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      this.logger.log(
+        `Found ${nftPositions.length} NFT positions for market: ${marketId}`,
+      );
+      return nftPositions;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get NFT positions for market: ${error.message}`,
         error.stack,
       );
       throw error;
