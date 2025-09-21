@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Market } from '@prisma/client';
+import { MarketStatus } from './dto/market.dto';
 
 @Injectable()
 export class MarketService {
@@ -31,10 +32,12 @@ export class MarketService {
   /**
    * Retrieves a market by unique identifier with volume calculation
    * @param {Prisma.MarketWhereUniqueInput} where - Unique market identifier (id, address, or slug)
+   * @param {MarketStatus} status - Optional market status filter (OPEN, CLOSED, RESOLVED, PAUSED)
    * @returns {Promise<(Market & { volume: bigint }) | null>} The market with volume or null if not found
    */
   async getMarket(
     where: Prisma.MarketWhereUniqueInput,
+    status?: MarketStatus,
   ): Promise<(Market & { volume: bigint }) | null> {
     const market = await this.prisma.market.findUnique({
       where,
@@ -44,7 +47,10 @@ export class MarketService {
       return null;
     }
 
-    // Calculate volume for this market
+    if (status && market.status !== status) {
+      return null;
+    }
+
     const volume = await this.calculateMarketVolume(market.slug);
 
     return {
@@ -56,15 +62,23 @@ export class MarketService {
   /**
    * Retrieves all markets with optional filtering and volume calculation
    * @param {Prisma.MarketFindManyArgs} args - Optional filtering and pagination arguments
+   * @param {MarketStatus} status - Optional market status filter (OPEN, CLOSED, RESOLVED, PAUSED)
    * @returns {Promise<(Market & { volume: bigint })[]>} Array of markets with volume
    */
   async getAllMarkets(
     args?: Prisma.MarketFindManyArgs,
+    status?: MarketStatus,
   ): Promise<(Market & { volume: bigint })[]> {
+    const whereClause: Prisma.MarketWhereInput = {
+      deletedAt: null,
+    };
+
+    if (status) {
+      whereClause.status = status;
+    }
+
     const defaultArgs: Prisma.MarketFindManyArgs = {
-      where: {
-        deletedAt: null,
-      },
+      where: whereClause,
       orderBy: {
         createdAt: 'desc',
       },
@@ -73,7 +87,6 @@ export class MarketService {
 
     const markets = await this.prisma.market.findMany(defaultArgs);
 
-    // Calculate volume for each market
     const marketsWithVolume = await Promise.all(
       markets.map(async (market) => {
         const volume = await this.calculateMarketVolume(market.slug);

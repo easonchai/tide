@@ -24,6 +24,7 @@ import {
   UpdateMarketDTO,
   CreateNFTPositionDTO,
   CloseNFTPositionDTO,
+  MarketStatus,
 } from './dto/market.dto';
 import {
   MarketResponseDTO,
@@ -169,13 +170,21 @@ export class MarketController {
 
   @Get()
   @ApiOperation({ summary: 'Get all markets' })
+  @ApiQuery({
+    name: 'status',
+    description: 'Filter markets by status',
+    required: false,
+    enum: MarketStatus,
+  })
   @ApiResponse({
     status: 200,
     description: 'List of markets',
     type: [MarketResponseDTO],
   })
-  async getAllMarkets(): Promise<(Market & { volume: bigint })[]> {
-    return this.marketService.getAllMarkets();
+  async getAllMarkets(
+    @Query('status') status?: MarketStatus,
+  ): Promise<(Market & { volume: bigint })[]> {
+    return this.marketService.getAllMarkets(undefined, status);
   }
 
   @Get(':slug')
@@ -185,6 +194,12 @@ export class MarketController {
     description: 'Market slug',
     example: 'bitcoin-100k-2024',
   })
+  @ApiQuery({
+    name: 'status',
+    description: 'Filter market by status',
+    required: false,
+    enum: MarketStatus,
+  })
   @ApiResponse({
     status: 200,
     description: 'Market found',
@@ -193,8 +208,9 @@ export class MarketController {
   @ApiResponse({ status: 404, description: 'Market not found' })
   async getMarketBySlug(
     @Param('slug') slug: string,
+    @Query('status') status?: MarketStatus,
   ): Promise<(Market & { volume: bigint }) | null> {
-    return this.marketService.getMarket({ slug });
+    return this.marketService.getMarket({ slug }, status);
   }
 
   @Put(':slug')
