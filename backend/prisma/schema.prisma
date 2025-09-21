@@ -61,7 +61,7 @@ model NFTPosition {
   userId   String
 
   amount     BigInt
-  payout     BigInt
+  payout     BigInt?
   lowerBound BigInt
   upperBound BigInt
 
