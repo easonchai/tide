@@ -12,7 +12,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract Buyback {
     // Token addresses
     address public constant USDC = 0x2B3370eE501B4a559b57D449569354196457D8Ab;
-    address public constant HYPE = 0x5555555555555555555555555555555555555555; // HYPE token address (verify from official sources)
+    address public constant HYPE = 0x0d01dc56dcaaca66ad901c959b4011ec;
 
     // Events
     event BuybackExecuted(

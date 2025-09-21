@@ -144,7 +144,7 @@ uint64 anyTokenId = buyback.getTokenId(0x...); // Gets any token's ID
 
 ### Token Addresses
 - **USDC**: `0x2B3370eE501B4a559b57D449569354196457D8Ab`
-- **HYPE**: `0x5555555555555555555555555555555555555555` (verify from official sources)
+- **HYPE**: `0x0d01dc56dcaaca66ad901c959b4011ec`
 
 ### Events
 - `BuybackExecuted(address indexed recipient, uint256 usdcAmount, uint256 hypeAmount, uint256 price)`
