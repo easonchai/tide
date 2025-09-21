@@ -1,6 +1,6 @@
 ## Tide — Continuous Scalar Prediction Markets on Hyperliquid
 
-Tide brings continuous scalar prediction markets to Hyperliquid by pairing a CLMSR on‑chain market maker with HyperCore data and execution. Traders express views over a price range, concentrating liquidity into a single curve with probabilities that always sum to 100%. The platform spans a web app and APIs that talk directly to HyperEVM for trading and settlement, with live data and instant hedging powered by HyperCore.
+Tide brings continuous scalar prediction markets to Hyperliquid by pairing a CLMSR on‑chain market maker with HyperCore data and execution. Traders express views over a price range, concentrating liquidity into a single curve with probabilities that always sum to 100%. The platform spans a web app and APIs that interact with HyperEVM for trading and settlement, with live data and instant hedging powered by HyperCore.
 
 ### Why this matters
 - Continuous scalar markets: trade along a price curve, not in fragmented buckets.
