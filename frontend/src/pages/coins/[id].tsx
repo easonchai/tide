@@ -2,6 +2,7 @@ import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import Header from "@/component/header";
 import { useQuery } from "@tanstack/react-query";
 import {
   LineChart,
@@ -183,12 +184,26 @@ export default function CoinDetail() {
     setPositionsError(null);
 
     try {
-      console.log("Fetching market positions for slug:", slug);
+      console.log("=== Fetching Market Positions ===");
+      console.log("Slug:", slug);
+      console.log("API URL:", `/api/markets/positions/market/${slug}`);
+
       const response = await apiService.market.getPositionsByMarket(slug);
-      console.log("Market positions response:", response.data);
+      console.log("Full response:", response);
+      console.log("Response status:", response.status);
+      console.log("Response data:", response.data);
+      console.log("Data type:", typeof response.data);
+      console.log("Data length:", response.data?.length);
+
       setMarketPositions(response.data || []);
     } catch (error) {
-      console.error("Failed to fetch market positions:", error);
+      console.error("=== Failed to fetch market positions ===");
+      console.error("Error:", error);
+      console.error(
+        "Error message:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+      console.error("Error response:", (error as any)?.response);
       setPositionsError(
         error instanceof Error ? error.message : "Failed to fetch positions"
       );
@@ -198,12 +213,42 @@ export default function CoinDetail() {
     }
   }, []);
 
+  // Market 정보를 가져와서 slug를 얻은 후 positions를 가져오는 함수
+  const fetchMarketBySlug = useCallback(
+    async (marketId: string) => {
+      try {
+        console.log("Fetching market info for ID:", marketId);
+
+        // 모든 market을 가져와서 id로 찾기
+        const allMarkets = await apiService.market.getAll();
+        console.log("All markets:", allMarkets);
+
+        const foundMarket = allMarkets.data?.find(
+          (m: any) => m.id === marketId
+        );
+
+        if (foundMarket?.slug) {
+          console.log("Found market by id, using slug:", foundMarket.slug);
+          await fetchMarketPositions(foundMarket.slug);
+        } else {
+          console.error("No market found with id:", marketId);
+          setPositionsError("Market not found");
+        }
+      } catch (error) {
+        console.error("Failed to fetch market info:", error);
+        setPositionsError("Failed to fetch market information");
+      }
+    },
+    [fetchMarketPositions]
+  );
+
   // Fetch market positions when component mounts or id changes
   useEffect(() => {
     if (id && typeof id === "string") {
-      fetchMarketPositions(id);
+      // URL 파라미터로 받은 id는 실제 market의 id이므로, 먼저 market 정보를 가져와서 slug를 얻어야 함
+      fetchMarketBySlug(id);
     }
-  }, [id, fetchMarketPositions]);
+  }, [id, fetchMarketBySlug]);
 
   const amount = useMemo(() => {
     const normalized = amountInput.replace(/,/g, ".").trim();
@@ -573,139 +618,7 @@ export default function CoinDetail() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Header */}
-      <header className={headerStyles.header}>
-        <div className={headerStyles.headerContent}>
-          <div className={headerStyles.brand}>
-            <div className={headerStyles.logo}>
-              <img
-                src="/tide-logo.svg"
-                alt="Tide Logo"
-                width="48"
-                height="48"
-              />
-            </div>
-            <span className={headerStyles.brandName}>Tide</span>
-          </div>
-
-          <nav className={headerStyles.navigation}>
-            <a href="#" className={headerStyles.navLink}>
-              Markets
-            </a>
-            <a href="#" className={headerStyles.navLink}>
-              Portfolio
-            </a>
-          </nav>
-
-          <div className={headerStyles.headerActions}>
-            <div className={headerStyles.walletInfo}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 12V7H5a2 2 0 01-2-2V5a2 2 0 012-2h14v4"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M3 5v14a2 2 0 002 2h16v-5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx="16"
-                  cy="12"
-                  r="2"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </svg>
-              {walletAddress && (
-                <span className={headerStyles.walletAmount}>
-                  {isFetchingBalance
-                    ? "Loading..."
-                    : walletBalance
-                    ? `${walletBalance} ETH`
-                    : "-"}
-                </span>
-              )}
-            </div>
-            <div
-              className={headerStyles.connectWrapper}
-              ref={connectWrapperRef}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  if (walletAddress) {
-                    setShowDisconnectTooltip((prev) => !prev);
-                    return;
-                  }
-
-                  if (!isConnecting) {
-                    void connectWallet();
-                  }
-                }}
-                disabled={isConnecting}
-                className={`${headerStyles.connectButton} ${
-                  walletAddress ? headerStyles.connectButtonConnected : ""
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle
-                    cx="12"
-                    cy="7"
-                    r="4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                </svg>
-                <span>
-                  {walletAddress
-                    ? shortenAddress(walletAddress)
-                    : isConnecting
-                    ? "Connecting..."
-                    : "Connect"}
-                </span>
-              </button>
-              {connectError && (
-                <span className={headerStyles.connectError}>
-                  {connectError}
-                </span>
-              )}
-              {walletAddress && showDisconnectTooltip && (
-                <div className={headerStyles.disconnectTooltip}>
-                  <span className={headerStyles.disconnectLabel}>
-                    Connected
-                  </span>
-                  <span className={headerStyles.disconnectAddress}>
-                    {shortenAddress(walletAddress)}
-                  </span>
-                  <button
-                    type="button"
-                    className={headerStyles.disconnectAction}
-                    onClick={() => {
-                      setShowDisconnectTooltip(false);
-                      void disconnectWallet();
-                    }}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header currentPath="/coins" />
 
       <div className={styles.container}>
         {/* Event Details Section */}

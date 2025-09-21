@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import styles from "@/styles/Portfolio.module.css";
 import { apiService } from "@/utils/apiService";
 import { MarketStatus } from "@/types/market";
+import Header from "@/component/header";
 
 interface PortfolioMarket {
   id: string;
@@ -38,7 +39,9 @@ interface PortfolioPosition {
 
 const WEI_IN_ETH = 1e18;
 
-const toNumber = (value: string | number | bigint | null | undefined): number => {
+const toNumber = (
+  value: string | number | bigint | null | undefined
+): number => {
   if (value === null || value === undefined) {
     return 0;
   }
@@ -55,7 +58,9 @@ const toNumber = (value: string | number | bigint | null | undefined): number =>
   return Number.isFinite(value) ? value : 0;
 };
 
-const weiToEth = (value: string | number | bigint | null | undefined): number => {
+const weiToEth = (
+  value: string | number | bigint | null | undefined
+): number => {
   return toNumber(value) / WEI_IN_ETH;
 };
 
@@ -86,18 +91,24 @@ const computePnL = (position: PortfolioPosition) => {
 
 export default function PortfolioPage() {
   const router = useRouter();
-  const address = typeof router.query.address === "string"
-    ? router.query.address
-    : undefined;
+  const address =
+    typeof router.query.address === "string" ? router.query.address : undefined;
 
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
 
   useEffect(() => {
     if (!address) {
       return;
     }
+
+    console.log("Portfolio page - received address:", address);
+    console.log("Address type:", typeof address);
+    console.log("Address length:", address.length);
+    console.log("Address checksum:", address);
+    console.log("URL query:", router.query);
 
     let isMounted = true;
     setIsLoading(true);
@@ -109,6 +120,17 @@ export default function PortfolioPage() {
         if (!isMounted) {
           return;
         }
+
+        console.log("=== Portfolio API Response ===");
+        console.log("Full response:", response);
+        console.log("Response status:", response.status);
+        console.log("Response data:", response.data);
+        console.log("Data type:", typeof response.data);
+        console.log(
+          "Data length:",
+          Array.isArray(response.data) ? response.data.length : "Not an array"
+        );
+        console.log("Data content:", JSON.stringify(response.data, null, 2));
 
         const data = Array.isArray(response.data) ? response.data : [];
         setPositions(data);
@@ -145,8 +167,33 @@ export default function PortfolioPage() {
     });
   }, [positions, thirtyDaysAgo]);
 
+  // Open/Closed positions 필터링
+  const openPositions = useMemo(() => {
+    return positions.filter((position) => {
+      if (!position.market) return false;
+      return position.market.status === "OPEN";
+    });
+  }, [positions]);
+
+  const closedPositions = useMemo(() => {
+    return positions.filter((position) => {
+      if (!position.market) return false;
+      return (
+        position.market.status === "RESOLVED" ||
+        position.market.status === "CLOSED"
+      );
+    });
+  }, [positions]);
+
+  const filteredPositions = useMemo(() => {
+    return activeTab === "open" ? openPositions : closedPositions;
+  }, [activeTab, openPositions, closedPositions]);
+
   const summary = useMemo(() => {
-    const totalPnL = positions.reduce((sum, position) => sum + computePnL(position), 0);
+    const totalPnL = positions.reduce(
+      (sum, position) => sum + computePnL(position),
+      0
+    );
     const totalVolume = positions.reduce(
       (sum, position) => sum + weiToEth(position.amount),
       0
@@ -210,14 +257,6 @@ export default function PortfolioPage() {
     });
   }, [positions]);
 
-  const openPositions = useMemo(() => {
-    return positions.filter((position) => position.market?.status === MarketStatus.OPEN);
-  }, [positions]);
-
-  const closedPositions = useMemo(() => {
-    return positions.filter((position) => position.market?.status !== MarketStatus.OPEN);
-  }, [positions]);
-
   const graphPath = useMemo(() => {
     if (pnlSeries.length === 0) {
       return "";
@@ -246,52 +285,25 @@ export default function PortfolioPage() {
         <meta name="description" content="View your Tide Markets portfolio" />
       </Head>
 
-      <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <div className={styles.brand}>
-            <Link href="/" className={styles.brandLink}>
-              <img src="/tide-logo.svg" alt="Tide" width={36} height={36} />
-              <span className={styles.brandName}>Tide</span>
-            </Link>
-          </div>
-
-          <nav className={styles.navigation}>
-            <Link href="/" className={styles.navLink}>
-              Markets
-            </Link>
-            <Link
-              href={address ? `/portfolio?address=${address}` : "/portfolio"}
-              className={`${styles.navLink} ${styles.navLinkActive}`}
-            >
-              Portfolio
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Header currentPath="/portfolio" />
 
       <main className={styles.main}>
         <section className={styles.heroSection}>
           <div>
-            <h1 className={styles.title}>Your Portfolio</h1>
-            <p className={styles.subtitle}>
-              Track your performance, monitor active markets, and review historical PnL.
-            </p>
-          </div>
-          <div className={styles.addressBox}>
-            <span className={styles.addressLabel}>Wallet</span>
-            <span className={styles.addressValue}>
-              {address ? address : "Connect your wallet from the markets page"}
-            </span>
+            <h1 className={styles.title}>Portfolio</h1>
           </div>
         </section>
 
         {!address ? (
           <div className={styles.emptyState}>
-            <p>지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시 시도해주세요.</p>
+            <p>
+              지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
+              시도해주세요.
+            </p>
           </div>
         ) : isLoading ? (
           <div className={styles.emptyState}>
-            <p>포트폴리오 데이터를 불러오는 중입니다...</p>
+            <p>Loading...</p>
           </div>
         ) : error ? (
           <div className={styles.emptyState}>
@@ -303,147 +315,101 @@ export default function PortfolioPage() {
           </div>
         ) : (
           <>
-            <section className={styles.summaryGrid}>
-              <div className={styles.summaryCard}>
-                <span className={styles.summaryLabel}>30 Day PnL</span>
-                <span
-                  className={
-                    summary.pnl30d >= 0 ? styles.summaryPositive : styles.summaryNegative
-                  }
-                >
-                  {summary.pnl30d >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.pnl30d))}
-                </span>
-              </div>
-              <div className={styles.summaryCard}>
-                <span className={styles.summaryLabel}>30 Day Volume</span>
-                <span className={styles.summaryValue}>${formatCurrency(summary.volume30d)}</span>
-              </div>
-              <div className={styles.summaryCard}>
-                <span className={styles.summaryLabel}>Total PnL</span>
-                <span
-                  className={
-                    summary.totalPnL >= 0
-                      ? styles.summaryPositive
-                      : styles.summaryNegative
-                  }
-                >
-                  {summary.totalPnL >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.totalPnL))}
-                </span>
-              </div>
-              <div className={styles.summaryCard}>
-                <span className={styles.summaryLabel}>Total Volume</span>
-                <span className={styles.summaryValue}>${formatCurrency(summary.totalVolume)}</span>
-              </div>
-            </section>
-
-            <section className={styles.statsSection}>
-              <h2 className={styles.sectionTitle}>User Statistics</h2>
-              <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                  <span className={styles.statLabel}>Markets Traded</span>
-                  <span className={styles.statValue}>{summary.marketsTraded}</span>
-                </div>
-                <div className={styles.statCard}>
-                  <span className={styles.statLabel}>Wins</span>
-                  <span className={styles.statValue}>{summary.wins}</span>
-                </div>
-                <div className={styles.statCard}>
-                  <span className={styles.statLabel}>Losses</span>
-                  <span className={styles.statValue}>{summary.losses}</span>
-                </div>
-                <div className={styles.statCard}>
-                  <span className={styles.statLabel}>Win / Loss Ratio</span>
-                  <span className={styles.statValue}>
-                    {(summary.winLossRatio * 100).toFixed(1)}%
+            <div className={styles.dashboardRow}>
+              <section className={styles.summaryGrid}>
+                <div className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>30 Day PnL</span>
+                  <span className={styles.summaryValue}>
+                    {summary.pnl30d >= 0 ? "+" : "-"}$
+                    {formatCurrency(Math.abs(summary.pnl30d))}
                   </span>
                 </div>
-              </div>
-            </section>
+                <div className={styles.summaryCard}>
+                  <span className={styles.summaryLabel}>30 Day Volume</span>
+                  <span className={styles.summaryValue}>
+                    ${formatCurrency(summary.volume30d)}
+                  </span>
+                </div>
+              </section>
 
-            <section className={styles.graphSection}>
-              <div className={styles.graphHeader}>
-                <h2 className={styles.sectionTitle}>PnL (Cumulative)</h2>
-                <span className={styles.graphRange}>All Positions</span>
-              </div>
-              <div className={styles.graphContainer}>
-                {graphPath ? (
-                  <svg
-                    className={styles.graphSvg}
-                    viewBox="0 0 600 220"
-                    preserveAspectRatio="none"
-                  >
-                    <path d={graphPath} className={styles.graphLine} />
-                  </svg>
-                ) : (
-                  <div className={styles.graphEmpty}>PnL 데이터를 시각화할 수 없습니다.</div>
-                )}
-              </div>
-            </section>
+              <section className={styles.statsSection}>
+                <h2 className={styles.sectionTitle}>User Statistics</h2>
+                <div className={styles.statsContainer}>
+                  <div className={styles.primaryStats}>
+                    <div className={styles.primaryStat}>
+                      <span className={styles.primaryStatLabel}>PNL</span>
+                      <span
+                        className={`${styles.primaryStatValue} ${
+                          summary.totalPnL >= 0
+                            ? styles.valuePositive
+                            : styles.valueNegative
+                        }`}
+                      >
+                        ${formatCurrency(Math.abs(summary.totalPnL))}
+                      </span>
+                    </div>
+                    <div className={styles.primaryStat}>
+                      <span className={styles.primaryStatLabel}>Volume</span>
+                      <span className={styles.primaryStatValue}>
+                        ${formatCurrency(summary.totalVolume)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.secondaryStats}>
+                    <div className={styles.secondaryStat}>
+                      <span className={styles.secondaryStatLabel}>
+                        Markets Traded
+                      </span>
+                      <span className={styles.secondaryStatValue}>
+                        {summary.marketsTraded}
+                      </span>
+                    </div>
+                    <div className={styles.secondaryStat}>
+                      <span className={styles.secondaryStatLabel}>
+                        Win/Loss Ratio
+                      </span>
+                      <span className={styles.secondaryStatValue}>
+                        {summary.winLossRatio.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
 
             <section className={styles.positionsSection}>
-              <div className={styles.positionsColumn}>
-                <h3 className={styles.sectionSubtitle}>Open Positions</h3>
-                {openPositions.length === 0 ? (
-                  <div className={styles.emptyPositions}>열린 포지션이 없습니다.</div>
-                ) : (
-                  <ul className={styles.positionList}>
-                    {openPositions.map((position) => (
-                      <li key={position.id} className={styles.positionCard}>
-                        <div className={styles.positionHeader}>
-                          <div className={styles.positionIcon}>
-                            {position.market?.profileImage ? (
-                              <img
-                                src={position.market.profileImage}
-                                alt="Profile"
-                                className={styles.positionImage}
-                              />
-                            ) : (
-                              <span className={styles.positionIconText}>M</span>
-                            )}
-                          </div>
-                          <div className={styles.positionMeta}>
-                            <span className={styles.positionQuestion}>
-                              {position.market?.question ?? "Unknown market"}
-                            </span>
-                            <span className={styles.positionStatus}>OPEN</span>
-                          </div>
-                        </div>
-                        <dl className={styles.positionStats}>
-                          <div>
-                            <dt>Amount</dt>
-                            <dd>${formatCurrency(weiToEth(position.amount))}</dd>
-                          </div>
-                          <div>
-                            <dt>Potential Payout</dt>
-                            <dd>${formatCurrency(weiToEth(position.payout))}</dd>
-                          </div>
-                          <div>
-                            <dt>Range</dt>
-                            <dd>
-                              {weiToEth(position.lowerBound).toFixed(2)} -
-                              {" "}
-                              {weiToEth(position.upperBound).toFixed(2)}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Ends</dt>
-                            <dd>{formatDate(position.market?.endDate ?? null)}</dd>
-                          </div>
-                        </dl>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <div className={styles.tabContainer}>
+                <div className={styles.tabHeader}>
+                  <button
+                    className={`${styles.tabButton} ${
+                      activeTab === "open" ? styles.tabActive : ""
+                    }`}
+                    onClick={() => setActiveTab("open")}
+                  >
+                    open
+                  </button>
+                  <button
+                    className={`${styles.tabButton} ${
+                      activeTab === "closed" ? styles.tabActive : ""
+                    }`}
+                    onClick={() => setActiveTab("closed")}
+                  >
+                    close
+                  </button>
+                </div>
 
-              <div className={styles.positionsColumn}>
-                <h3 className={styles.sectionSubtitle}>Closed Positions</h3>
-                {closedPositions.length === 0 ? (
-                  <div className={styles.emptyPositions}>닫힌 포지션이 없습니다.</div>
-                ) : (
-                  <ul className={styles.positionList}>
-                    {closedPositions.map((position) => (
-                      <li key={position.id} className={styles.positionCard}>
+                <div className={styles.positionsGrid}>
+                  {filteredPositions.length > 0 &&
+                    filteredPositions.map((position) => (
+                      <div
+                        key={position.id}
+                        className={styles.positionCard}
+                        onClick={() => {
+                          if (position.market?.slug) {
+                            router.push(`/coins/${position.market.slug}`);
+                          }
+                        }}
+                      >
                         <div className={styles.positionHeader}>
                           <div className={styles.positionIcon}>
                             {position.market?.profileImage ? (
@@ -460,42 +426,79 @@ export default function PortfolioPage() {
                             <span className={styles.positionQuestion}>
                               {position.market?.question ?? "Unknown market"}
                             </span>
-                            <span className={styles.positionStatus}>
-                              {position.market?.status ?? "CLOSED"}
+                            <span className={styles.positionEndDate}>
+                              Ends at{" "}
+                              {formatDate(
+                                position.market?.status === "OPEN"
+                                  ? position.market?.endDate ?? null
+                                  : position.updatedAt
+                              )}
                             </span>
                           </div>
                         </div>
-                        <dl className={styles.positionStats}>
-                          <div>
-                            <dt>Amount</dt>
-                            <dd>${formatCurrency(weiToEth(position.amount))}</dd>
+
+                        <div className={styles.positionStats}>
+                          <div className={styles.investmentRow}>
+                            <div className={styles.investmentItem}>
+                              <span className={styles.statLabel}>Invested</span>
+                              <span className={styles.statValue}>
+                                ${formatCurrency(weiToEth(position.amount))}
+                              </span>
+                            </div>
+                            {position.market?.status === "OPEN" ? (
+                              <div className={styles.investmentItem}>
+                                <span className={styles.statLabel}>
+                                  Current Value
+                                </span>
+                                <span
+                                  className={`${styles.statValue} ${
+                                    computePnL(position) >= 0
+                                      ? styles.valuePositive
+                                      : styles.valueNegative
+                                  }`}
+                                >
+                                  $
+                                  {formatCurrency(
+                                    weiToEth(position.amount) +
+                                      computePnL(position)
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className={styles.investmentItem}>
+                                <span className={styles.statLabel}>PnL</span>
+                                <span
+                                  className={`${styles.statValue} ${
+                                    computePnL(position) >= 0
+                                      ? styles.valuePositive
+                                      : styles.valueNegative
+                                  }`}
+                                >
+                                  {computePnL(position) >= 0 ? "+" : ""}$
+                                  {formatCurrency(computePnL(position))}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <dt>Payout</dt>
-                            <dd>${formatCurrency(weiToEth(position.payout))}</dd>
-                          </div>
-                          <div>
-                            <dt>PnL</dt>
-                            <dd
-                              className={
-                                computePnL(position) >= 0
-                                  ? styles.summaryPositive
-                                  : styles.summaryNegative
-                              }
+                        </div>
+
+                        {position.market?.status === "OPEN" && (
+                          <div className={styles.positionActions}>
+                            <button
+                              className={styles.sellButton}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // TODO: Implement sell functionality
+                                console.log("Sell position:", position.id);
+                              }}
                             >
-                              {computePnL(position) >= 0 ? "+" : "-"}$
-                              {formatCurrency(Math.abs(computePnL(position)))}
-                            </dd>
+                              Sell
+                            </button>
                           </div>
-                          <div>
-                            <dt>Closed</dt>
-                            <dd>{formatDate(position.updatedAt)}</dd>
-                          </div>
-                        </dl>
-                      </li>
+                        )}
+                      </div>
                     ))}
-                  </ul>
-                )}
+                </div>
               </div>
             </section>
           </>

@@ -7,6 +7,7 @@ import styles from "@/styles/Home.module.css";
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
 import type { AxiosError } from "axios";
 import { apiService } from "@/utils/apiService";
+import Header from "@/component/header";
 
 // Destructure apiService
 const { market } = apiService;
@@ -455,145 +456,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Header */}
-      <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <div className={styles.brand}>
-            <div className={styles.logo}>
-              <img
-                src="/tide-logo.svg"
-                alt="Tide Logo"
-                width="48"
-                height="48"
-              />
-            </div>
-            <span className={styles.brandName}>Tide</span>
-          </div>
-
-          <nav className={styles.navigation}>
-            <Link href="/" className={styles.navLink}>
-              Markets
-            </Link>
-            <Link
-              href={
-                walletAddress
-                  ? `/portfolio?address=${walletAddress}`
-                  : "/portfolio"
-              }
-              className={styles.navLink}
-            >
-              Portfolio
-            </a>
-            <a href="/news" className={styles.navLink}>
-              News
-            </a>
-            <a href="#" className={styles.navLink}>
-              Analytics
-            </a>
-          </nav>
-
-          <div className={styles.headerActions}>
-            <div className={styles.walletInfo}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 12V7H5a2 2 0 01-2-2V5a2 2 0 012-2h14v4"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M3 5v14a2 2 0 002 2h16v-5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx="16"
-                  cy="12"
-                  r="2"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </svg>
-              {walletAddress && (
-                <span className={styles.walletAmount}>
-                  {isFetchingBalance
-                    ? "Loading..."
-                    : walletBalance
-                    ? `${walletBalance} ETH`
-                    : "-"}
-                </span>
-              )}
-            </div>
-            <div className={styles.connectWrapper} ref={connectWrapperRef}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (walletAddress) {
-                    setShowDisconnectTooltip((prev) => !prev);
-                    return;
-                  }
-
-                  if (!isConnecting) {
-                    void connectWallet();
-                  }
-                }}
-                disabled={isConnecting}
-                className={`${styles.connectButton} ${
-                  walletAddress ? styles.connectButtonConnected : ""
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle
-                    cx="12"
-                    cy="7"
-                    r="4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                </svg>
-                <span>
-                  {walletAddress
-                    ? shortenAddress(walletAddress)
-                    : isConnecting
-                    ? "Connecting..."
-                    : "Connect"}
-                </span>
-              </button>
-              {connectError && (
-                <span className={styles.connectError}>{connectError}</span>
-              )}
-              {walletAddress && showDisconnectTooltip && (
-                <div className={styles.disconnectTooltip}>
-                  <span className={styles.disconnectLabel}>Connected</span>
-                  <span className={styles.disconnectAddress}>
-                    {shortenAddress(walletAddress)}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.disconnectAction}
-                    onClick={() => {
-                      setShowDisconnectTooltip(false);
-                      void disconnectWallet();
-                    }}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header currentPath="/" />
 
       <div className={styles.container}>
         <main className={styles.main}>
@@ -607,7 +470,7 @@ export default function Home() {
               {/* Question Card View */}
               <div className={styles.cardList}>
                 {markets.map((marketItem) => (
-                  <div key={marketItem.id} className={styles.card}>
+                  <div key={marketItem.slug} className={styles.card}>
                     {/* Header with icon, name, and chevron */}
                     <div className={styles.cardHeader}>
                       <div className={styles.coinInfo}>
@@ -623,11 +486,13 @@ export default function Home() {
                           )}
                         </div>
                         <div className={styles.coinDetails}>
-                          <p className={styles.coinName}>{marketItem.question}</p>
+                          <p className={styles.coinName}>
+                            {marketItem.question}
+                          </p>
                         </div>
                       </div>
                       <div
-                        onClick={() => router.push(`/coins/${marketItem.id}`)}
+                        onClick={() => router.push(`/coins/${marketItem.slug}`)}
                         className={styles.chevron}
                       >
                         ›
@@ -657,7 +522,7 @@ export default function Home() {
                     {/* Trade and Quick Bet Buttons */}
                     <div className={styles.actionButtons}>
                       <button
-                        onClick={() => router.push(`/coins/${marketItem.id}`)}
+                        onClick={() => router.push(`/coins/${marketItem.slug}`)}
                         className={styles.tradeButton}
                       >
                         Trade
