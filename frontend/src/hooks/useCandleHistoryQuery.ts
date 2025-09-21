@@ -6,7 +6,7 @@ import { InfoClient, HttpTransport, type Candle } from "@nktkas/hyperliquid";
 type Interval = Candle["i"];
 
 export function useCandleHistoryQuery(params: {
-  token: string;
+  token?: string;
   interval: Interval;
   startTime: number;
   endTime?: number | null;
@@ -45,13 +45,13 @@ export function useCandleHistoryQuery(params: {
       const transport = new HttpTransport({ isTestnet: testnet });
       const info = new InfoClient({ transport });
       return info.candleSnapshot({
-        coin: token,
+        coin: token!,
         interval,
         startTime,
         endTime: normalizedEndTime,
       });
     },
-    enabled,
+    enabled: Boolean(enabled && token),
     staleTime,
     gcTime,
     refetchOnWindowFocus,

@@ -11,6 +11,7 @@ import { InfoClient, HttpTransport } from "@nktkas/hyperliquid";
 import { MarketResponseDTO, CreateMarketDTO } from "@/types/market";
 import PriceLineChart from "@/components/PriceLineChart";
 import { fetchCryptoPrices } from "@/utils/externalApiService";
+import { useAccount } from "wagmi";
 
 // Destructure apiService
 const { market } = apiService;
@@ -93,6 +94,9 @@ const fetchEthPrice = async (): Promise<number | null> => {
 export default function Home() {
   const router = useRouter();
   const { walletAddress } = useWallet();
+
+  const {address} = useAccount()
+
   const PRICE_MIN = 77000;
   const PRICE_MAX = 116000;
   const PRICE_STEP = 1000;

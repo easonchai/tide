@@ -1,6 +1,6 @@
 import { Abi } from "viem";
 
-export const CLMSRMarketCoreABI = [
+export const cLMSRMarketCoreABI = [
   {
     type: "function",
     name: "FEE_RANGE",
