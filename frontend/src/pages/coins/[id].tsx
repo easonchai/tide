@@ -96,7 +96,7 @@ const extractPriceFromQuestion = (question: string): number => {
 
 export default function CoinDetail() {
   const router = useRouter();
-  const { slug } = router.query;
+  const { id } = router.query;
 
   // Parse market data from query params
 
@@ -110,13 +110,13 @@ export default function CoinDetail() {
   const [showHedgeModal, setShowHedgeModal] = useState(false);
 
   const { data: marketData } = useQuery({
-    queryKey: ["marketData", slug],
+    queryKey: ["marketData", id],
     queryFn: async () => {
-      const response = await apiService.market.getBySlug(slug as string);
+      const response = await apiService.market.getBySlug(id as string);
 
       return response.data;
     },
-    enabled: Boolean(slug),
+    enabled: Boolean(id),
   }) as { data: MarketResponseDTO | undefined };
 
   const twentyFourHoursMs = 24 * 60 * 60 * 1000;
@@ -193,9 +193,9 @@ export default function CoinDetail() {
   }, []);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["coin-detail", slug],
-    queryFn: () => fetchCoinDetail(slug as string),
-    enabled: !!slug,
+    queryKey: ["coin-detail", id],
+    queryFn: () => fetchCoinDetail(id as string),
+    enabled: !!id,
     staleTime: 1000 * 60,
   });
 
@@ -557,7 +557,7 @@ export default function CoinDetail() {
 
       try {
         await apiService.market.createPosition({
-          marketSlug: String(slug),
+          marketSlug: String(id),
           userAddress: walletAddress,
           amount: amountParsed as bigint,
           lowerBound: BigInt(lowerTick),
