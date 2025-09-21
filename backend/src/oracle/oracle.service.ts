@@ -228,6 +228,68 @@ export class OracleService {
   }
 
   /**
+   * Manually resolves a market by slug
+   * @param {string} slug - The market slug to resolve
+   * @returns {Promise<any>} Resolution result with price data and transaction hash
+   * @throws {Error} If market not found or resolution fails
+   */
+  async manualResolveMarket(slug: string): Promise<any> {
+    this.logger.log(`Manual resolution requested for market: ${slug}`);
+
+    const market = await this.prisma.market.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        question: true,
+        address: true,
+        endDate: true,
+        status: true,
+      },
+    });
+
+    if (!market) {
+      throw new Error(`Market with slug "${slug}" not found`);
+    }
+
+    if (market.status !== 'OPEN') {
+      throw new Error(
+        `Market "${slug}" is not open (status: ${market.status})`,
+      );
+    }
+
+    await this.resolveMarket(market);
+
+    return {
+      success: true,
+      market: market.slug,
+      message: `Market ${slug} resolved successfully`,
+    };
+  }
+
+  /**
+   * Tests Hyperliquid price fetching for a specific coin and date
+   * @param {string} coinSymbol - The coin symbol to fetch (e.g., 'BTC', 'ETH')
+   * @param {Date} endDate - The date to fetch price data for
+   * @returns {Promise<any>} Price data from Hyperliquid
+   * @throws {Error} If price fetching fails
+   */
+  async testFetchPrice(coinSymbol: string, endDate: Date): Promise<any> {
+    this.logger.log(
+      `Testing price fetch for ${coinSymbol} at ${endDate.toISOString()}`,
+    );
+
+    const priceData = await this.fetchHyperliquidPrice(coinSymbol, endDate);
+
+    return {
+      success: true,
+      coinSymbol,
+      endDate: endDate.toISOString(),
+      priceData,
+    };
+  }
+
+  /**
    * Calculates the execution window for markets that ended at least 1 minute ago
    * Only processes markets that have already ended to ensure price data is finalized
    * @returns {{ windowStart: Date; windowEnd: Date }} Object containing start and end dates for the execution window
