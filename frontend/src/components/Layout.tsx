@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { ReactNode } from "react";
 import { useWallet } from "@/contexts/WalletContext";
 import styles from "@/styles/Layout.module.css";
+import { Toaster } from "react-hot-toast";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,7 +17,7 @@ const shortenAddress = (address: string) =>
 export default function Layout({
   children,
   title = "Tide Markets",
-  description = "Realtime crypto markets overview"
+  description = "Realtime crypto markets overview",
 }: LayoutProps) {
   const router = useRouter();
   const {
@@ -28,7 +29,7 @@ export default function Layout({
     setShowDisconnectTooltip,
     connectWallet,
     disconnectWallet,
-    connectWrapperRef
+    connectWrapperRef,
   } = useWallet();
 
   const isActivePage = (path: string) => router.pathname === path;
@@ -51,38 +52,38 @@ export default function Layout({
                 <div className={styles.logo}>
                   <img src="/logo.svg" alt="Tide Logo" width="52" height="32" />
                 </div>
-                <img src="/tide-text.svg" alt="Tide" className={styles.brandText} />
+                <img
+                  src="/tide-text.svg"
+                  alt="Tide"
+                  className={styles.brandText}
+                />
               </div>
 
               <nav className={styles.navigation}>
                 <a
                   href="/"
-                  className={`${styles.navLink} ${isActivePage('/') ? styles.active : ''}`}
+                  className={`${styles.navLink} ${isActivePage("/") ? styles.active : ""}`}
                 >
                   Markets
                 </a>
-                <a
-                  href="#"
-                  className={styles.navLink}
-                >
+                <a href="#" className={styles.navLink}>
                   Portfolio
                 </a>
                 <a
                   href="/news"
-                  className={`${styles.navLink} ${isActivePage('/news') ? styles.active : ''}`}
+                  className={`${styles.navLink} ${isActivePage("/news") ? styles.active : ""}`}
                 >
                   News Feed
                 </a>
               </nav>
             </div>
 
-
             <div className={styles.headerActions}>
               {walletAddress && (
                 <div className={styles.walletBalance}>
                   {walletBalance
-                      ? `$${(parseFloat(walletBalance) * 2500).toFixed(0)}` // Approximate ETH to USD
-                      : "$0"}
+                    ? `$${(parseFloat(walletBalance) * 2500).toFixed(0)}` // Approximate ETH to USD
+                    : "$0"}
                 </div>
               )}
               <div className={styles.connectWrapper} ref={connectWrapperRef}>
@@ -99,8 +100,9 @@ export default function Layout({
                     }
                   }}
                   disabled={isConnecting}
-                  className={`${styles.connectButton} ${walletAddress ? styles.connectButtonConnected : ""
-                    }`}
+                  className={`${styles.connectButton} ${
+                    walletAddress ? styles.connectButtonConnected : ""
+                  }`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
@@ -151,9 +153,36 @@ export default function Layout({
             </div>
           </div>
         </header>
+        <Toaster
+          position="top-center"
+          reverseOrder={false}
+          gutter={8}
+          containerClassName=""
+          containerStyle={{}}
+          toasterId="default"
+          toastOptions={{
+            // Define default options
+            className: "",
+            duration: 5000,
+            removeDelay: 1000,
+            style: {
+              background: "#363636",
+              color: "#fff",
+            },
 
+            // Default options for specific types
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: "green",
+                secondary: "black",
+              },
+            },
+          }}
+        />
         {children}
       </div>
     </>
   );
 }
+
