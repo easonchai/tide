@@ -5,6 +5,14 @@
   color: #ffffff;
 }
 
+.loadingMessage {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
 /* Header */
 .header {
   background: #1f2937;
@@ -228,6 +236,17 @@
   color: #ffffff;
 }
 
+.titleLink {
+  color: #ffffff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.titleLink:hover {
+  color: #51D5EB;
+  text-decoration: underline;
+}
+
 .newsSummary {
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.5;
@@ -260,6 +279,13 @@
   color: #51D5EB;
   font-weight: 500;
   font-size: 0.85rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sourceName:hover {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .marketImpact {

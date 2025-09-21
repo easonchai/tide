@@ -1,6 +1,7 @@
 import Head from "next/head";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import styles from "@/styles/News.module.css";
+import { fetchCryptoPrices } from "@/utils/externalApiService";
 
 interface NewsItem {
   id: string;
@@ -10,6 +11,7 @@ interface NewsItem {
   timeAgo: string;
   source: string;
   category: "fed" | "crypto" | "market" | "regulation";
+  url?: string;
   marketImpact: {
     btc: number;
     eth: number;
@@ -105,6 +107,32 @@ const mockNews: NewsItem[] = [
 ];
 
 export default function News() {
+  const newsData = mockNews;
+  const [pricesData, setPricesData] = useState<any>(null);
+
+  useEffect(() => {
+    const loadPrices = async () => {
+      try {
+        const prices = await fetchCryptoPrices();
+        setPricesData(prices);
+      } catch (error) {
+        console.error('Failed to load prices:', error);
+        // Keep fallback prices
+        setPricesData({
+          bitcoin: { price: 96582, change24h: 2.34 },
+          ethereum: { price: 3421, change24h: 1.89 },
+          solana: { price: 180, change24h: 1.2 },
+          hyperliquid: { price: 25.42, change24h: 0.5 }
+        });
+      }
+    };
+
+    loadPrices();
+    
+    // Refresh prices every 5 minutes
+    const interval = setInterval(loadPrices, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -118,7 +146,7 @@ export default function News() {
 
   const formatImpact = (value: number) => {
     const sign = value >= 0 ? "+" : "";
-    return `${sign}${value}%`;
+    return `${sign}${value.toFixed(2)}%`;
   };
 
   const formatTimeAgo = (timeAgo: string) => {
@@ -236,7 +264,7 @@ export default function News() {
         <main className={styles.main}>
           {/* News Grid */}
           <div className={styles.newsGrid}>
-            {mockNews.map((item) => (
+            {newsData.map((item) => (
               <article key={item.id} className={styles.newsCard}>
                 <div className={styles.cardHeader}>
                   <div className={styles.cardMeta}>
@@ -289,23 +317,59 @@ export default function News() {
             <div className={styles.summaryGrid}>
               <div className={styles.summaryCard}>
                 <h3>Bitcoin</h3>
-                <div className={styles.summaryPrice}>$96,582</div>
-                <div className={`${styles.summaryChange} ${styles.positive}`}>+2.34%</div>
+                <div className={styles.summaryPrice}>
+                  ${pricesData?.bitcoin?.price ? pricesData.bitcoin.price.toLocaleString() : '96,582'}
+                </div>
+                <div className={`${styles.summaryChange} ${
+                  (pricesData?.bitcoin?.change24h || 2.34) >= 0 ? styles.positive : styles.negative
+                }`}>
+                  {pricesData?.bitcoin?.change24h ? 
+                    `${pricesData.bitcoin.change24h >= 0 ? '+' : ''}${pricesData.bitcoin.change24h.toFixed(2)}%` : 
+                    '+2.34%'
+                  }
+                </div>
               </div>
               <div className={styles.summaryCard}>
                 <h3>Ethereum</h3>
-                <div className={styles.summaryPrice}>$3,421</div>
-                <div className={`${styles.summaryChange} ${styles.positive}`}>+1.89%</div>
+                <div className={styles.summaryPrice}>
+                  ${pricesData?.ethereum?.price ? pricesData.ethereum.price.toLocaleString() : '3,421'}
+                </div>
+                <div className={`${styles.summaryChange} ${
+                  (pricesData?.ethereum?.change24h || 1.89) >= 0 ? styles.positive : styles.negative
+                }`}>
+                  {pricesData?.ethereum?.change24h ? 
+                    `${pricesData.ethereum.change24h >= 0 ? '+' : ''}${pricesData.ethereum.change24h.toFixed(2)}%` : 
+                    '+1.89%'
+                  }
+                </div>
               </div>
               <div className={styles.summaryCard}>
-                <h3>Total Market Cap</h3>
-                <div className={styles.summaryPrice}>$2.1T</div>
-                <div className={`${styles.summaryChange} ${styles.positive}`}>+1.2%</div>
+                <h3>Solana</h3>
+                <div className={styles.summaryPrice}>
+                  ${pricesData?.solana?.price ? pricesData.solana.price.toLocaleString() : '180'}
+                </div>
+                <div className={`${styles.summaryChange} ${
+                  (pricesData?.solana?.change24h || 1.2) >= 0 ? styles.positive : styles.negative
+                }`}>
+                  {pricesData?.solana?.change24h ? 
+                    `${pricesData.solana.change24h >= 0 ? '+' : ''}${pricesData.solana.change24h.toFixed(2)}%` : 
+                    '+1.2%'
+                  }
+                </div>
               </div>
               <div className={styles.summaryCard}>
-                <h3>Fear & Greed Index</h3>
-                <div className={styles.summaryPrice}>72</div>
-                <div className={`${styles.summaryChange} ${styles.neutral}`}>Greed</div>
+                <h3>Hyperliquid</h3>
+                <div className={styles.summaryPrice}>
+                  ${pricesData?.hyperliquid?.price ? pricesData.hyperliquid.price.toFixed(2) : '25.42'}
+                </div>
+                <div className={`${styles.summaryChange} ${
+                  (pricesData?.hyperliquid?.change24h || 0.5) >= 0 ? styles.positive : styles.negative
+                }`}>
+                  {pricesData?.hyperliquid?.change24h ? 
+                    `${pricesData.hyperliquid.change24h >= 0 ? '+' : ''}${pricesData.hyperliquid.change24h.toFixed(2)}%` : 
+                    '+0.5%'
+                  }
+                </div>
               </div>
             </div>
           </div>
