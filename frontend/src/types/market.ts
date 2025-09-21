@@ -34,6 +34,7 @@ export interface MarketResponseDTO {
   updatedAt: string;
   deletedAt: string | null;
   resolvedAt: string | null;
+  resolutionOutcome: string | null;
 }
 
 export interface CreateNFTPositionDTO {

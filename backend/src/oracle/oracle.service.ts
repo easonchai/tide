@@ -77,6 +77,7 @@ export class OracleService {
         data: {
           status: 'RESOLVED',
           resolvedAt: new Date(),
+          resolutionOutcome: priceData.close.toString(),
         },
       });
 

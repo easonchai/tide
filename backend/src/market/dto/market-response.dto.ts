@@ -79,6 +79,13 @@ export class MarketResponseDTO {
     nullable: true,
   })
   resolvedAt: Date | null;
+
+  @ApiProperty({
+    description: 'The resolution outcome (price) when market is resolved',
+    example: '65.986',
+    nullable: true,
+  })
+  resolutionOutcome: string | null;
 }
 
 export class NFTPositionResponseDTO {
