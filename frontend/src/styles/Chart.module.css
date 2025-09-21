@@ -1,0 +1,29 @@
+.chartWrapper {
+  width: 100%;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #112b32; /* deep teal background similar to reference */
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.centerWrapper {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #112b32;
+}
+
+.chartContainer {
+  width: 100%;
+  max-width: 1200px;
+  height: 60vh;
+  background-color: #112b32;
+  border-left: 4px solid #e1f0f4;  /* y-axis line */
+  border-bottom: 4px solid #e1f0f4; /* x-axis line */
+}
+
