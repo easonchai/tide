@@ -90,9 +90,9 @@ This drives real‑time price context and helps users place more informed bets o
 ```text
 MockUSDC:               0x43c56b1d5be6170ff006d1634CCA2AC15092b50F
 CLMSRPosition Proxy:    0xCDFeF1ccEcc3935dB4824f876Bf4025C7e150076
-CLMSRPosition Impl:     0xCd78daa5a2718E922C2b17f95375e02523433cdD
+CLMSRPosition Implementation:     0xCd78daa5a2718E922C2b17f95375e02523433cdD
 CLMSRMarketCore Proxy:  0x59795AE595Eda5361504db12C7a250EE54bE079D
-CLMSRMarketCore Impl:   0xdf3f2b3F0E74aD776A9A8abEe35791396ccfA990
+CLMSRMarketCore Implementation:   0xdf3f2b3F0E74aD776A9A8abEe35791396ccfA990
 Vault:                  0x6666A67c36926c16f9587bb42D65ffB7E21e8d94
 ```
 
