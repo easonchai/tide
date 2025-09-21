@@ -42,7 +42,7 @@ export class MarketTransactionService {
    * @param {bigint} payout - The payout amount for the position (0 for deletions)
    * @returns {Promise<NFTPosition>} The closed NFT position with updated payout
    */
-  async deleteNFTPosition(id: string, payout: bigint): Promise<NFTPosition> {
+  async closeNFTPosition(id: string, payout: bigint): Promise<NFTPosition> {
     this.logger.log(`Soft deleting NFT position: ${id}`);
     try {
       const nftPosition = await this.prisma.nFTPosition.update({
