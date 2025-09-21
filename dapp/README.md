@@ -4,11 +4,14 @@ A decentralized prediction market contract implementing the Logarithmic Market S
 
 ## 🎯 Features
 
+- **ERC20 Token Support**: Bet using any ERC20 token (USDC, DAI, etc.)
 - **Scalar Market Support**: Bet on any price range within defined bounds
 - **LMSR Implementation**: Logarithmic Market Scoring Rule with PRB Math for accurate calculations
 - **NFT Position Tracking**: Each bet creates an ERC721 NFT representing the position
 - **Dynamic Pricing**: Real-time probability, odds, and payout calculations
 - **Range Betting**: Support for arbitrary price ranges (e.g., 110-120, 114-118)
+- **Configurable Fees**: Set custom fee percentages per market
+- **Fee Management**: Admin fee collection and withdrawal system
 - **Market Management**: Admin controls for creating, pausing, and resolving markets
 
 ## 🏗️ Architecture
@@ -29,10 +32,13 @@ struct Market {
     uint256 maxPrice;        // Maximum price in range
     uint256 bucketSize;      // Price increment size
     uint256 liquidityParameter; // LMSR liquidity parameter
+    address betToken;        // ERC20 token for betting
+    uint256 feePercentage;   // Fee percentage (basis points)
     bool isActive;
     bool isResolved;
     uint256 winningPrice;
     uint256 totalLiquidity;
+    uint256 totalFeesCollected;
     uint256 createdAt;
     uint256 resolvedAt;
 }
@@ -102,30 +108,36 @@ forge script script/ScalarLMSR.s.sol --rpc-url <testnet-rpc> --private-key <priv
 ### 1. Creating a Market (Admin Only)
 
 ```solidity
-// Create a market for prices 100-130 with $1 buckets
+// Create a market for prices 100-130 with $1 buckets using USDC
 uint256 marketId = scalarLMSR.createMarket(
     100,    // minPrice
     130,    // maxPrice
     1,      // bucketSize ($1 increments)
-    10000   // liquidityParameter
+    10000,  // liquidityParameter
+    address(usdc), // betToken: USDC address
+    250     // feePercentage: 2.5% (250 basis points)
 );
 ```
 
 ### 2. Placing Bets
 
 ```solidity
-// User bets $5k on range 111-112
-uint256 tokenId = scalarLMSR.placeBet{value: 5000 ether}(
+// User approves USDC and bets $5k on range 111-112
+usdc.approve(address(scalarLMSR), 5000 * 1e6);
+uint256 tokenId = scalarLMSR.placeBet(
     marketId,
     111,     // startPrice
-    112      // endPrice
+    112,     // endPrice
+    5000 * 1e6 // amount in USDC (6 decimals)
 );
 
 // User bets $3k on range 114-118
-uint256 tokenId2 = scalarLMSR.placeBet{value: 3000 ether}(
+usdc.approve(address(scalarLMSR), 3000 * 1e6);
+uint256 tokenId2 = scalarLMSR.placeBet(
     marketId,
     114,     // startPrice
-    118      // endPrice
+    118,     // endPrice
+    3000 * 1e6 // amount in USDC
 );
 ```
 
@@ -157,11 +169,28 @@ scalarLMSR.claimWinnings(tokenId);  // Will win if 115 is in range 111-112
 scalarLMSR.claimWinnings(tokenId2); // Will win if 115 is in range 114-118
 ```
 
+### 6. Fee Management (Admin Only)
+
+```solidity
+// Check collected fees
+uint256 totalFees = scalarLMSR.getTotalFeesCollected(address(usdc));
+uint256 withdrawableFees = scalarLMSR.getWithdrawableFees(address(usdc));
+
+// Withdraw fees to admin address
+scalarLMSR.withdrawFees(address(usdc), 0, adminAddress); // 0 = withdraw all
+
+// Update market fee
+scalarLMSR.updateMarketFee(marketId, 500); // 5% fee
+
+// Set default fee for new markets
+scalarLMSR.setDefaultFeePercentage(300); // 3% default
+```
+
 ## 🔧 API Reference
 
 ### Core Functions
 
-#### `createMarket(uint256 minPrice, uint256 maxPrice, uint256 bucketSize, uint256 liquidityParameter)`
+#### `createMarket(uint256 minPrice, uint256 maxPrice, uint256 bucketSize, uint256 liquidityParameter, address betToken, uint256 feePercentage)`
 
 Creates a new prediction market.
 
@@ -169,14 +198,17 @@ Creates a new prediction market.
 - **maxPrice**: Maximum price in the range
 - **bucketSize**: Size of each price bucket
 - **liquidityParameter**: LMSR liquidity parameter (higher = less price movement)
+- **betToken**: ERC20 token address for betting
+- **feePercentage**: Fee percentage in basis points (e.g., 250 = 2.5%)
 
-#### `placeBet(uint256 marketId, uint256 startPrice, uint256 endPrice)`
+#### `placeBet(uint256 marketId, uint256 startPrice, uint256 endPrice, uint256 amount)`
 
 Places a bet on a price range.
 
 - **marketId**: ID of the market
 - **startPrice**: Start of the price range
 - **endPrice**: End of the price range
+- **amount**: Amount to bet (in ERC20 tokens)
 - **Returns**: NFT token ID representing the position
 
 #### `resolveMarket(uint256 marketId, uint256 winningPrice)`
@@ -214,6 +246,43 @@ Returns market information.
 
 Returns position information.
 
+### Fee Management Functions
+
+#### `setDefaultFeePercentage(uint256 newFeePercentage)`
+
+Sets the default fee percentage for new markets.
+
+- **newFeePercentage**: New fee percentage in basis points
+
+#### `updateMarketFee(uint256 marketId, uint256 newFeePercentage)`
+
+Updates fee percentage for a specific market.
+
+- **marketId**: ID of the market
+- **newFeePercentage**: New fee percentage in basis points
+
+#### `withdrawFees(address token, uint256 amount, address to)`
+
+Withdraws collected fees for a specific token.
+
+- **token**: ERC20 token address
+- **amount**: Amount to withdraw (0 = withdraw all)
+- **to**: Address to send fees to
+
+#### `getTotalFeesCollected(address token)`
+
+Returns total fees collected for a token.
+
+#### `getWithdrawableFees(address token)`
+
+Returns withdrawable fees for a token.
+
+#### `getMarketFeeInfo(uint256 marketId)`
+
+Returns market fee information.
+
+- **Returns**: feePercentage and totalFeesCollected for the market
+
 ## 🧪 Testing
 
 The project includes comprehensive tests covering:
@@ -243,12 +312,14 @@ forge test --gas-report
 
 ### Test Coverage
 
-- ✅ Market creation
-- ✅ Betting functionality
+- ✅ Market creation with ERC20 tokens
+- ✅ Betting functionality with fees
 - ✅ Probability calculations
 - ✅ Odds calculations
 - ✅ Market resolution
 - ✅ Payout claims
+- ✅ Fee collection and management
+- ✅ Admin fee withdrawal
 - ✅ Error handling
 - ✅ Access controls
 
@@ -258,7 +329,9 @@ forge test --gas-report
 - **Ownable**: Admin-only functions for market management
 - **Input Validation**: Comprehensive parameter validation
 - **Fixed-Point Math**: PRB Math prevents overflow/underflow
-- **Safe Transfers**: Secure ETH transfers for payouts
+- **SafeERC20**: Secure ERC20 token transfers
+- **Fee Validation**: Fee percentage bounds checking
+- **Emergency Functions**: Admin can withdraw tokens in emergencies
 
 ## 📊 LMSR Implementation
 

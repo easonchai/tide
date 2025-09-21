@@ -23,12 +23,18 @@ contract ScalarLMSRScript is Script {
         // Create sample markets for demonstration
         console.log("\n=== Creating Sample Markets ===");
         
+        // Note: In a real deployment, you would need to deploy or use existing ERC20 tokens
+        // For this example, we'll use a mock USDC address (you'll need to replace with real USDC)
+        address mockUSDC = address(0x1234567890123456789012345678901234567890); // Replace with real USDC
+        
         // Bitcoin price prediction market
         uint256 btcMarketId = scalarLMSR.createMarket(
             50000,  // minPrice: $50,000
             70000,  // maxPrice: $70,000
             1000,   // bucketSize: $1,000 increments
-            10000   // liquidityParameter
+            10000,  // liquidityParameter
+            mockUSDC, // betToken: USDC
+            250     // feePercentage: 2.5%
         );
         console.log("Bitcoin market created with ID:", btcMarketId);
         
@@ -37,7 +43,9 @@ contract ScalarLMSRScript is Script {
             3000,   // minPrice: $3,000
             5000,   // maxPrice: $5,000
             100,    // bucketSize: $100 increments
-            10000   // liquidityParameter
+            10000,  // liquidityParameter
+            mockUSDC, // betToken: USDC
+            250     // feePercentage: 2.5%
         );
         console.log("Ethereum market created with ID:", ethMarketId);
         
@@ -46,7 +54,9 @@ contract ScalarLMSRScript is Script {
             100,    // minPrice: $100
             200,    // maxPrice: $200
             5,      // bucketSize: $5 increments
-            10000   // liquidityParameter
+            10000,  // liquidityParameter
+            mockUSDC, // betToken: USDC
+            250     // feePercentage: 2.5%
         );
         console.log("Stock market created with ID:", stockMarketId);
 
