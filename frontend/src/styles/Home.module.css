@@ -284,8 +284,8 @@
 }
 
 .card {
-  background: #1f2937;
-  border: 1px solid #374151;
+  background: #51D5EB1A;
+  border: none;
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -430,10 +430,10 @@
   width: 100%;
 }
 
-.tradeButton {
+.predictButton {
   flex: 1;
-  background: #000000;
-  color: #51d5eb;
+  background: #51D5EB;
+  color: #000000;
   border: none;
   border-radius: 12px;
   padding: 16px;
@@ -444,12 +444,12 @@
   cursor: pointer;
 }
 
-.tradeButton:hover {
-  background: #1a1a1a;
+.predictButton:hover {
+  background: #3bc5d8;
   transform: translateY(-1px);
 }
 
-.tradeButton:active {
+.predictButton:active {
   transform: translateY(0);
 }
 
@@ -842,11 +842,11 @@
   }
 
   .container {
-    background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
+    background: #0e1b24;
   }
 
   .card {
-    background: #1f2937;
+    background: #51D5EB1A;
     color: #f9fafb;
   }
 
@@ -1042,7 +1042,7 @@
     font-size: 18px;
   }
 
-  .tradeButton,
+  .predictButton,
   .quickBetButton {
     padding: 14px;
     font-size: 15px;
@@ -1120,15 +1120,6 @@
     background: #1a1a1a;
   }
 
-  .tradeButton {
-    background: #000000;
-    color: #ffffff;
-  }
-
-  .tradeButton:hover {
-    background: #1a1a1a;
-  }
-
   .quickBetButton {
     background: #374151;
     color: #f9fafb;
@@ -1138,6 +1129,7 @@
   .quickBetButton:hover {
     background: #4b5563;
   }
+
 }
 
 /* Section Title */

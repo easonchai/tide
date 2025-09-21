@@ -300,18 +300,13 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Trade and Quick Bet Buttons */}
+                    {/* Predict and Quick Bet Buttons */}
                     <div className={styles.actionButtons}>
                       <button
-                        onClick={() =>
-                          router.push({
-                            pathname: `/coins/${marketItem.slug}`,
-                            query: { marketData: JSON.stringify(marketItem) },
-                          })
-                        }
-                        className={styles.tradeButton}
+                        onClick={() => router.push(`/coins/${marketItem.slug}`)}
+                        className={styles.predictButton}
                       >
-                        Trade
+                        Predict
                       </button>
                       <button
                         onClick={() => {
