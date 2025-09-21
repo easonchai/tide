@@ -50,14 +50,10 @@ export const apiService = {
     delete: (slug: string) => api.delete(`/markets/${slug}`),
     createPosition: (payload: CreateNFTPositionDTO) =>
       api.post("/markets/positions", payload),
-    getPositionsByUser: (
-      address: string,
-      params?: { includeClosed?: boolean }
-    ) => api.get(`/markets/positions/user/${address}`, { params }),
-    getPositionsByMarket: (
-      slug: string,
-      params?: { includeClosed?: boolean }
-    ) => api.get(`/markets/positions/market/${slug}`, { params }),
+    getPositionsByUser: (address: string) =>
+      api.get(`/markets/positions/user/${address}`),
+    getPositionsByMarket: (slug: string) =>
+      api.get(`/markets/positions/market/${slug}`),
     closePosition: (id: string, payload: CloseNFTPositionDTO) =>
       api.put(`/markets/positions/${id}/close`, payload),
   },
