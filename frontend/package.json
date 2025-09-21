@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "workspace": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:hyperliquid": "node test-hyperliquid.js"
   },
   "dependencies": {
     "@nktkas/hyperliquid": "^0.24.3",
