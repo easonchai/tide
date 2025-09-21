@@ -28,6 +28,7 @@ const mockNews: NewsItem[] = [
     timeAgo: "2 hrs ago",
     source: "Federal Reserve",
     category: "fed",
+    url: "https://images.unsplash.com/photo-1649635839465-731f7dffd0a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZWRlcmFsJTIwcmVzZXJ2ZSUyMG1lZXRpbmclMjBmaW5hbmNlfGVufDF8fHx8MTc1ODQ0OTgyNXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
     marketImpact: {
       btc: 0.81,
       eth: 0.9,
@@ -42,6 +43,7 @@ const mockNews: NewsItem[] = [
     timeAgo: "4 hrs ago",
     source: "Bloomberg",
     category: "crypto",
+    url: "https://images.unsplash.com/photo-1627570120184-7aec90f5613a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiaXRjb2luJTIwY3J5cHRvY3VycmVuY3klMjBuZXdzfGVufDF8fHx8MTc1ODQ0OTgyOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
     marketImpact: {
       btc: 2.1,
       eth: 1.4,
@@ -56,6 +58,7 @@ const mockNews: NewsItem[] = [
     timeAgo: "6 hrs ago",
     source: "European Commission",
     category: "regulation",
+    url: "https://images.unsplash.com/photo-1744473755637-e09f0c2fab41?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcnlwdG9jdXJyZW5jeSUyMHRyYWRpbmclMjBjaGFydHN8ZW58MXx8fHwxNzU4NDMyNTY4fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
     marketImpact: {
       btc: -0.3,
       eth: -0.7,
@@ -70,6 +73,7 @@ const mockNews: NewsItem[] = [
     timeAgo: "8 hrs ago",
     source: "Ethereum Foundation", 
     category: "crypto",
+    url: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
     marketImpact: {
       btc: 0.1,
       eth: 1.8,
@@ -84,6 +88,7 @@ const mockNews: NewsItem[] = [
     timeAgo: "3 hrs ago",
     source: "MarketWatch",
     category: "market", 
+    url: "https://images.unsplash.com/photo-1556155092-490a1ba16284?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdG9jayUyMG1hcmtldCUyMGFuYWx5dGljc3xlbnwxfHx8fDE3NTg0NDk4MzF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
     marketImpact: {
       btc: 0.5,
       eth: 0.6,
@@ -98,6 +103,7 @@ const mockNews: NewsItem[] = [
     timeAgo: "12 hrs ago",
     source: "Binance",
     category: "crypto",
+    url: "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
     marketImpact: {
       btc: 1.2,
       eth: 0.2,
@@ -262,48 +268,59 @@ export default function News() {
         </header>
 
         <main className={styles.main}>
-          {/* News Grid */}
-          <div className={styles.newsGrid}>
+          {/* Single Column News Feed */}
+          <div className={styles.newsFeed}>
             {newsData.map((item) => (
               <article key={item.id} className={styles.newsCard}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardMeta}>
-                    <span 
-                      className={styles.category}
-                      style={{ backgroundColor: getCategoryColor(item.category) }}
-                    >
-                      {item.category.toUpperCase()}
-                    </span>
-                    <span className={styles.timeAgo}>{formatTimeAgo(item.timeAgo)}</span>
-                  </div>
-                </div>
-
-                <h3 className={styles.newsTitle}>{item.title}</h3>
-                <p className={styles.newsSummary}>{item.summary}</p>
-
-                <div className={styles.cardFooter}>
-                  <div className={styles.source}>
-                    <span className={styles.sourceLabel}>Source:</span>
-                    <span className={styles.sourceName}>{item.source}</span>
-                  </div>
-
-                  <div className={styles.marketImpact}>
-                    <span className={styles.impactLabel}>Market Impact:</span>
-                    <div className={styles.impactValues}>
+                {/* News Image */}
+                {item.url && (
+                  <div className={styles.newsImage}>
+                    <img 
+                      src={item.url} 
+                      alt={item.title}
+                      className={styles.cardImage}
+                    />
+                    <div className={styles.imageOverlay}>
                       <span 
-                        className={`${styles.impactValue} ${
-                          item.marketImpact.btc >= 0 ? styles.positive : styles.negative
-                        }`}
+                        className={styles.category}
+                        style={{ backgroundColor: getCategoryColor(item.category) }}
                       >
-                        BTC {formatImpact(item.marketImpact.btc)}
+                        {item.category.toUpperCase()}
                       </span>
-                      <span 
-                        className={`${styles.impactValue} ${
-                          item.marketImpact.eth >= 0 ? styles.positive : styles.negative
-                        }`}
-                      >
-                        ETH {formatImpact(item.marketImpact.eth)}
-                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.cardContent}>
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardMeta}>
+                      <span className={styles.source}>{item.source}</span>
+                      <span className={styles.timeAgo}>{formatTimeAgo(item.timeAgo)}</span>
+                    </div>
+                  </div>
+
+                  <h3 className={styles.newsTitle}>{item.title}</h3>
+                  <p className={styles.newsSummary}>{item.summary}</p>
+
+                  <div className={styles.cardFooter}>
+                    <div className={styles.marketImpact}>
+                      <span className={styles.impactLabel}>Market Impact:</span>
+                      <div className={styles.impactValues}>
+                        <span 
+                          className={`${styles.impactValue} ${
+                            item.marketImpact.btc >= 0 ? styles.positive : styles.negative
+                          }`}
+                        >
+                          BTC {formatImpact(item.marketImpact.btc)}
+                        </span>
+                        <span 
+                          className={`${styles.impactValue} ${
+                            item.marketImpact.eth >= 0 ? styles.positive : styles.negative
+                          }`}
+                        >
+                          ETH {formatImpact(item.marketImpact.eth)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -177,15 +177,59 @@
   margin-bottom: 3rem;
 }
 
+/* Single Column News Feed */
+.newsFeed {
+  max-width: 1200px;
+  margin: 0 auto 3rem auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
 .newsCard {
   background: #51D5EB1A;
   border-radius: 12px;
-  padding: 1.5rem;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+/* News Card for Grid Layout */
+.newsGrid .newsCard {
+  padding: 1.5rem;
   justify-content: space-between;
   gap: 0.25rem;
+}
+
+/* News Image */
+.newsImage {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.newsCard:hover .cardImage {
+  transform: scale(1.05);
+}
+
+.imageOverlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
+/* Card Content */
+.cardContent {
+  padding: 1.5rem;
 }
 
 
@@ -291,7 +335,6 @@
 .marketImpact {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 0.5rem;
 }
 
@@ -417,6 +460,20 @@
   .newsGrid {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
+  }
+
+  .newsFeed {
+    max-width: 100%;
+    margin: 0 0 2rem 0;
+    grid-template-columns: 1fr;
+  }
+
+  .newsImage {
+    height: 160px;
+  }
+
+  .cardContent {
+    padding: 1rem;
   }
 
   .cardFooter {
