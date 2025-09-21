@@ -18,51 +18,51 @@ CLMSR generalizes LMSR to a continuous price axis. Instead of splitting liquidit
 This design yields instant exposure, fairer pricing, and better capital efficiency than bucketed scalar markets.
 
 ## Core Writer
-- Used to get candle data (HyperCore) for the app and analytics
-- Candle data drives Oracle settlement
+- We use the Hyperliquid TypeScript SDK for Core Writer and data access as it provides typed, well-documented, and easy integration for signing and sending Core Writer actions.: [nktkas/hyperliquid](https://github.com/nktkas/hyperliquid)
+- Used to get candlestick data (HyperCore) for the app (charts & live feed) and analytics
+- Candlestick data drives Oracle settlement
 - Used to buy perps for hedging (correlated assets)
 
-Candle data (app & oracle):
+Candlestick data (frontend charts & live feed):
 ```ts
-// Essentials: historical candles from HyperCore
-const transport = new HttpTransport({ isTestnet: true });
+// frontend/src/hooks/useCandleHistoryQuery.ts
+const transport = new HttpTransport({ isTestnet: testnet });
 const info = new InfoClient({ transport });
-const candles = await info.candleSnapshot({ coin, interval: '1m', startTime, endTime });
-const close = parseFloat(candles.at(-1).c);
-```
-
-Oracle settlement (scale and settle):
-```ts
-// Scale for 2‑decimal ticks and settle on HyperEVM
-const scaled = BigInt(Math.round(close * 1e8));
-await blockchain.settleMarket(BigInt(market.onChainId), scaled);
-```
-
-Hedging order (client → server → Core Writer):
-```tsx
-// Frontend: submit hedge intent
-await fetch('/api/hedge', {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ symbol, side, sizeUsd, leverage, type, limitPrice })
+return info.candleSnapshot({
+  coin: token,
+  interval,
+  startTime,
+  endTime: normalizedEndTime,
 });
 ```
+
+Oracle price snapshot (HyperCore → close price):
 ```ts
-// Server: route into Core Writer
-const order = { symbol, side, sizeUsd, leverage, type, limitPrice };
-// const tx = await coreWriter.placeOrder(order);
+// backend/src/oracle/oracle.service.ts
+const transport = new HttpTransport({ isTestnet: false });
+const infoClient = new InfoClient({ transport });
+const candlestickData = await infoClient.candleSnapshot({
+  coin: coinSymbol,
+  interval: '1m',
+  startTime,
+  endTime,
+});
+const latestCandle = candlestickData[candlestickData.length - 1];
+const close = parseFloat(latestCandle.c);
+```
+
+Settlement and on‑chain call:
+```ts
+// backend/src/oracle/oracle.service.ts
+const scaledSettlement = BigInt(Math.round(priceData.close * 1e8));
+await this.blockchain.settleMarket(BigInt(market.onChainId), scaledSettlement);
 ```
 
 ## Builder Codes
 - Used in hedging to attribute flow to Tide
 - Fees in USDC are used for HYPE buybacks (and future builder/user rewards)
 
-Hedging with attribution:
-```tsx
-await fetch('/api/hedge', {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ symbol, side, sizeUsd, leverage, type, builderCode: 'TIDE' })
-});
-```
+Hedging requests include a Tide builder code so fees are routed back to the platform, enabling sustainable incentives and periodic HYPE buybacks that can fund future rewards programs.
 
 ## Frontend (Trading + Data)
 The Tide web app provides:
@@ -70,20 +70,12 @@ The Tide web app provides:
 - Continuous range selection for scalar markets.
 - One‑click hedging on Hyperliquid perps from the same screen.
 
-We source chart data directly from HyperCore. Example historical candles hook:
-```ts
-// frontend/src/hooks/useCandleHistoryQuery.ts (essentials)
-const transport = new HttpTransport({ isTestnet: true });
-const info = new InfoClient({ transport });
-return info.candleSnapshot({ coin: token, interval, startTime, endTime });
-```
-
+We source candlestick data directly from HyperCore to power frontend charts and the live price feed. Example historical candles hook:
 This drives real‑time price context and helps users place more informed bets or hedges.
 
 ## Backend (API + Oracle)
 - NestJS + Prisma. Public APIs for markets and positions.
-- Manual Oracle resolution endpoint pulls HyperCore prices and settles CLMSR markets on HyperEVM (standardized 2‑decimal tick scaling via 1e8 multiplier on the close price).
-- Scheduling/automation is on the roadmap.
+- Manual Oracle resolution endpoint pulls HyperCore prices and settles CLMSR markets on HyperEVM, with an automated version being planned for the future that uses a scheduler.
 
 ## Contracts (HyperEVM testnet 998)
 ```text
@@ -96,4 +88,4 @@ Vault:                  0x6666A67c36926c16f9587bb42D65ffB7E21e8d94
 ```
 
 ## Pitch deck
-- Link: <add your deck link here>
+- Link: [Tide Pitch Deck](https://www.figma.com/slides/xRDDtPnlwDsMZv6Hm52rjJ/Tide-Deck?node-id=1-15&t=ByNVARfWY3XZHISW-1)
