@@ -19,7 +19,7 @@ export enum MarketStatus {
   PAUSED = 'PAUSED',
 }
 
-export class CreateMarketDto {
+export class CreateMarketDTO {
   @ApiProperty({
     description: 'The market question',
     example: 'Will Bitcoin reach $100,000 by end of 2024?',
@@ -111,7 +111,7 @@ export class CreateMarketDto {
   endDate?: string;
 }
 
-export class UpdateMarketDto {
+export class UpdateMarketDTO {
   @ApiProperty({
     description: 'The market question',
     example: 'Will Bitcoin reach $100,000 by end of 2024?',

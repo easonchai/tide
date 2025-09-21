@@ -12,8 +12,8 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { MarketService } from './market.service';
 import { Market } from '@prisma/client';
-import { CreateMarketDto, UpdateMarketDto } from './dto/market.dto';
-import { MarketResponseDto } from './dto/market-response.dto';
+import { CreateMarketDTO, UpdateMarketDTO } from './dto/market.dto';
+import { MarketResponseDTO } from './dto/market-response.dto';
 
 @ApiTags('Markets')
 @Controller('markets')
@@ -26,7 +26,7 @@ export class MarketController {
   @ApiResponse({
     status: 201,
     description: 'Market created successfully',
-    type: MarketResponseDto,
+    type: MarketResponseDTO,
   })
   @ApiResponse({
     status: 400,
@@ -34,7 +34,7 @@ export class MarketController {
   })
   @ApiResponse({ status: 409, description: 'Address or slug already exists' })
   async createMarket(
-    @Body() createMarketData: CreateMarketDto,
+    @Body() createMarketData: CreateMarketDTO,
   ): Promise<Market> {
     return this.marketService.createMarket(createMarketData);
   }
@@ -44,7 +44,7 @@ export class MarketController {
   @ApiResponse({
     status: 200,
     description: 'List of markets',
-    type: [MarketResponseDto],
+    type: [MarketResponseDTO],
   })
   async getAllMarkets(): Promise<Market[]> {
     return this.marketService.getAllMarkets();
@@ -60,7 +60,7 @@ export class MarketController {
   @ApiResponse({
     status: 200,
     description: 'Market found',
-    type: MarketResponseDto,
+    type: MarketResponseDTO,
   })
   @ApiResponse({ status: 404, description: 'Market not found' })
   async getMarketBySlug(@Param('slug') slug: string): Promise<Market | null> {
@@ -78,7 +78,7 @@ export class MarketController {
   @ApiResponse({
     status: 200,
     description: 'Market updated successfully',
-    type: MarketResponseDto,
+    type: MarketResponseDTO,
   })
   @ApiResponse({ status: 404, description: 'Market not found' })
   @ApiResponse({
@@ -87,7 +87,7 @@ export class MarketController {
   })
   async updateMarket(
     @Param('slug') slug: string,
-    @Body() updateMarketData: UpdateMarketDto,
+    @Body() updateMarketData: UpdateMarketDTO,
   ): Promise<Market> {
     return this.marketService.updateMarket({ slug }, updateMarketData);
   }
@@ -103,7 +103,7 @@ export class MarketController {
   @ApiResponse({
     status: 200,
     description: 'Market deleted successfully',
-    type: MarketResponseDto,
+    type: MarketResponseDTO,
   })
   @ApiResponse({ status: 404, description: 'Market not found' })
   @ApiResponse({ status: 400, description: 'Market already deleted' })

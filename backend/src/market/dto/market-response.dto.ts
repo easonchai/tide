@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { MarketStatus } from './market.dto';
 
-export class MarketResponseDto {
+export class MarketResponseDTO {
   @ApiProperty({
     description: 'Unique identifier for the market',
     example: 'clx1234567890abcdef',
