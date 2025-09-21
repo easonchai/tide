@@ -47,9 +47,9 @@ const defaultData: LineChartPoint[] = [
 export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartProps): React.ReactElement {
   // Use static historyStart to prevent constant reloading
   const historyStart = React.useMemo(() => {
-    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    const twentyFourHoursMs = 30 * 60 * 1000;
     return Date.now() - twentyFourHoursMs;
-  }, [coin]); // Only recalculate when coin changes
+  }, []); // Only recalculate when coin changes
   
   const { data: candleHistory } = useCandleHistoryQuery({
     token: coin,

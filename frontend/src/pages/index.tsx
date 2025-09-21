@@ -123,12 +123,6 @@ export default function Home() {
     return ["#e5e7eb", "#000000", "#e5e7eb"];
   }, []);
 
-  // Hyperliquid live candle for HYPE/USDC (mainnet)
-  const { latest: hypeCandle } = useHyperliquidCandles({
-    baseOrPair: "HYPE",
-    interval: "1m",
-    testnet: false,
-  });
 
   // Fetch markets
   const fetchMarkets = useCallback(async () => {
@@ -199,6 +193,27 @@ export default function Home() {
     return `${(ethVolume / 1000).toFixed(1)}k`;
   };
 
+  // Hyperliquid live candle for HYPE/USDC (mainnet)
+  const { latest: hypeCandle } = useHyperliquidCandles({
+    baseOrPair: "HYPE",
+    interval: "1m",
+    testnet: false,
+  });
+
+  const { latest: btcCandle } = useHyperliquidCandles({
+    baseOrPair: "BTC",
+    interval: "1m",
+    testnet: false,
+  });
+
+  const { latest: ethCandle } = useHyperliquidCandles({
+    baseOrPair: "ETH",
+    interval: "1m",
+    testnet: false,
+  });
+
+  console.log("latest: ", {hypeCandle, btcCandle, ethCandle})
+
   // Get current price from market data or real-time prices
   const getCurrentPrice = (market: Market): string => {
     if (market.resolutionOutcome) {
@@ -209,13 +224,13 @@ export default function Home() {
     if (cryptoPrices) {
       const questionLower = market.question.toLowerCase();
       if (questionLower.includes('bitcoin') || questionLower.includes('btc')) {
-        return cryptoPrices.bitcoin?.price ? Math.round(cryptoPrices.bitcoin.price).toLocaleString() : "0";
+        return btcCandle ? Math.round(parseFloat(btcCandle.c)).toLocaleString() : "0";
       }
       if (questionLower.includes('ethereum') || questionLower.includes('eth')) {
-        return cryptoPrices.ethereum?.price ? Math.round(cryptoPrices.ethereum.price).toLocaleString() : "0";
+        return ethCandle ? Math.round(parseFloat(ethCandle.c)).toLocaleString() : "0";
       }
       if (questionLower.includes('hype')) {
-        return cryptoPrices.hyperliquid?.price ? cryptoPrices.hyperliquid.price.toFixed(3) : "0";
+        return hypeCandle ? Math.round(parseFloat(hypeCandle.c)).toLocaleString() : "0";
       }
     }
     
