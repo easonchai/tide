@@ -9,7 +9,7 @@ import {parseEther} from "viem";
 contract CreateSampleMarkets is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address coreAddress = vm.envAddress("CORE");
+        address coreAddress = vm.envAddress("CLMSR_CORE_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 
