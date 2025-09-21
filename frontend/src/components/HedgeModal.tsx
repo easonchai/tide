@@ -76,28 +76,36 @@ const HedgeModal: React.FC<HedgeModalProps> = ({
           </div>
 
           {/* Direction and Order Type Row */}
-          <div className="flex space-x-4">
+          <div className="flex justify-between items-end">
             {/* Direction Toggle */}
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center space-x-2">
-                <span style={{ color: direction === 'LONG' ? '#16a34a' : '#9ca3af', fontSize: '14px' }}>LONG</span>
+            <div className="space-y-2">
+              <div className="flex rounded overflow-hidden border h-6" style={{ borderColor: '#374151' }}>
                 <button
-                  onClick={() => setDirection(direction === 'LONG' ? 'SHORT' : 'LONG')}
-                  className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                  style={{ background: direction === 'LONG' ? '#16a34a' : '#dc2626' }}
+                  onClick={() => setDirection('LONG')}
+                  className="flex-1 px-4 text-xs font-medium transition-colors flex items-center justify-center hover:bg-gray-700"
+                  style={{
+                    background: direction === 'LONG' ? '#16a34a' : '#1f2937',
+                    color: 'white',
+                    borderRight: '1px solid #374151'
+                  }}
                 >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      direction === 'LONG' ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
+                  LONG
                 </button>
-                <span style={{ color: direction === 'SHORT' ? '#dc2626' : '#9ca3af', fontSize: '14px' }}>SHORT</span>
+                <button
+                  onClick={() => setDirection('SHORT')}
+                  className="flex-1 px-4 text-xs font-medium transition-colors flex items-center justify-center hover:bg-gray-700"
+                  style={{
+                    background: direction === 'SHORT' ? '#dc2626' : '#1f2937',
+                    color: 'white'
+                  }}
+                >
+                  SHORT
+                </button>
               </div>
             </div>
 
             {/* Order Type Toggle */}
-            <div className="flex-1 space-y-2">
+            <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <span style={{ color: orderType === 'MARKET' ? '#51D5EB' : '#9ca3af', fontSize: '14px' }}>Market</span>
                 <button
