@@ -11,8 +11,8 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { User } from '@prisma/client';
-import { CreateUserDto } from './dto/user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
+import { CreateUserDTO } from './dto/user.dto';
+import { UserResponseDTO } from './dto/user-response.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -25,14 +25,14 @@ export class UserController {
   @ApiResponse({
     status: 201,
     description: 'User created successfully',
-    type: UserResponseDto,
+    type: UserResponseDTO,
   })
   @ApiResponse({
     status: 400,
     description: 'Bad request - Invalid address format',
   })
   @ApiResponse({ status: 409, description: 'Address already exists' })
-  async createUser(@Body() createUserData: CreateUserDto): Promise<User> {
+  async createUser(@Body() createUserData: CreateUserDTO): Promise<User> {
     return this.userService.createUser(createUserData);
   }
 
@@ -46,7 +46,7 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'User found',
-    type: UserResponseDto,
+    type: UserResponseDTO,
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async getUserByAddress(
@@ -66,7 +66,7 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'User deleted successfully',
-    type: UserResponseDto,
+    type: UserResponseDTO,
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 400, description: 'User already deleted' })
