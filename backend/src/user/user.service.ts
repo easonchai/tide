@@ -9,13 +9,22 @@ export class UserService {
   private readonly logger = new Logger(UserService.name);
 
   /**
-   * Creates a new user in the database
+   * Creates a new user in the database, or returns existing user if already exists
    * @param {Prisma.UserCreateInput} data - User creation data
-   * @returns {Promise<User>} The created user
+   * @returns {Promise<User>} The created or existing user
    */
   async createUser(data: Prisma.UserCreateInput): Promise<User> {
     this.logger.log(`Creating user with address: ${data.address}`);
     try {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { address: data.address },
+      });
+
+      if (existingUser) {
+        this.logger.log(`User already exists: ${existingUser.id}`);
+        return existingUser;
+      }
+
       const user = await this.prisma.user.create({ data });
       this.logger.log(`User created successfully: ${user.id}`);
       return user;
