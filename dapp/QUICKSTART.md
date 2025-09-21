@@ -7,32 +7,28 @@ Get up and running with the Scalar LMSR Prediction Market in 5 minutes!
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) installed
 - Basic knowledge of Solidity
 
-## 1. Setup (30 seconds)
-
-```bash
-cd dapp
-chmod +x setup.sh
-./setup.sh
-```
-
-## 2. Deploy Locally (1 minute)
+## 1. Deploy Locally (1 minute)
 
 ```bash
 # Start local node (in separate terminal)
 anvil
 
-# Deploy contract (in dapp directory)
-forge script script/ScalarLMSR.s.sol --rpc-url http://localhost:8545 --broadcast
+# Deploy contracts (in dapp directory)
+export PRIVATE_KEY=YOUR_PRIVATE_KEY
+forge script script/DeployCLMSR.s.sol --rpc-url http://localhost:8545 --broadcast -vv
 ```
 
-## 3. Run Example (2 minutes)
+## 2. Verify Deployment (2 minutes)
 
 ```bash
-# Run the example usage script
-forge script examples/ExampleUsage.s.sol --rpc-url http://localhost:8545 --broadcast
+# Check addresses from the deployment logs:
+# - MockUSDC
+# - CLMSRPosition (proxy)
+# - CLMSRMarketCore (proxy)
+# - Vault
 ```
 
-## 4. Test Everything (1 minute)
+## 3. Test Everything (1 minute)
 
 ```bash
 # Run all tests
@@ -42,20 +38,20 @@ forge test
 forge test --gas-report
 ```
 
-## 5. Deploy to Testnet (2 minutes)
+## 4. Deploy to Testnet (2 minutes)
 
 ```bash
-# Deploy to Sepolia
-forge script script/ScalarLMSR.s.sol \
-  --rpc-url https://sepolia.infura.io/v3/YOUR_KEY \
-  --private-key YOUR_PRIVATE_KEY \
-  --broadcast
+# Deploy to Hyperliquid Testnet (example)
+export PRIVATE_KEY=YOUR_PRIVATE_KEY
+forge script script/DeployCLMSR.s.sol \
+  --rpc-url https://rpc.hyperliquid-testnet.xyz/evm \
+  --broadcast -vv
 ```
 
 ## 🎯 What You Get
 
-- ✅ **Working prediction market contract**
-- ✅ **3 sample markets** (Bitcoin, Ethereum, Stock)
+- ✅ **Core market system (CLMSRMarketCore + CLMSRPosition)**
+- ✅ **Vault with timelock and per-token fees**
 - ✅ **All tests passing**
 - ✅ **Gas-optimized code**
 - ✅ **Ready for production**

@@ -7,3 +7,6 @@
 [submodule "dapp/lib/prb-math"]
 	path = dapp/lib/prb-math
 	url = https://github.com/PaulRBerg/prb-math
+[submodule "dapp/lib/openzeppelin-contracts-upgradeable"]
+	path = dapp/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
