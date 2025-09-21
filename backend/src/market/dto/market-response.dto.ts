@@ -9,6 +9,12 @@ export class MarketResponseDTO {
   id: string;
 
   @ApiProperty({
+    description: 'On-chain market ID',
+    example: '1',
+  })
+  onChainId: bigint;
+
+  @ApiProperty({
     description: 'The market question',
     example: 'Will Bitcoin reach $100,000 by end of 2024?',
   })
@@ -116,8 +122,9 @@ export class NFTPositionResponseDTO {
   @ApiProperty({
     description: 'The on chain NFT ID of the position',
     example: '42',
+    required: false,
   })
-  onChainId: string;
+  onChainId?: string;
 
   @ApiProperty({
     description: 'The amount of the position',

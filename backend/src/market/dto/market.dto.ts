@@ -37,6 +37,15 @@ export class CreateMarketDTO {
   token: string;
 
   @ApiProperty({
+    description: 'On-chain market ID',
+    example: '1',
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => BigInt(value))
+  onChainId?: bigint;
+
+  @ApiProperty({
     description: 'Market tags',
     example: ['crypto', 'bitcoin', 'price-prediction'],
     type: [String],
@@ -98,6 +107,15 @@ export class UpdateMarketDTO {
     message: 'Status must be one of: OPEN, CLOSED, RESOLVED, PAUSED',
   })
   status?: MarketStatus;
+
+  @ApiProperty({
+    description: 'On-chain market ID',
+    example: '1',
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => BigInt(value))
+  onChainId?: bigint;
 
   @ApiProperty({
     description: 'Market tags',

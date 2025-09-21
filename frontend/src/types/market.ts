@@ -8,6 +8,7 @@ export enum MarketStatus {
 export interface CreateMarketDTO {
   question: string;
   token: string;
+  onChainId?: bigint;
   tags?: string[];
   profileImage?: string;
   slug: string;
@@ -17,6 +18,7 @@ export interface CreateMarketDTO {
 export interface UpdateMarketDTO {
   question?: string;
   token?: string;
+  onChainId?: bigint;
   status?: MarketStatus;
   tags?: string[];
   profileImage?: string;
@@ -25,6 +27,7 @@ export interface UpdateMarketDTO {
 
 export interface MarketResponseDTO {
   id: string;
+  onChainId: bigint;
   question: string;
   token: string;
   status: MarketStatus;
