@@ -19,6 +19,7 @@ import { betOnPriceRange } from "@/utils/lmsr";
 import { apiService } from "@/utils/apiService";
 import styles from "@/styles/CoinDetail.module.css";
 import { useWallet } from "@/contexts/WalletContext";
+import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 
 const shortenAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -75,9 +76,24 @@ const percentageFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+const extractPriceFromQuestion = (question: string): number => {
+  // Extract price from question text like "Bitcoin will be above $100,000 by Dec 31, 2024"
+  const match = question.match(/\$([\d,]+)/);
+  if (match) {
+    return parseInt(match[1].replace(/,/g, ""), 10);
+  }
+  return 100000; // Default price if not found
+};
+
 export default function CoinDetail() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, marketData: marketDataString } = router.query;
+
+  // Parse market data from query params
+  const marketData = marketDataString
+    ? JSON.parse(marketDataString as string)
+    : null;
+
   const [amountInput, setAmountInput] = useState("100");
   const { walletAddress, connectWallet } = useWallet();
 
@@ -134,18 +150,28 @@ export default function CoinDetail() {
     [fetchMarketPositions]
   );
 
-  // Fetch market positions when component mounts or when we have market data
+  // Fetch market positions when component mounts
   useEffect(() => {
-    if (marketData?.slug) {
-      console.log("marketData", marketData);
-      // If we have market data with slug, use it directly
-      void fetchMarketPositions(marketData.slug);
-    } else if (id && typeof id === "string") {
-      // Otherwise, fetch market info by ID first
-      console.log("---2");
+    if (id && typeof id === "string") {
       fetchMarketBySlug(id);
     }
-  }, [marketData?.slug, id, fetchMarketBySlug, fetchMarketPositions]);
+  }, [id, fetchMarketBySlug]);
+
+  const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+  const [historyStart] = useState(() => Date.now() - twentyFourHoursMs);
+
+  const { data: hypeHistory } = useCandleHistoryQuery({
+    token: marketData?.token,
+    interval: "1m",
+    startTime: historyStart,
+    endTime: null,
+    testnet: false,
+    enabled: true,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+  });
 
   const amount = useMemo(() => {
     const normalized = amountInput.replace(/,/g, ".").trim();
@@ -204,11 +230,60 @@ export default function CoinDetail() {
     });
   }, []);
 
-  // Price range slider state
-  const [priceRange, setPriceRange] = useState<[number, number]>([
-    114700, 116700,
-  ]);
-  const domain: [number, number] = [110000, 120000];
+  // Calculate price range and domain from real data
+  const {
+    dataMinPrice,
+    dataMaxPrice,
+    dataAvgPrice,
+    domain,
+    initialPriceRange,
+  } = useMemo(() => {
+    if (!hypeHistory || !hypeHistory.length) {
+      return {
+        dataMinPrice: 110000,
+        dataMaxPrice: 120000,
+        dataAvgPrice: 115000,
+        domain: [110000, 120000] as [number, number],
+        initialPriceRange: [114700, 116700] as [number, number],
+      };
+    }
+
+    const prices = hypeHistory.map((candle) => parseFloat(candle.c));
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+
+    // Add some padding to the domain
+    const padding = (max - min) * 0.1;
+    const domainMin = Math.max(0, min - padding);
+    const domainMax = max + padding;
+
+    // Set initial price range to be around the average
+    const rangePadding = (max - min) * 0.1;
+    const rangeMin = Math.max(domainMin, avg - rangePadding);
+    const rangeMax = Math.min(domainMax, avg + rangePadding);
+
+    return {
+      dataMinPrice: min,
+      dataMaxPrice: max,
+      dataAvgPrice: avg,
+      domain: [domainMin, domainMax] as [number, number],
+      initialPriceRange: [rangeMin, rangeMax] as [number, number],
+    };
+  }, [hypeHistory]);
+
+  // Price range slider state - initialize with domain values
+  const [priceRange, setPriceRange] = useState<[number, number]>(() => {
+    // Initialize with domain values to avoid Range error
+    return [domain[0], domain[1]];
+  });
+
+  // Update price range when initial data is available
+  useEffect(() => {
+    if (initialPriceRange[0] !== 0 && initialPriceRange[1] !== 0) {
+      setPriceRange(initialPriceRange);
+    }
+  }, [initialPriceRange]);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["coin-detail", id],
@@ -216,6 +291,116 @@ export default function CoinDetail() {
     enabled: !!id,
     staleTime: 1000 * 60,
   });
+
+  // Use market data if available, otherwise fall back to fetched data
+  const coin = marketData
+    ? {
+        id: marketData.id,
+        symbol: "BTC",
+        name: marketData.question,
+        image: marketData.profileImage || "/bitcoin-icon.png",
+        currentPrice: extractPriceFromQuestion(marketData.question),
+        priceChangePercentage24h: null,
+      }
+    : data?.coin;
+
+  // Use real data from hypeHistory for chart
+  const chart = useMemo(() => {
+    if (!hypeHistory || !hypeHistory.length) {
+      return [];
+    }
+
+    return hypeHistory.map((candle) => ({
+      time: new Date(candle.T).toISOString(),
+      price: parseFloat(candle.c), // close price
+    }));
+  }, [hypeHistory]);
+
+  // Generate probability distribution from real data
+  const probability = useMemo(() => {
+    if (!hypeHistory || !hypeHistory.length) {
+      return [];
+    }
+
+    const prices = hypeHistory.map((candle) => parseFloat(candle.c));
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min;
+    const binCount = 20; // Number of price bins
+    const binSize = range / binCount;
+
+    // Create bins and count occurrences
+    const bins = Array.from({ length: binCount }, (_, i) => {
+      const binStart = min + i * binSize;
+      const binEnd = min + (i + 1) * binSize;
+      const count = prices.filter(
+        (price) => price >= binStart && price < binEnd
+      ).length;
+      const probability = count / prices.length;
+
+      return {
+        price: binStart + binSize / 2, // Center of bin
+        probability: probability > 0 ? probability : 0.001, // Minimum probability
+      };
+    });
+
+    return bins;
+  }, [hypeHistory]);
+
+  // Create bin structure for LMSR calculations based on real data
+  const { bins, q } = useMemo(() => {
+    if (!hypeHistory || !hypeHistory.length) {
+      return { bins: [], q: [] };
+    }
+
+    const binSize = Math.max(1, (domain[1] - domain[0]) / 100); // Dynamic bin size
+    const minPrice = Math.floor(domain[0] / binSize) * binSize;
+    const maxPrice = Math.ceil(domain[1] / binSize) * binSize;
+    const binCount = Math.floor((maxPrice - minPrice) / binSize);
+
+    // Create bins and distribute probability
+    const bins = Array.from({ length: binCount }, (_, i) => {
+      const binPrice = minPrice + i * binSize;
+      const binProb = probability
+        .filter((p) => p.price >= binPrice && p.price < binPrice + binSize)
+        .reduce((sum, p) => sum + p.probability, 0);
+
+      return {
+        index: i,
+        price: binPrice,
+        probability: binProb > 0 ? binProb : 0.001, // Minimum probability to avoid zero
+      };
+    });
+
+    // Initialize LMSR quantities (q values) based on real data
+    const initialLiquidity = 100;
+    const q = bins.map((bin, i) => {
+      // Center bin gets higher liquidity, decreases towards edges
+      const centerIndex = binCount / 2;
+      const distanceFromCenter = Math.abs(i - centerIndex);
+      const liquidityFactor = Math.exp(-distanceFromCenter / (binCount / 6));
+
+      // Base liquidity + probability-based liquidity
+      const baseLiquidity = 10;
+      const probabilityBasedLiquidity =
+        bin.probability * initialLiquidity * liquidityFactor;
+
+      return Math.max(baseLiquidity + probabilityBasedLiquidity, 1);
+    });
+
+    return { bins, q };
+  }, [hypeHistory, domain, probability]);
+
+  // Calculate which bins are in the selected range (정확한 범위 계산)
+  const selectedBins = bins
+    .filter((bin) => bin.price >= priceRange[0] && bin.price < priceRange[1])
+    .map((bin) => bin.index);
+
+  // Use LMSR calculation for accurate predictions
+  const lmsrResult = betOnPriceRange(q, selectedBins, amount);
+
+  const winProbability = lmsrResult.winProbability;
+  const receiveIfWin = lmsrResult.receiveIfWin;
 
   // If we have market data from props, we can render immediately
   // Otherwise, wait for the API data to load
@@ -235,94 +420,10 @@ export default function CoinDetail() {
     );
   }
 
-  // Use market data if available, otherwise fall back to fetched data
-  const coin = marketData
-    ? {
-        id: marketData.id,
-        symbol: "BTC",
-        name: marketData.question,
-        image: marketData.profileImage || "/bitcoin-icon.png",
-        currentPrice: extractPriceFromQuestion(marketData.question),
-        priceChangePercentage24h: null,
-      }
-    : data?.coin;
-
-  // Use mock data for chart and probability (in production, these should come from separate APIs)
-  const chart = data?.chart || [
-    { time: "2024-01-01T00:00:00Z", price: 114000 },
-    { time: "2024-01-01T01:00:00Z", price: 114500 },
-    { time: "2024-01-01T02:00:00Z", price: 115000 },
-    { time: "2024-01-01T03:00:00Z", price: 115500 },
-    { time: "2024-01-01T04:00:00Z", price: 116000 },
-    { time: "2024-01-01T05:00:00Z", price: 116500 },
-    { time: "2024-01-01T06:00:00Z", price: 117000 },
-  ];
-
-  const probability = data?.probability || [
-    { price: 110000, probability: 0.05 },
-    { price: 111000, probability: 0.08 },
-    { price: 112000, probability: 0.12 },
-    { price: 113000, probability: 0.15 },
-    { price: 114000, probability: 0.18 },
-    { price: 115000, probability: 0.2 },
-    { price: 116000, probability: 0.15 },
-    { price: 117000, probability: 0.12 },
-    { price: 118000, probability: 0.08 },
-    { price: 119000, probability: 0.05 },
-    { price: 120000, probability: 0.02 },
-  ];
-
-  // Create $100 bin structure for LMSR calculations (Signals 스타일)
-  const binSize = 100;
-  const minPrice = Math.floor(domain[0] / binSize) * binSize;
-  const maxPrice = Math.ceil(domain[1] / binSize) * binSize;
-  const binCount = Math.floor((maxPrice - minPrice) / binSize);
-
-  // Create bins and distribute probability
-  const bins = Array.from({ length: binCount }, (_, i) => {
-    const binPrice = minPrice + i * binSize;
-    const binProb = probability
-      .filter((p) => p.price >= binPrice && p.price < binPrice + binSize)
-      .reduce((sum, p) => sum + p.probability, 0);
-
-    return {
-      index: i,
-      price: binPrice,
-      probability: binProb > 0 ? binProb : 0.001, // Minimum probability to avoid zero
-    };
-  });
-
-  // Initialize LMSR quantities (q values) - 더 현실적인 시장 분포
-  const initialLiquidity = 100;
-  const q = bins.map((bin, i) => {
-    // 중앙 bin에 더 높은 유동성, 끝으로 갈수록 낮아지는 분포
-    const centerIndex = binCount / 2;
-    const distanceFromCenter = Math.abs(i - centerIndex);
-    const liquidityFactor = Math.exp(-distanceFromCenter / (binCount / 6));
-
-    // 기본 유동성 + 확률 기반 유동성
-    const baseLiquidity = 10;
-    const probabilityBasedLiquidity =
-      bin.probability * initialLiquidity * liquidityFactor;
-
-    return Math.max(baseLiquidity + probabilityBasedLiquidity, 1);
-  });
-
-  // Calculate which bins are in the selected range (정확한 범위 계산)
-  const selectedBins = bins
-    .filter((bin) => bin.price >= priceRange[0] && bin.price < priceRange[1])
-    .map((bin) => bin.index);
-
-  // Use LMSR calculation for accurate predictions
-  const lmsrResult = betOnPriceRange(q, selectedBins, amount);
-
-  const winProbability = lmsrResult.winProbability;
-  const receiveIfWin = lmsrResult.receiveIfWin;
-
   return (
     <Layout
-      title={`${coin.name} Market - Tide Markets`}
-      description={`${coin.name} market analysis and prediction`}
+      title={`${coin?.name || "Market"} - Tide Markets`}
+      description={`${coin?.name || "Market"} market analysis and prediction`}
     >
       <div className={styles.container}>
         {/* Event Details Section */}
@@ -428,80 +529,83 @@ export default function CoinDetail() {
 
               {/* Range Slider Overlay */}
               <div className={styles.rangeSliderOverlay}>
-                <Range
-                  values={priceRange}
-                  step={100}
-                  min={domain[0]}
-                  max={domain[1]}
-                  onChange={(values) => {
-                    setPriceRange(values as [number, number]);
-                  }}
-                  renderTrack={({ props, children }) => {
-                    const {
-                      key: trackKey,
-                      style,
-                      ...trackProps
-                    } = props as unknown as {
-                      key?: string | number;
-                      style?: React.CSSProperties;
-                      [key: string]: unknown;
-                    };
+                {priceRange[0] >= domain[0] && priceRange[1] <= domain[1] && (
+                  <Range
+                    values={priceRange}
+                    step={100}
+                    min={domain[0]}
+                    max={domain[1]}
+                    onChange={(values) => {
+                      setPriceRange(values as [number, number]);
+                    }}
+                    renderTrack={({ props, children }) => {
+                      const {
+                        key: trackKey,
+                        style,
+                        ...trackProps
+                      } = props as unknown as {
+                        key?: string | number;
+                        style?: React.CSSProperties;
+                        [key: string]: unknown;
+                      };
 
-                    return (
-                      <div
-                        key={trackKey}
-                        {...trackProps}
-                        className={styles.rangeTrack}
-                        style={{
-                          ...style,
-                          height: "100%",
-                          width: "8px",
-                          background:
-                            "linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%)",
-                          borderRadius: "4px",
-                          border: "1px solid rgba(81, 213, 235, 0.3)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {children}
-                      </div>
-                    );
-                  }}
-                  renderThumb={({ props, index }) => {
-                    const {
-                      key: thumbKey,
-                      style,
-                      ...thumbProps
-                    } = props as unknown as {
-                      key?: string | number;
-                      style?: React.CSSProperties;
-                      [key: string]: unknown;
-                    };
+                      return (
+                        <div
+                          key={trackKey}
+                          {...trackProps}
+                          className={styles.rangeTrack}
+                          style={{
+                            ...style,
+                            height: "100%",
+                            width: "8px",
+                            background:
+                              "linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%)",
+                            borderRadius: "4px",
+                            border: "1px solid rgba(81, 213, 235, 0.3)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {children}
+                        </div>
+                      );
+                    }}
+                    renderThumb={({ props, index }) => {
+                      const {
+                        key: thumbKey,
+                        style,
+                        ...thumbProps
+                      } = props as unknown as {
+                        key?: string | number;
+                        style?: React.CSSProperties;
+                        [key: string]: unknown;
+                      };
 
-                    return (
-                      <div
-                        key={thumbKey}
-                        {...thumbProps}
-                        className={`${styles.rangeThumb} ${
-                          index === 0 ? styles.minThumb : styles.maxThumb
-                        }`}
-                        style={{
-                          ...style,
-                          height: "24px",
-                          width: "24px",
-                          borderRadius: "50%",
-                          backgroundColor: index === 0 ? "#16a34a" : "#dc2626",
-                          border: "3px solid #1f2937",
-                          boxShadow: "0 4px 12px rgba(81, 213, 235, 0.4)",
-                          cursor: "grab",
-                          transition:
-                            "transform 0.2s ease, box-shadow 0.2s ease",
-                        }}
-                      />
-                    );
-                  }}
-                  direction={Direction.Up}
-                />
+                      return (
+                        <div
+                          key={thumbKey}
+                          {...thumbProps}
+                          className={`${styles.rangeThumb} ${
+                            index === 0 ? styles.minThumb : styles.maxThumb
+                          }`}
+                          style={{
+                            ...style,
+                            height: "24px",
+                            width: "24px",
+                            borderRadius: "50%",
+                            backgroundColor:
+                              index === 0 ? "#16a34a" : "#dc2626",
+                            border: "3px solid #1f2937",
+                            boxShadow: "0 4px 12px rgba(81, 213, 235, 0.4)",
+                            cursor: "grab",
+                            transition:
+                              "transform 0.2s ease, box-shadow 0.2s ease",
+                          }}
+                        />
+                      );
+                    }}
+                    direction={Direction.Up}
+                  />
+                )}
 
                 {/* Range Labels */}
                 <div className={styles.rangeLabels}>
@@ -527,7 +631,7 @@ export default function CoinDetail() {
           <div className={styles.priceCard}>
             <div className={styles.cardLabel}>Min Price</div>
             <div className={styles.cardValue}>
-              {currencyFormatter.format(priceRange[0])}
+              {currencyFormatter.format(dataMinPrice)}
             </div>
           </div>
 
@@ -535,7 +639,7 @@ export default function CoinDetail() {
           <div className={styles.priceCard}>
             <div className={styles.cardLabel}>Max Price</div>
             <div className={styles.cardValue}>
-              {currencyFormatter.format(priceRange[1])}
+              {currencyFormatter.format(dataMaxPrice)}
             </div>
           </div>
 
@@ -551,7 +655,7 @@ export default function CoinDetail() {
           <div className={styles.priceCard}>
             <div className={styles.cardLabel}>Avg Price</div>
             <div className={styles.cardValue}>
-              {currencyFormatter.format((priceRange[0] + priceRange[1]) / 2)}
+              {currencyFormatter.format(dataAvgPrice)}
             </div>
           </div>
 
@@ -573,9 +677,7 @@ export default function CoinDetail() {
             <div className={styles.cardValue}>
               {currencyFormatter.format(amount || 0)}
             </div>
-            <div className={styles.cardSubtext}>
-              Balance: {usdBalance || "$0"}
-            </div>
+            <div className={styles.cardSubtext}>Balance: $0</div>
           </div>
 
           {/* Receive if you win */}

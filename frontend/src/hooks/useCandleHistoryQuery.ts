@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { InfoClient, HttpTransport, type Candle } from '@nktkas/hyperliquid';
+import { useQuery } from "@tanstack/react-query";
+import { InfoClient, HttpTransport, type Candle } from "@nktkas/hyperliquid";
 
-type Interval = Candle['i'];
+type Interval = Candle["i"];
 
 export function useCandleHistoryQuery(params: {
-  coin: string;
+  token: string;
   interval: Interval;
   startTime: number;
   endTime?: number | null;
@@ -19,7 +19,7 @@ export function useCandleHistoryQuery(params: {
   retry?: boolean | number;
 }) {
   const {
-    coin,
+    token,
     interval,
     startTime,
     endTime,
@@ -36,14 +36,20 @@ export function useCandleHistoryQuery(params: {
 
   return useQuery<Candle[]>({
     queryKey: [
-      'hyperliquid',
-      'candleSnapshot',
-      { coin, interval, startTime, endTime: normalizedEndTime, testnet },
+      "hyperliquid",
+      "candleSnapshot",
+      { token, interval, startTime, endTime: normalizedEndTime, testnet },
     ],
     queryFn: async () => {
+      console.log("🕯️ useCandleHistoryQuery - Using token:", token);
       const transport = new HttpTransport({ isTestnet: testnet });
       const info = new InfoClient({ transport });
-      return info.candleSnapshot({ coin, interval, startTime, endTime: normalizedEndTime });
+      return info.candleSnapshot({
+        coin: token,
+        interval,
+        startTime,
+        endTime: normalizedEndTime,
+      });
     },
     enabled,
     staleTime,
@@ -55,5 +61,3 @@ export function useCandleHistoryQuery(params: {
 }
 
 export type { Candle };
-
-

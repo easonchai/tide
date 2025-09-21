@@ -8,27 +8,13 @@ import { apiService } from "@/utils/apiService";
 import { useHyperliquidCandles } from "@/hooks/useHyperliquidCandles";
 import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 import { InfoClient, HttpTransport } from "@nktkas/hyperliquid";
+import { MarketResponseDTO, CreateMarketDTO } from "@/types/market";
 
 // Destructure apiService
 const { market } = apiService;
 
-// Market data type (from API response)
-type Market = {
-  id: string;
-  question: string;
-  address: string;
-  status: string;
-  tags: string[];
-  profileImage: string;
-  slug: string;
-  fee: number;
-  volume: number;
-  endDate: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-  resolvedAt: string | null;
-};
+// Use MarketResponseDTO instead of local Market type
+type Market = MarketResponseDTO;
 
 const shortenAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -131,36 +117,22 @@ export default function Home() {
   }, []);
 
   // Hyperliquid live candle for HYPE/USDC (mainnet)
-  const { latest: hypeCandle } = useHyperliquidCandles({ baseOrPair: 'HYPE', interval: '1m', testnet: false });
+  const { latest: hypeCandle } = useHyperliquidCandles({
+    baseOrPair: "HYPE",
+    interval: "1m",
+    testnet: false,
+  });
 
   useEffect(() => {
     if (!hypeCandle) return;
     // Console log ISO timestamp and current close price
     // Candle numbers are strings; keep as-is or parse if needed
-    console.log('[HYPE/USDC 1m]', new Date(hypeCandle.T).toISOString(), hypeCandle.c);
+    console.log(
+      "[HYPE/USDC 1m]",
+      new Date(hypeCandle.T).toISOString(),
+      hypeCandle.c
+    );
   }, [hypeCandle]);
-
-  // Fetch last 24h 1m historical candles (mainnet) via React Query
-  const twentyFourHoursMs = 24 * 60 * 60 * 1000;
-  const [historyStart] = useState(() => Date.now() - twentyFourHoursMs); // stable startTime
-  const { data: hypeHistory } = useCandleHistoryQuery({
-    coin: "@107", // HYPE/USDC mainnet pair id (update if needed)
-    interval: '1m',
-    startTime: historyStart,
-    endTime: null,
-    testnet: false,
-    enabled: true,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: 1,
-  });
-
-  useEffect(() => {
-    if (!hypeHistory?.length) return;
-    const last = hypeHistory[hypeHistory.length - 1];
-    console.log('[HYPE/USDC history 1m]', new Date(last.T).toISOString(), last.c);
-  }, [hypeHistory]);
 
   // Fetch markets
   const fetchMarkets = useCallback(async () => {
@@ -169,6 +141,7 @@ export default function Home() {
         status: "OPEN" as any,
       });
       const marketsData = response.data || [];
+
       setMarkets(marketsData);
       setCurrentQuestion(marketsData[0] || null);
     } catch (error: any) {
@@ -187,9 +160,10 @@ export default function Home() {
   };
 
   // Format volume from wei to k Vol format
-  const formatVolume = (volume: number): string => {
-    if (volume === 0) return "0";
-    const ethVolume = volume / 1e18;
+  const formatVolume = (volume: string | number): string => {
+    const numVolume = typeof volume === "string" ? parseFloat(volume) : volume;
+    if (numVolume === 0) return "0";
+    const ethVolume = numVolume / 1e18;
     // Always show in k units (divide by 1000)
     return `${(ethVolume / 1000).toFixed(1)}k`;
   };
@@ -236,6 +210,8 @@ export default function Home() {
     <Layout>
       <div className={styles.container}>
         <main className={styles.main}>
+          {/* Test Button for Market Creation */}
+
           {!showPredictionModal ? (
             <>
               {/* Section Title */}
@@ -268,12 +244,17 @@ export default function Home() {
                         </div>
                       </div>
                       <div
-                        onClick={() =>
+                        onClick={() => {
+                          console.log("🏠 Home - marketItem:", marketItem);
+                          console.log(
+                            "🏠 Home - marketItem.token:",
+                            marketItem.token
+                          );
                           router.push({
                             pathname: `/coins/${marketItem.slug}`,
                             query: { marketData: JSON.stringify(marketItem) },
-                          })
-                        }
+                          });
+                        }}
                         className={styles.chevron}
                       >
                         ›
@@ -303,19 +284,15 @@ export default function Home() {
                     {/* Predict and Quick Bet Buttons */}
                     <div className={styles.actionButtons}>
                       <button
-                        onClick={() => router.push(`/coins/${marketItem.slug}`)}
+                        onClick={() => {
+                          router.push({
+                            pathname: `/coins/${marketItem.slug}`,
+                            query: { marketData: JSON.stringify(marketItem) },
+                          });
+                        }}
                         className={styles.predictButton}
                       >
                         Predict
-                      </button>
-                      <button
-                        onClick={() => {
-                          setCurrentQuestion(marketItem);
-                          setShowPredictionModal(true);
-                        }}
-                        className={styles.quickBetButton}
-                      >
-                        Quick Bet
                       </button>
                     </div>
                   </div>
