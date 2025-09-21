@@ -1,0 +1,9 @@
+[submodule "dapp/lib/forge-std"]
+	path = dapp/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "dapp/lib/openzeppelin-contracts"]
+	path = dapp/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "dapp/lib/prb-math"]
+	path = dapp/lib/prb-math
+	url = https://github.com/PaulRBerg/prb-math
