@@ -16,11 +16,72 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Range, Direction } from "react-range";
-import { useState } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import React from "react";
+import type { EthereumProvider } from "@walletconnect/ethereum-provider";
 
 import { betOnPriceRange } from "@/utils/lmsr";
 import styles from "@/styles/CoinDetail.module.css";
+import headerStyles from "@/styles/Home.module.css";
+
+const shortenAddress = (address: string) =>
+  `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+const isIgnorableWalletConnectError = (error: unknown) => {
+  const message =
+    typeof error === "string"
+      ? error
+      : (error as Error | undefined)?.message ?? "";
+
+  if (!message) {
+    return false;
+  }
+
+  return [
+    "Record was recently deleted",
+    "No matching key",
+    "Pending session not found",
+    "session topic doesn't exist",
+  ].some((fragment) => message.includes(fragment));
+};
+
+const formatEthBalance = (weiHex: string) => {
+  try {
+    const wei = BigInt(weiHex);
+    const etherWhole = wei / 10n ** 18n;
+    const etherFraction = wei % 10n ** 18n;
+
+    if (etherFraction === 0n) {
+      return etherWhole.toString();
+    }
+
+    const fraction = etherFraction.toString().padStart(18, "0").slice(0, 4);
+    const trimmedFraction = fraction.replace(/0+$/, "");
+
+    return `${etherWhole.toString()}${
+      trimmedFraction ? `.${trimmedFraction}` : ""
+    }`;
+  } catch (error) {
+    console.error("ETH 잔액 포맷 실패", error);
+    return "0";
+  }
+};
+
+const clearWalletConnectStorage = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    const storage = window.localStorage;
+
+    Object.keys(storage)
+      .filter((key) => key.startsWith("wc@"))
+      .forEach((key) => storage.removeItem(key));
+  } catch (error) {
+    console.warn("WalletConnect 스토리지 초기화 실패", error);
+  }
+};
 
 type ChartPoint = {
   time: string;
@@ -78,7 +139,231 @@ export default function CoinDetail() {
   const router = useRouter();
   const { id } = router.query;
   const [shares, setShares] = useState(1);
-  const [amount, setAmount] = useState(0);
+  const [amountInput, setAmountInput] = useState("100");
+
+  // Wallet states
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+  const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
+  const providerRef = useRef<EthereumProvider | null>(null);
+  const connectWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  const amount = useMemo(() => {
+    const normalized = amountInput.replace(/,/g, ".").trim();
+
+    if (!normalized) {
+      return 0;
+    }
+
+    const parsed = Number.parseFloat(normalized);
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 0;
+    }
+
+    return parsed;
+  }, [amountInput]);
+
+  const handleAmountChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = event.target;
+
+      if (!value) {
+        setAmountInput("");
+        return;
+      }
+
+      const normalized = value.replace(/,/g, ".");
+      const sanitized = normalized.replace(/[^0-9.]/g, "");
+      const dotIndex = sanitized.indexOf(".");
+      const nextValue =
+        dotIndex === -1
+          ? sanitized
+          : `${sanitized.slice(0, dotIndex + 1)}${sanitized
+              .slice(dotIndex + 1)
+              .replace(/\./g, "")}`;
+
+      setAmountInput(nextValue);
+    },
+    []
+  );
+
+  const handleAmountBlur = useCallback(() => {
+    setAmountInput((prev) => {
+      if (!prev.trim()) {
+        return "";
+      }
+
+      const parsed = Number.parseFloat(prev);
+
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return "";
+      }
+
+      const formatted = parsed.toFixed(parsed % 1 === 0 ? 0 : 2);
+      return formatted.replace(/\.00$/, "");
+    });
+  }, []);
+
+  const fetchWalletBalance = useCallback(async (address: string) => {
+    const provider = providerRef.current;
+
+    if (!provider) {
+      return;
+    }
+
+    setWalletBalance(null);
+    setIsFetchingBalance(true);
+
+    try {
+      const balanceHex = (await provider.request({
+        method: "eth_getBalance",
+        params: [address, "latest"],
+      })) as string;
+
+      setWalletBalance(formatEthBalance(balanceHex));
+    } catch (error) {
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("지갑 잔액 조회 실패", error);
+      }
+      setWalletBalance(null);
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  }, []);
+
+  const handleAccountsChanged = useCallback(
+    (accounts: string[]) => {
+      const nextAccount = accounts?.[0] ?? null;
+      setWalletAddress(nextAccount);
+
+      if (nextAccount) {
+        void fetchWalletBalance(nextAccount);
+      } else {
+        setWalletBalance(null);
+      }
+
+      setShowDisconnectTooltip(false);
+    },
+    [fetchWalletBalance]
+  );
+
+  const handleDisconnect = useCallback(() => {
+    setWalletAddress(null);
+    setWalletBalance(null);
+    setShowDisconnectTooltip(false);
+    providerRef.current = null;
+  }, []);
+
+  const connectWallet = useCallback(async () => {
+    if (isConnecting || walletAddress) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+
+    if (!projectId) {
+      setConnectError("WalletConnect 프로젝트 ID가 설정되어 있지 않습니다.");
+      return;
+    }
+
+    setShowDisconnectTooltip(false);
+    setIsConnecting(true);
+    setConnectError(null);
+
+    try {
+      if (!providerRef.current) {
+        const { EthereumProvider } = await import(
+          "@walletconnect/ethereum-provider"
+        );
+
+        const provider = await EthereumProvider.init({
+          projectId,
+          showQrModal: true,
+          chains: [1],
+          optionalChains: [137, 42161, 10],
+          methods: ["eth_sendTransaction", "personal_sign"],
+          optionalMethods: [
+            "eth_accounts",
+            "eth_requestAccounts",
+            "eth_sign",
+            "eth_signTypedData",
+            "eth_getBalance",
+          ],
+          events: ["chainChanged", "accountsChanged"],
+          optionalEvents: ["disconnect"],
+        });
+
+        provider.on("accountsChanged", handleAccountsChanged);
+        provider.on("disconnect", handleDisconnect);
+
+        providerRef.current = provider;
+      }
+
+      let accounts: string[] = [];
+
+      if (!providerRef.current.connected) {
+        accounts =
+          ((await providerRef.current.connect().catch((error) => {
+            if (!isIgnorableWalletConnectError(error)) {
+              console.error("WalletConnect 연결 실패", error);
+              setConnectError("지갑 연결에 실패했습니다.");
+            }
+            throw error;
+          })) as string[]) ?? [];
+      } else {
+        accounts = (providerRef.current.accounts as string[]) ?? [];
+      }
+
+      const account = accounts?.[0];
+
+      if (account) {
+        setWalletAddress(account);
+        void fetchWalletBalance(account);
+      }
+    } catch (error) {
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("WalletConnect 연결 실패", error);
+        setConnectError("지갑 연결에 실패했습니다.");
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [
+    fetchWalletBalance,
+    handleAccountsChanged,
+    handleDisconnect,
+    isConnecting,
+    walletAddress,
+  ]);
+
+  const disconnectWallet = useCallback(async () => {
+    const provider = providerRef.current;
+
+    if (!provider) {
+      return;
+    }
+
+    try {
+      if (provider.connected) {
+        await provider.disconnect();
+      }
+    } catch (error) {
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("WalletConnect 연결 해제 실패", error);
+      }
+    } finally {
+      handleDisconnect();
+      clearWalletConnectStorage();
+    }
+  }, [handleDisconnect]);
 
   // Price range slider state
   const [priceRange, setPriceRange] = useState<[number, number]>([
@@ -231,66 +516,176 @@ export default function CoinDetail() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <Link href="/" className={styles.backButton}>
-            ← Back to Markets
-          </Link>
-        </header>
-
-        <div className={styles.coinHeader}>
-          <div className={styles.identity}>
-            <Image
-              src={coin.image}
-              alt={coin.name}
-              width={60}
-              height={60}
-              className={styles.avatar}
-            />
-            <div>
-              <h1 className={styles.coinName}>{coin.name}</h1>
-              <p className={styles.coinSymbol}>{coin.symbol.toUpperCase()}</p>
+      {/* Header */}
+      <header className={headerStyles.header}>
+        <div className={headerStyles.headerContent}>
+          <div className={headerStyles.brand}>
+            <div className={headerStyles.logo}>
+              <img
+                src="/tide-logo.svg"
+                alt="Tide Logo"
+                width="48"
+                height="48"
+              />
             </div>
+            <span className={headerStyles.brandName}>Tide</span>
           </div>
-          <div className={styles.priceSection}>
-            <p className={styles.currentPrice}>
-              {currencyFormatter.format(coin.currentPrice)}
-            </p>
-            {typeof coin.priceChangePercentage24h === "number" ? (
-              <p
-                className={`${styles.priceChange} ${
-                  coin.priceChangePercentage24h >= 0
-                    ? styles.positive
-                    : styles.negative
+
+          <nav className={headerStyles.navigation}>
+            <a href="#" className={headerStyles.navLink}>
+              Markets
+            </a>
+            <a href="#" className={headerStyles.navLink}>
+              Portfolio
+            </a>
+          </nav>
+
+          <div className={headerStyles.headerActions}>
+            <div className={headerStyles.walletInfo}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M21 12V7H5a2 2 0 01-2-2V5a2 2 0 012-2h14v4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M3 5v14a2 2 0 002 2h16v-5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="16"
+                  cy="12"
+                  r="2"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+              </svg>
+              {walletAddress && (
+                <span className={headerStyles.walletAmount}>
+                  {isFetchingBalance
+                    ? "Loading..."
+                    : walletBalance
+                    ? `${walletBalance} ETH`
+                    : "-"}
+                </span>
+              )}
+            </div>
+            <div
+              className={headerStyles.connectWrapper}
+              ref={connectWrapperRef}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  if (walletAddress) {
+                    setShowDisconnectTooltip((prev) => !prev);
+                    return;
+                  }
+
+                  if (!isConnecting) {
+                    void connectWallet();
+                  }
+                }}
+                disabled={isConnecting}
+                className={`${headerStyles.connectButton} ${
+                  walletAddress ? headerStyles.connectButtonConnected : ""
                 }`}
               >
-                {percentageFormatter.format(
-                  coin.priceChangePercentage24h / 100
-                )}
-              </p>
-            ) : (
-              <p className={styles.priceChange}>-</p>
-            )}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="7"
+                    r="4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                </svg>
+                <span>
+                  {walletAddress
+                    ? shortenAddress(walletAddress)
+                    : isConnecting
+                    ? "Connecting..."
+                    : "Connect"}
+                </span>
+              </button>
+              {connectError && (
+                <span className={headerStyles.connectError}>
+                  {connectError}
+                </span>
+              )}
+              {walletAddress && showDisconnectTooltip && (
+                <div className={headerStyles.disconnectTooltip}>
+                  <span className={headerStyles.disconnectLabel}>
+                    Connected
+                  </span>
+                  <span className={headerStyles.disconnectAddress}>
+                    {shortenAddress(walletAddress)}
+                  </span>
+                  <button
+                    type="button"
+                    className={headerStyles.disconnectAction}
+                    onClick={() => {
+                      setShowDisconnectTooltip(false);
+                      void disconnectWallet();
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+      </header>
 
-        <div className={styles.chartSection}>
-          <h2>Price Chart & Range Selection</h2>
-          <div className={styles.signalsChartContainer}>
-            {/* Main chart area */}
-            <div className={styles.mainChartArea}>
+      <div className={styles.container}>
+        {/* Event Details Section */}
+        <div className={styles.eventSection}>
+          <div className={styles.eventHeader}>
+            <div className={styles.eventIcon}>
+              <div className={styles.bitcoinIcon}>B</div>
+            </div>
+            <div className={styles.eventDetails}>
+              <h1 className={styles.eventTitle}>
+                Bitcoin Closing Price on Sep 21
+              </h1>
+              <p className={styles.resolutionDate}>
+                Resolves at September 22, 2025 at 08:00 AM GMT+9
+              </p>
+            </div>
+          </div>
+
+          {/* Main Chart Area */}
+          <div className={styles.mainChartArea}>
+            <div className={styles.chartContainer}>
               <ResponsiveContainer width="100%" height={400}>
                 <LineChart
                   data={chart}
                   margin={{ top: 20, right: 60, left: 60, bottom: 40 }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #51d5eb1a 0%, rgba(81, 213, 235, 0.1) 100%)",
+                  }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="rgba(var(--foreground-rgb), 0.1)"
+                    stroke="rgba(255, 255, 255, 0.1)"
                   />
                   <XAxis
                     dataKey="time"
-                    stroke="rgba(var(--foreground-rgb), 0.6)"
+                    stroke="rgba(255, 255, 255, 0.6)"
                     fontSize={12}
                     tickFormatter={(value) => {
                       const date = new Date(value);
@@ -302,12 +697,19 @@ export default function CoinDetail() {
                     }}
                   />
                   <YAxis
-                    stroke="rgba(var(--foreground-rgb), 0.6)"
+                    stroke="rgba(255, 255, 255, 0.6)"
                     fontSize={12}
                     tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                     domain={domain}
                   />
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1f2937",
+                      border: "1px solid #374151",
+                      borderRadius: "8px",
+                      color: "#f9fafb",
+                    }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="price"
@@ -316,8 +718,6 @@ export default function CoinDetail() {
                     dot={{ fill: "#f97316", strokeWidth: 2, r: 4 }}
                     activeDot={{ r: 6, stroke: "#f97316", strokeWidth: 2 }}
                   />
-
-                  {/* 선택된 영역 표시를 위한 Reference Line */}
                   <ReferenceLine
                     y={priceRange[1]}
                     stroke="#dc2626"
@@ -333,28 +733,91 @@ export default function CoinDetail() {
                 </LineChart>
               </ResponsiveContainer>
 
-              {/* 선택된 영역 overlay */}
-              <div className={styles.rangeOverlay}>
-                <div
-                  className={styles.rangeOverlayArea}
-                  style={{
-                    top: `${
-                      ((domain[1] - priceRange[1]) / (domain[1] - domain[0])) *
-                      100
-                    }%`,
-                    height: `${
-                      ((priceRange[1] - priceRange[0]) /
-                        (domain[1] - domain[0])) *
-                      100
-                    }%`,
+              {/* Range Slider Overlay */}
+              <div className={styles.rangeSliderOverlay}>
+                <Range
+                  values={priceRange}
+                  step={100}
+                  min={domain[0]}
+                  max={domain[1]}
+                  onChange={(values) => {
+                    setPriceRange(values as [number, number]);
                   }}
-                >
-                  <div className={styles.rangeOverlayTop}>
+                  renderTrack={({ props, children }) => {
+                    const {
+                      key: trackKey,
+                      style,
+                      ...trackProps
+                    } = props as unknown as {
+                      key?: string | number;
+                      style?: React.CSSProperties;
+                      [key: string]: unknown;
+                    };
+
+                    return (
+                      <div
+                        key={trackKey}
+                        {...trackProps}
+                        className={styles.rangeTrack}
+                        style={{
+                          ...style,
+                          height: "100%",
+                          width: "8px",
+                          background:
+                            "linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%)",
+                          borderRadius: "4px",
+                          border: "1px solid rgba(81, 213, 235, 0.3)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {children}
+                      </div>
+                    );
+                  }}
+                  renderThumb={({ props, index }) => {
+                    const {
+                      key: thumbKey,
+                      style,
+                      ...thumbProps
+                    } = props as unknown as {
+                      key?: string | number;
+                      style?: React.CSSProperties;
+                      [key: string]: unknown;
+                    };
+
+                    return (
+                      <div
+                        key={thumbKey}
+                        {...thumbProps}
+                        className={`${styles.rangeThumb} ${
+                          index === 0 ? styles.minThumb : styles.maxThumb
+                        }`}
+                        style={{
+                          ...style,
+                          height: "24px",
+                          width: "24px",
+                          borderRadius: "50%",
+                          backgroundColor: index === 0 ? "#16a34a" : "#dc2626",
+                          border: "3px solid #1f2937",
+                          boxShadow: "0 4px 12px rgba(81, 213, 235, 0.4)",
+                          cursor: "grab",
+                          transition:
+                            "transform 0.2s ease, box-shadow 0.2s ease",
+                        }}
+                      />
+                    );
+                  }}
+                  direction={Direction.Up}
+                />
+
+                {/* Range Labels */}
+                <div className={styles.rangeLabels}>
+                  <div className={styles.rangeLabel}>
                     <span className={styles.rangePrice}>
                       ${(priceRange[1] / 1000).toFixed(1)}k
                     </span>
                   </div>
-                  <div className={styles.rangeOverlayBottom}>
+                  <div className={styles.rangeLabel}>
                     <span className={styles.rangePrice}>
                       ${(priceRange[0] / 1000).toFixed(1)}k
                     </span>
@@ -362,317 +825,100 @@ export default function CoinDetail() {
                 </div>
               </div>
             </div>
-
-            {/* Overlay range slider on the right side */}
-            <div className={styles.overlayRangeSlider}>
-              <Range
-                values={priceRange}
-                step={step}
-                min={domain[0]}
-                max={domain[1]}
-                onChange={(values) => {
-                  console.log("Range changed:", values);
-                  setPriceRange(values as [number, number]);
-                }}
-                renderTrack={({ props, children }) => {
-                  const {
-                    key: trackKey,
-                    style,
-                    ...trackProps
-                  } = props as unknown as {
-                    key?: string | number;
-                    style?: React.CSSProperties;
-                    [key: string]: unknown;
-                  };
-
-                  return (
-                    <div
-                      key={trackKey}
-                      {...trackProps}
-                      className={styles.overlayRangeTrack}
-                      style={{
-                        ...style,
-                        height: "100%",
-                        width: "8px",
-                        background:
-                          "linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%)",
-                        borderRadius: "4px",
-                        border: "1px solid rgba(0, 112, 243, 0.3)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {children}
-                    </div>
-                  );
-                }}
-                renderThumb={({ props, index }) => {
-                  const {
-                    key: thumbKey,
-                    style,
-                    ...thumbProps
-                  } = props as unknown as {
-                    key?: string | number;
-                    style?: React.CSSProperties;
-                    [key: string]: unknown;
-                  };
-
-                  return (
-                    <div
-                      key={thumbKey}
-                      {...thumbProps}
-                      className={`${styles.overlayRangeThumb} ${
-                        index === 0
-                          ? styles.overlayMinThumb
-                          : styles.overlayMaxThumb
-                      }`}
-                      style={{
-                        ...style,
-                        height: "24px",
-                        width: "24px",
-                        borderRadius: "50%",
-                        backgroundColor: index === 0 ? "#16a34a" : "#dc2626",
-                        border: "3px solid white",
-                        boxShadow: "0 4px 12px rgba(0, 112, 243, 0.4)",
-                        cursor: "grab",
-                        transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                      }}
-                    />
-                  );
-                }}
-                direction={Direction.Up}
-              />
-            </div>
-
-            {/* Probability distribution chart on the right */}
-            <div className={styles.probabilityDistribution}>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart
-                  data={bins}
-                  layout="horizontal"
-                  margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="rgba(var(--foreground-rgb), 0.1)"
-                  />
-                  <XAxis
-                    type="number"
-                    domain={[0, "dataMax"]}
-                    stroke="rgba(var(--foreground-rgb), 0.6)"
-                    fontSize={10}
-                    tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="price"
-                    stroke="rgba(var(--foreground-rgb), 0.6)"
-                    fontSize={10}
-                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                    width={60}
-                  />
-                  <Tooltip content={<ProbabilityTooltip />} />
-                  <Bar
-                    dataKey="probability"
-                    fill="#0070f3"
-                    radius={[0, 2, 2, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Range input controls */}
-          <div className={styles.rangeControls}>
-            <div className={styles.rangeInput}>
-              <label>Min Price ($)</label>
-              <input
-                type="number"
-                value={priceRange[0]}
-                onChange={(e) => {
-                  const newMin = parseInt(e.target.value) || priceRange[0];
-                  if (newMin < priceRange[1] && newMin >= domain[0]) {
-                    setPriceRange([newMin, priceRange[1]]);
-                  } else if (newMin >= priceRange[1]) {
-                    // If min becomes >= max, adjust max to be min + 100
-                    setPriceRange([newMin, Math.min(newMin + 100, domain[1])]);
-                  }
-                }}
-                className={styles.rangeInputField}
-                step="100"
-                min={domain[0]}
-                max={domain[1]}
-              />
-            </div>
-            <div className={styles.rangeInput}>
-              <label>Max Price ($)</label>
-              <input
-                type="number"
-                value={priceRange[1]}
-                onChange={(e) => {
-                  const newMax = parseInt(e.target.value) || priceRange[1];
-                  if (newMax > priceRange[0] && newMax <= domain[1]) {
-                    setPriceRange([priceRange[0], newMax]);
-                  } else if (newMax <= priceRange[0]) {
-                    // If max becomes <= min, adjust min to be max - 100
-                    setPriceRange([Math.max(newMax - 100, domain[0]), newMax]);
-                  }
-                }}
-                className={styles.rangeInputField}
-                step="100"
-                min={domain[0]}
-                max={domain[1]}
-              />
-            </div>
-            <div className={styles.rangeInfo}>
-              Price ranges can be set in $100 increments. Select your prediction
-              range to see win probability and potential returns.
-            </div>
           </div>
         </div>
 
-        <div className={styles.tradingSection}>
-          <h2>Market Trading</h2>
-          <div className={styles.tradingCard}>
-            <div className={styles.tradingStats}>
-              <div className={styles.stat}>
-                <h3>Win Probability</h3>
-                <p className={styles.statValue}>
-                  {percentageFormatter.format(winProbability)}
-                </p>
-                <small style={{ fontSize: "0.75rem", color: "#666" }}>
-                  {selectedBins.length} bins selected
-                </small>
-              </div>
-              <div className={styles.stat}>
-                <h3>Receive if you win</h3>
-                <p className={styles.statValue}>
-                  {amount > 0 ? currencyFormatter.format(receiveIfWin) : "$0"}
-                </p>
-                {amount > 0 && (
-                  <small style={{ fontSize: "0.75rem", color: "#666" }}>
-                    Profit: {currencyFormatter.format(receiveIfWin - amount)}
-                  </small>
-                )}
-              </div>
-              <div className={styles.stat}>
-                <h3>Avg Price</h3>
-                <p className={styles.statValue}>
-                  {currencyFormatter.format(
-                    (priceRange[0] + priceRange[1]) / 2
-                  )}
-                </p>
-                <small style={{ fontSize: "0.75rem", color: "#666" }}>
-                  Range:{" "}
-                  {currencyFormatter.format(priceRange[1] - priceRange[0])}
-                </small>
-              </div>
-            </div>
-
-            {/* Debug info - remove in production */}
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: "#666",
-                margin: "10px 0",
-                padding: "8px",
-                background: "#f5f5f5",
-                borderRadius: "4px",
-              }}
-            >
-              <strong>Signals Calculation Debug:</strong>
-              <br />
-              Amount: ${amount} | Win Prob: {(winProbability * 100).toFixed(2)}%
-              | Range: ${priceRange[0]} - ${priceRange[1]} | Selected Bins:{" "}
-              {selectedBins.length}
-              <br />
-              Receive: ${receiveIfWin.toFixed(2)} | Profit: $
-              {(receiveIfWin - amount).toFixed(2)} | Total Bins: {binCount} |
-              Liquidity: {initialLiquidity}
-              <br />
-              <strong>Relationship Check:</strong> Win Prob ↑ = Receive ↓
-              (Expected)
-              {winProbability > 0 && (
-                <span
-                  style={{ color: receiveIfWin > amount ? "green" : "red" }}
-                >
-                  {" "}
-                  | Current:{" "}
-                  {receiveIfWin > amount
-                    ? "✓ Correct (Receive > Amount)"
-                    : "✗ Incorrect (Receive ≤ Amount)"}
-                </span>
-              )}
-              <br />
-              <strong>Odds:</strong>{" "}
-              {winProbability > 0
-                ? (receiveIfWin / amount).toFixed(2) + "x"
-                : "N/A"}{" "}
-              |<strong> Profit:</strong> ${(receiveIfWin - amount).toFixed(2)}
-            </div>
-
-            <div className={styles.amountInput}>
-              <label htmlFor="amount">Amount ($):</label>
-              <input
-                id="amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                className={styles.input}
-                placeholder="Enter amount to bet"
-              />
-              <small style={{ fontSize: "0.75rem", color: "#666" }}>
-                Enter amount to see receive if you win calculation
-              </small>
-            </div>
-
-            {/* 선택된 bin들의 probability 표시 */}
-            <div className={styles.binProbabilities}>
-              <h4>Selected Range Bin Probabilities</h4>
-              <div className={styles.binList}>
-                {binProbabilities
-                  .filter((bin) => bin.isSelected)
-                  .map((bin) => (
-                    <div key={bin.index} className={styles.binItem}>
-                      <span className={styles.binPrice}>
-                        ${(bin.price / 1000).toFixed(1)}k - $
-                        {((bin.price + 100) / 1000).toFixed(1)}k
-                      </span>
-                      <span className={styles.binProbability}>
-                        {(bin.lmsrProbability * 100).toFixed(2)}%
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-            <div className={styles.sharesInput}>
-              <label htmlFor="shares">Number of shares:</label>
-              <input
-                id="shares"
-                type="number"
-                min="1"
-                max="100"
-                value={shares}
-                onChange={(e) =>
-                  setShares(Math.max(1, parseInt(e.target.value) || 1))
-                }
-                className={styles.input}
-              />
-            </div>
-            <div className={styles.balanceInfo}>
-              <div className={styles.balanceItem}>
-                <span className={styles.balanceLabel}>Balance:</span>
-                <span className={styles.balanceValue}>$0</span>
-              </div>
-              <div className={styles.balanceItem}>
-                <span className={styles.balanceLabel}>Amount:</span>
-                <span className={styles.balanceValue}>
-                  {currencyFormatter.format(amount)}
-                </span>
-              </div>
+        {/* Right Sidebar */}
+        <div className={styles.sidebar}>
+          {/* Min Price */}
+          <div className={styles.priceCard}>
+            <div className={styles.cardLabel}>Min Price</div>
+            <div className={styles.cardValue}>
+              {currencyFormatter.format(priceRange[0])}
             </div>
           </div>
+
+          {/* Max Price */}
+          <div className={styles.priceCard}>
+            <div className={styles.cardLabel}>Max Price</div>
+            <div className={styles.cardValue}>
+              {currencyFormatter.format(priceRange[1])}
+            </div>
+          </div>
+
+          {/* Win Probability */}
+          <div className={styles.probabilityCard}>
+            <div className={styles.cardLabel}>Win Probability</div>
+            <div className={styles.cardValue}>
+              {percentageFormatter.format(winProbability)}
+            </div>
+          </div>
+
+          {/* Avg Price */}
+          <div className={styles.priceCard}>
+            <div className={styles.cardLabel}>Avg Price</div>
+            <div className={styles.cardValue}>
+              {currencyFormatter.format((priceRange[0] + priceRange[1]) / 2)}
+            </div>
+          </div>
+
+          {/* Amount */}
+          <div className={styles.amountCard}>
+            <div className={styles.cardLabel}>Amount</div>
+            <div className={styles.amountInput}>
+              <input
+                type="text"
+                inputMode="decimal"
+                pattern="^[0-9]*[.,]?[0-9]*$"
+                value={amountInput}
+                onChange={handleAmountChange}
+                onBlur={handleAmountBlur}
+                className={styles.amountInputField}
+                placeholder="Enter amount"
+              />
+            </div>
+            <div className={styles.cardValue}>
+              {currencyFormatter.format(amount || 0)}
+            </div>
+            <div className={styles.cardSubtext}>Balance: $0</div>
+          </div>
+
+          {/* Receive if you win */}
+          <div className={styles.receiveCard}>
+            <div className={styles.cardLabel}>Receive if you win</div>
+            <div className={styles.cardValue}>
+              {amount > 0 ? currencyFormatter.format(receiveIfWin) : "$0"}
+            </div>
+            <div className={styles.cardSubtext}>
+              {winProbability > 0 && amount > 0
+                ? (receiveIfWin / amount).toFixed(2) + "x"
+                : "x0.00"}
+            </div>
+          </div>
+
+          {/* Place Bet Button */}
+          <button
+            className={styles.placeBetButton}
+            onClick={() => {
+              if (!walletAddress) {
+                connectWallet();
+                return;
+              }
+
+              if (amount <= 0) {
+                return;
+              }
+
+              // 실제 베팅 로직 구현
+              console.log("Placing bet:", {
+                amount,
+                priceRange,
+                winProbability,
+              });
+            }}
+          >
+            {walletAddress ? "Place Bet" : "Connect Wallet"}
+          </button>
         </div>
       </div>
     </>

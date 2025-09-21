@@ -1,8 +1,31 @@
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Range, getTrackBackground } from "react-range";
 import styles from "@/styles/Home.module.css";
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
+import { apiService } from "@/utils/apiService";
+
+// Destructure apiService
+const { market } = apiService;
+
+// Question data type
+type Question = {
+  id: string;
+  question: string;
+  address: string;
+  status: string;
+  tags: string[];
+  profileImage: string;
+  slug: string;
+  fee: string;
+  volume: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  resolvedAt: string | null;
+};
 
 const shortenAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -38,7 +61,9 @@ const formatEthBalance = (weiHex: string) => {
     const fraction = etherFraction.toString().padStart(18, "0").slice(0, 4);
     const trimmedFraction = fraction.replace(/0+$/, "");
 
-    return `${etherWhole.toString()}${trimmedFraction ? `.${trimmedFraction}` : ""}`;
+    return `${etherWhole.toString()}${
+      trimmedFraction ? `.${trimmedFraction}` : ""
+    }`;
   } catch (error) {
     console.error("ETH 잔액 포맷 실패", error);
     return "0";
@@ -62,61 +87,66 @@ const clearWalletConnectStorage = () => {
 };
 
 export default function Home() {
+  const router = useRouter();
   const PRICE_MIN = 77000;
   const PRICE_MAX = 116000;
   const PRICE_STEP = 1000;
 
   const [showPredictionModal, setShowPredictionModal] = useState(false);
   const [betAmount, setBetAmount] = useState(100);
-  const [priceRange, setPriceRange] = useState<[number, number]>([95000, 99000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    95000, 99000,
+  ]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
+
+  // Questions state
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [questionsError, setQuestionsError] = useState<string | null>(null);
   const trackColors = useMemo(() => {
     if (
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches
     ) {
-      return ["#1f2937", "#10b981", "#1f2937"] as const;
+      return ["#1f2937", "#000000", "#1f2937"] as const;
     }
 
-    return ["#e5e7eb", "#059669", "#e5e7eb"] as const;
+    return ["#e5e7eb", "#000000", "#e5e7eb"] as const;
   }, []);
   const providerRef = useRef<EthereumProvider | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchWalletBalance = useCallback(
-    async (address: string) => {
-      const provider = providerRef.current;
+  const fetchWalletBalance = useCallback(async (address: string) => {
+    const provider = providerRef.current;
 
-      if (!provider) {
-        return;
+    if (!provider) {
+      return;
+    }
+
+    setWalletBalance(null);
+    setIsFetchingBalance(true);
+
+    try {
+      const balanceHex = (await provider.request({
+        method: "eth_getBalance",
+        params: [address, "latest"],
+      })) as string;
+
+      setWalletBalance(formatEthBalance(balanceHex));
+    } catch (error) {
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("지갑 잔액 조회 실패", error);
       }
-
       setWalletBalance(null);
-      setIsFetchingBalance(true);
-
-      try {
-        const balanceHex = (await provider.request({
-          method: "eth_getBalance",
-          params: [address, "latest"],
-        })) as string;
-
-        setWalletBalance(formatEthBalance(balanceHex));
-      } catch (error) {
-        if (!isIgnorableWalletConnectError(error)) {
-          console.error("지갑 잔액 조회 실패", error);
-        }
-        setWalletBalance(null);
-      } finally {
-        setIsFetchingBalance(false);
-      }
-    },
-    []
-  );
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  }, []);
 
   const handleAccountsChanged = useCallback(
     (accounts: string[]) => {
@@ -230,7 +260,13 @@ export default function Home() {
     } finally {
       setIsConnecting(false);
     }
-  }, [fetchWalletBalance, handleAccountsChanged, handleDisconnect, isConnecting, walletAddress]);
+  }, [
+    fetchWalletBalance,
+    handleAccountsChanged,
+    handleDisconnect,
+    isConnecting,
+    walletAddress,
+  ]);
 
   const disconnectWallet = useCallback(async () => {
     const provider = providerRef.current;
@@ -269,6 +305,29 @@ export default function Home() {
       clearWalletConnectStorage();
     }
   }, [handleAccountsChanged, handleDisconnect]);
+
+  // Fetch questions
+  const fetchQuestions = useCallback(async () => {
+    setIsLoadingQuestions(true);
+    setQuestionsError(null);
+
+    try {
+      const response = await market.getAll({
+        status: "OPEN",
+      });
+      console.log(response);
+      setQuestions(response.data || []);
+    } catch (error) {
+      console.error("질문 목록 조회 실패", error);
+      setQuestionsError("질문 목록을 불러오는데 실패했습니다.");
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchQuestions();
+  }, [fetchQuestions]);
 
   useEffect(() => {
     return () => {
@@ -376,22 +435,12 @@ export default function Home() {
         <div className={styles.headerContent}>
           <div className={styles.brand}>
             <div className={styles.logo}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M3 12L9 6L15 12L21 6"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M3 18L9 12L15 18L21 12"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <img
+                src="/tide-logo.svg"
+                alt="Tide Logo"
+                width="48"
+                height="48"
+              />
             </div>
             <span className={styles.brandName}>Tide</span>
           </div>
@@ -402,9 +451,6 @@ export default function Home() {
             </a>
             <a href="#" className={styles.navLink}>
               Portfolio
-            </a>
-            <a href="#" className={styles.navLink}>
-              Analytics
             </a>
           </nav>
 
@@ -514,57 +560,72 @@ export default function Home() {
       <div className={styles.container}>
         <main className={styles.main}>
           {!showPredictionModal ? (
-            // Bitcoin Card View
-            <div className={styles.card}>
-              {/* Header with icon, name, and chevron */}
-              <div className={styles.cardHeader}>
-                <div className={styles.coinInfo}>
-                  <div className={styles.coinIcon}>
-                    <span className={styles.iconText}>BT</span>
-                  </div>
-                  <div className={styles.coinDetails}>
-                    <h2 className={styles.coinSymbol}>BTC</h2>
-                    <p className={styles.coinName}>{bitcoin.name}</p>
-                  </div>
-                </div>
-                <div
-                  onClick={() => setShowPredictionModal(true)}
-                  className={styles.chevron}
-                >
-                  ›
-                </div>
-              </div>
+            <>
+              {/* Section Title */}
+              <h2 className={styles.sectionTitle}>
+                Predict Price Ranges Across Top Crypto Markets
+              </h2>
 
-              {/* Price and Volume Section */}
-              <div className={styles.priceVolumeSection}>
-                <div className={styles.priceInfo}>
-                  <div className={styles.priceContainer}>
-                    <span className={styles.price}>
-                      ${bitcoin.currentPrice.toLocaleString()}
-                    </span>
-                    <div className={styles.priceChange}>
-                      <span className={styles.arrow}>↗</span>
-                      <span className={styles.positive}>
-                        +{bitcoin.priceChangePercentage24h}%
-                      </span>
+              {/* Bitcoin Card View */}
+              <div className={styles.card}>
+                {/* Header with icon, name, and chevron */}
+                <div className={styles.cardHeader}>
+                  <div className={styles.coinInfo}>
+                    <div className={styles.coinIcon}>
+                      <span className={styles.iconText}>BT</span>
+                    </div>
+                    <div className={styles.coinDetails}>
+                      <h2 className={styles.coinSymbol}>BTC</h2>
+                      <p className={styles.coinName}>{bitcoin.name}</p>
                     </div>
                   </div>
+                  <div
+                    onClick={() => router.push(`/coins/${bitcoin.id}`)}
+                    className={styles.chevron}
+                  >
+                    ›
+                  </div>
                 </div>
 
-                <div className={styles.volumeInfo}>
-                  <p className={styles.volumeLabel}>Volume</p>
-                  <p className={styles.volumeValue}>${bitcoin.volume}</p>
+                {/* Price and Volume Section */}
+                <div className={styles.priceVolumeSection}>
+                  <div className={styles.priceInfo}>
+                    <div className={styles.priceContainer}>
+                      <span className={styles.price}>
+                        ${bitcoin.currentPrice.toLocaleString()}
+                      </span>
+                      <div className={styles.priceChange}>
+                        <span className={styles.arrow}>↗</span>
+                        <span className={styles.positive}>
+                          +{bitcoin.priceChangePercentage24h}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.volumeInfo}>
+                    <p className={styles.volumeLabel}>Volume</p>
+                    <p className={styles.volumeValue}>${bitcoin.volume}</p>
+                  </div>
+                </div>
+
+                {/* Trade and Quick Bet Buttons */}
+                <div className={styles.actionButtons}>
+                  <button
+                    onClick={() => router.push(`/coins/${bitcoin.id}`)}
+                    className={styles.tradeButton}
+                  >
+                    Trade
+                  </button>
+                  <button
+                    onClick={() => setShowPredictionModal(true)}
+                    className={styles.quickBetButton}
+                  >
+                    Quick Bet
+                  </button>
                 </div>
               </div>
-
-              {/* Predict Range Button */}
-              <button
-                onClick={() => setShowPredictionModal(true)}
-                className={styles.predictButton}
-              >
-                Predict Range
-              </button>
-            </div>
+            </>
           ) : (
             // Prediction View
             <div className={styles.predictionView}>
@@ -700,10 +761,10 @@ export default function Home() {
                 </div>
                 <div className={styles.rangeValues}>
                   <span className={styles.rangeMin}>
-                    ${priceRange[0].toLocaleString()}
+                    {`$${priceRange[0].toLocaleString()}`}
                   </span>
                   <span className={styles.rangeMax}>
-                    ${priceRange[1].toLocaleString()}
+                    {`$${priceRange[1].toLocaleString()}`}
                   </span>
                 </div>
               </div>

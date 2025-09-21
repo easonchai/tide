@@ -1,8 +1,12 @@
 .container {
-  max-width: 1200px;
+  display: flex;
+  gap: 24px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 32px 24px;
   color: var(--foreground);
+  background: #0e1b24;
+  min-height: calc(100vh - 80px);
 }
 
 .header {
@@ -38,15 +42,393 @@
   color: #d00000;
 }
 
-.coinHeader {
+/* Event Section */
+.eventSection {
+  flex: 2;
   display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.eventHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.eventIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bitcoinIcon {
+  width: 48px;
+  height: 48px;
+  background: #f97316;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f1419;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.eventDetails {
+  flex: 1;
+}
+
+.eventTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #9ca3af;
+  margin: 0 0 8px 0;
+}
+
+.resolutionDate {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.mainChartArea {
+  flex: 1;
+  background: transparent;
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 400px;
+}
+
+.chartContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.chartPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: #374151;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+/* Range Slider Overlay */
+.rangeSliderOverlay {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  bottom: 40px;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 32px;
-  background: rgba(var(--background-rgb, 255, 255, 255), 0.85);
-  border-radius: 24px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
-  margin-bottom: 32px;
+  pointer-events: none;
+}
+
+.rangeTrack {
+  height: 100%;
+  width: 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  border-radius: 4px;
+  border: 1px solid rgba(81, 213, 235, 0.3);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.rangeThumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  border: 3px solid #1f2937;
+  box-shadow: 0 4px 12px rgba(81, 213, 235, 0.4);
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  pointer-events: auto;
+}
+
+.rangeThumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(81, 213, 235, 0.6);
+}
+
+.minThumb {
+  background-color: #16a34a;
+}
+
+.maxThumb {
+  background-color: #dc2626;
+}
+
+.rangeLabels {
+  position: absolute;
+  right: 100px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.rangeLabel {
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.rangePrice {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Sidebar */
+.sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 300px;
+}
+
+/* Card Styles */
+.priceCard,
+.probabilityCard,
+.amountCard,
+.receiveCard {
+  background: #1f2937;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: background-color 0.2s ease;
+}
+
+.priceCard:hover,
+.probabilityCard:hover,
+.amountCard:hover,
+.receiveCard:hover {
+  background: #374151;
+}
+
+.amountCard .amountInput {
+  margin: 12px 0 8px;
+}
+
+.amountCard .amountInputField::placeholder {
+  color: #9ca3af;
+}
+
+.cardLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.cardValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f9fafb;
+  margin-bottom: 4px;
+}
+
+.cardSubtext {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.receiveCard .cardLabel {
+  background: rgba(81, 213, 235, 0.1);
+  color: #51d5eb;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.receiveCard .cardSubtext {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f9fafb;
+  margin: 0 0 12px 0;
+}
+
+/* Range Controls */
+.rangeControls {
+  background: #1f2937;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.rangeInputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rangeInput {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rangeInput label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.rangeInputField {
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #f9fafb;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.rangeInputField:focus {
+  outline: none;
+  border-color: #51d5eb;
+}
+
+/* Amount Section */
+.amountSection {
+  background: #1f2937;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.amountInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.amountInputField {
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 12px 40px 12px 12px;
+  color: #f9fafb;
+  font-size: 16px;
+  font-weight: 600;
+  width: 100%;
+  transition: border-color 0.2s ease;
+}
+
+.amountInputField:focus {
+  outline: none;
+  border-color: #51d5eb;
+}
+
+.currencyLabel {
+  position: absolute;
+  right: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+/* Trading Stats */
+.tradingStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.statItem {
+  background: #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.statValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f9fafb;
+  margin-bottom: 4px;
+}
+
+.statSubtext {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.probabilitySection {
+  background: #1f2937;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.probabilityChart {
+  background: #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.probabilityTitle {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.probabilityValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f1419;
+  margin: 0;
+}
+
+.bottomStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.placeBetButton {
+  background: #51d5eb;
+  color: #0f1419;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: auto;
+}
+
+.placeBetButton:hover {
+  background: #3bc5d8;
 }
 
 .identity {
@@ -180,11 +562,12 @@
 }
 
 .rangePrice {
-  background: rgba(255, 255, 255, 0.9);
+  background: transparent;
   padding: 2px 6px;
   border-radius: 3px;
-  border: 1px solid rgba(0, 112, 243, 0.2);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: none;
+  color: #ffffff;
 }
 
 .overlayRangeSlider {
@@ -276,7 +659,7 @@
   width: 20px;
   border-radius: 50%;
   background: #0070f3;
-  border: 3px solid white;
+  border: 3px solid #1f2937;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   cursor: grab;
   transition: transform 0.2s ease;
@@ -304,7 +687,7 @@
   width: 24px;
   border-radius: 50%;
   background: #0070f3;
-  border: 3px solid white;
+  border: 3px solid #1f2937;
   box-shadow: 0 4px 12px rgba(0, 112, 243, 0.4);
   cursor: grab;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -380,9 +763,7 @@
 .rangeLabel {
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(var(--foreground-rgb, 23, 23, 23), 0.7);
   padding: 4px 8px;
-  background: rgba(var(--foreground-rgb, 23, 23, 23), 0.04);
   border-radius: 6px;
   white-space: nowrap;
 }
@@ -562,17 +943,17 @@
 
 .buyButton {
   background: linear-gradient(135deg, #15803d, #16a34a);
-  color: white;
+  color: #0f1419;
 }
 
 .sellButton {
   background: linear-gradient(135deg, #dc2626, #ef4444);
-  color: white;
+  color: #0f1419;
 }
 
 .connectButton {
   background: linear-gradient(135deg, #0070f3, #3291ff);
-  color: white;
+  color: #0f1419;
   width: 100%;
 }
 
@@ -606,25 +987,111 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  .container {
+    background: #0e1b24;
+  }
+
+  .eventTitle {
+    color: #d1d5db;
+  }
+
+  .bitcoinIcon {
+    color: #0f1419;
+  }
+
+  .resolutionDate {
+    color: #d1d5db;
+  }
+
+  .mainChartArea {
+    background: transparent;
+  }
+
+  .chartContainer {
+    background: linear-gradient(
+      135deg,
+      rgba(81, 213, 235, 0.08) 0%,
+      rgba(81, 213, 235, 0.03) 100%
+    );
+  }
+
+  .chartPlaceholder {
+    background: #1f2937;
+    color: #d1d5db;
+  }
+
+  .rangeTrack {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    border-color: rgba(81, 213, 235, 0.5);
+  }
+
+  .rangePrice {
+    /* color: #ffffff; */
+  }
+
+  .statBlock {
+    background: #111827;
+  }
+
+  .rangeControls,
+  .amountSection,
+  .probabilitySection,
+  .probabilityChart,
+  .statItem,
+  .priceCard,
+  .probabilityCard,
+  .amountCard,
+  .receiveCard {
+    background: #111827;
+  }
+
+  .priceCard:hover,
+  .probabilityCard:hover,
+  .amountCard:hover,
+  .receiveCard:hover {
+    background: #1f2937;
+  }
+
+  .rangeInputField,
+  .amountInputField {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .rangeInputField:focus,
+  .amountInputField:focus {
+    border-color: #51d5eb;
+  }
+
+  .probabilityTitle {
+    color: #d1d5db;
+  }
+
+  .probabilityValue {
+    color: #f9fafb;
+  }
+
+  .placeBetButton {
+    background: #51d5eb;
+    color: #0f1419;
+  }
+
+  .placeBetButton:hover {
+    background: #3bc5d8;
+    color: #0f1419;
+  }
+
   .backButton {
     background: rgba(255, 255, 255, 0.08);
   }
 
   .backButton:hover {
     background: rgba(255, 255, 255, 0.12);
-  }
-
-  .coinHeader,
-  .chartSection,
-  .probabilitySection,
-  .tradingSection,
-  .metaSection {
-    background: rgba(15, 23, 42, 0.75);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-  }
-
-  .stat {
-    background: rgba(255, 255, 255, 0.08);
   }
 
   .input {
@@ -635,20 +1102,6 @@
   .tooltip {
     background: rgba(237, 237, 237, 0.95);
     color: #171717;
-  }
-
-  .rangeTrack {
-    background: linear-gradient(
-      to top,
-      rgba(255, 255, 255, 0.2) 0%,
-      rgba(255, 255, 255, 0.3) 50%,
-      rgba(255, 255, 255, 0.2) 100%
-    );
-  }
-
-  .rangeLabel {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(237, 237, 237, 0.7);
   }
 
   .balanceItem {
@@ -698,91 +1151,84 @@
   }
 
   .rangePrice {
-    background: rgba(23, 23, 23, 0.9);
-    color: rgba(237, 237, 237, 0.9);
-    border-color: rgba(0, 112, 243, 0.4);
+    background: transparent;
+    color: #ffffff;
+    border: none;
   }
 }
 
 @media (max-width: 720px) {
   .container {
+    flex-direction: column;
     padding: 24px 16px;
   }
 
-  .coinHeader {
-    flex-direction: column;
-    gap: 24px;
-    text-align: center;
+  .eventSection {
+    flex: none;
   }
 
-  .priceSection {
-    text-align: center;
+  .sidebar {
+    flex: none;
+    max-width: none;
   }
 
-  .coinName {
-    font-size: 1.5rem;
+  .eventTitle {
+    font-size: 20px;
   }
 
-  .currentPrice {
-    font-size: 2rem;
+  .mainChartArea {
+    min-height: 300px;
   }
 
   .tradingStats {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .tradeButtons {
-    flex-direction: column;
+  .probabilityValue {
+    font-size: 24px;
   }
 
-  .metaGrid {
-    grid-template-columns: 1fr;
+  .rangeInputs {
+    gap: 8px;
   }
 
-  .chartContainer {
-    height: 250px;
+  .rangeControls,
+  .amountSection,
+  .probabilitySection {
+    padding: 16px;
   }
 
-  .chartWithSlider {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .rangeSliderContainer {
-    min-width: auto;
-    width: 100%;
-  }
-
-  .rangeSlider {
-    height: 60px;
-    width: 100%;
-  }
-
-  .rangeTrack {
-    height: 6px;
-    width: 100%;
-    background: linear-gradient(
-      to right,
-      #e5e7eb 0%,
-      #d1d5db 50%,
-      #e5e7eb 100%
-    );
-  }
-
-  .rangeLabels {
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-  }
-
-  .rangeInputField {
+  .rangeSliderOverlay {
+    right: 10px;
     width: 60px;
   }
 
-  .signalsChartContainer {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-    gap: 12px;
+  .rangeLabels {
+    right: 80px;
+  }
+
+  .rangeLabel {
+    padding: 2px 6px;
+  }
+
+  .rangePrice {
+    font-size: 10px;
+  }
+
+  .rangeThumb {
+    height: 20px;
+    width: 20px;
+  }
+
+  .priceCard,
+  .probabilityCard,
+  .amountCard,
+  .receiveCard {
+    padding: 16px;
+  }
+
+  .cardValue {
+    font-size: 20px;
   }
 
   .overlayRangeSlider {
