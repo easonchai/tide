@@ -1,11 +1,12 @@
 import Head from "next/head";
-import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "@/styles/Portfolio.module.css";
 import { apiService } from "@/utils/apiService";
 import { MarketStatus } from "@/types/market";
-import Header from "@/component/header";
+import { useAccount } from "wagmi";
+import { useQuery } from "@tanstack/react-query";
 
 interface PortfolioMarket {
   id: string;
@@ -21,6 +22,8 @@ interface PortfolioMarket {
   deletedAt: string | null;
   resolvedAt: string | null;
 }
+
+export default dynamic(() => Promise.resolve(PortfolioPage), { ssr: false });
 
 interface PortfolioPosition {
   id: string;
@@ -89,83 +92,87 @@ const computePnL = (position: PortfolioPosition) => {
   return weiToEth(position.payout) - weiToEth(position.amount);
 };
 
-export default function PortfolioPage() {
+function PortfolioPage() {
   const router = useRouter();
-  const address =
-    typeof router.query.address === "string" ? router.query.address : undefined;
 
-  const [positions, setPositions] = useState<PortfolioPosition[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {address} = useAccount();
+
+
+  // const [isLoading, setIsLoading] = useState(false);
+  // const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
 
-  useEffect(() => {
-    if (!address) {
-      return;
-    }
+  const { data: positionsData, isLoading, error } = useQuery<PortfolioPosition[]>({
+    queryKey: ["positions", address],
+    queryFn: async () => {
+      const response = await apiService.market.getPositionsByUser(address!);
+      return response.data;
+    },
+    enabled: Boolean(address),
+  });
+  const positions: PortfolioPosition[] = useMemo(
+    () => positionsData ?? [],
+    [positionsData]
+  );
 
-    console.log("Portfolio page - received address:", address);
-    console.log("Address type:", typeof address);
-    console.log("Address length:", address.length);
-    console.log("Address checksum:", address);
-    console.log("URL query:", router.query);
+  // useEffect(() => {
+  //   if (!address) {
+  //     return;
+  //   }
+  //
+  //   console.log("Portfolio page - received address:", address);
+  //   console.log("Address type:", typeof address);
+  //   console.log("Address length:", address.length);
+  //   console.log("Address checksum:", address);
+  //   console.log("URL query:", router.query);
+  //
+  //   let isMounted = true;
+  //   setIsLoading(true);
+  //   setError(null);
+  //
+  //   apiService.market
+  //     .getPositionsByUser(address)
+  //     .then((response) => {
+  //       if (!isMounted) {
+  //         return;
+  //       }
+  //
+  //       console.log("=== Portfolio API Response ===");
+  //       console.log("Full response:", response);
+  //       console.log("Response status:", response.status);
+  //       console.log("Response data:", response.data);
+  //       console.log("Data type:", typeof response.data);
+  //       console.log(
+  //         "Data length:",
+  //         Array.isArray(response.data) ? response.data.length : "Not an array"
+  //       );
+  //       console.log("Data content:", JSON.stringify(response.data, null, 2));
+  //
+  //       const data = Array.isArray(response.data) ? response.data : [];
+  //       setPositions(data);
+  //     })
+  //     .catch((fetchError) => {
+  //       if (!isMounted) {
+  //         return;
+  //       }
+  //
+  //       console.error("포트폴리오 데이터 조회 실패", fetchError);
+  //       setError("포트폴리오 데이터를 불러오지 못했습니다.");
+  //     })
+  //     .finally(() => {
+  //       if (isMounted) {
+  //         setIsLoading(false);
+  //       }
+  //     });
+  //
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, [address]);
 
-    let isMounted = true;
-    setIsLoading(true);
-    setError(null);
+  // Removed 30-day anchor since summary is randomized
 
-    apiService.market
-      .getPositionsByUser(address)
-      .then((response) => {
-        if (!isMounted) {
-          return;
-        }
-
-        console.log("=== Portfolio API Response ===");
-        console.log("Full response:", response);
-        console.log("Response status:", response.status);
-        console.log("Response data:", response.data);
-        console.log("Data type:", typeof response.data);
-        console.log(
-          "Data length:",
-          Array.isArray(response.data) ? response.data.length : "Not an array"
-        );
-        console.log("Data content:", JSON.stringify(response.data, null, 2));
-
-        const data = Array.isArray(response.data) ? response.data : [];
-        setPositions(data);
-      })
-      .catch((fetchError) => {
-        if (!isMounted) {
-          return;
-        }
-
-        console.error("포트폴리오 데이터 조회 실패", fetchError);
-        setError("포트폴리오 데이터를 불러오지 못했습니다.");
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [address]);
-
-  const thirtyDaysAgo = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    return date;
-  }, []);
-
-  const positions30d = useMemo(() => {
-    return positions.filter((position) => {
-      const createdAt = new Date(position.createdAt);
-      return createdAt >= thirtyDaysAgo;
-    });
-  }, [positions, thirtyDaysAgo]);
+  // Randomized summary does not require positions30d
 
   // Open/Closed positions 필터링
   const openPositions = useMemo(() => {
@@ -190,93 +197,33 @@ export default function PortfolioPage() {
   }, [activeTab, openPositions, closedPositions]);
 
   const summary = useMemo(() => {
-    const totalPnL = positions.reduce(
-      (sum, position) => sum + computePnL(position),
-      0
-    );
-    const totalVolume = positions.reduce(
-      (sum, position) => sum + weiToEth(position.amount),
-      0
-    );
-    const pnl30d = positions30d.reduce(
-      (sum, position) => sum + computePnL(position),
-      0
-    );
-    const volume30d = positions30d.reduce(
-      (sum, position) => sum + weiToEth(position.amount),
-      0
-    );
+    // Randomize values for demo purposes on each mount/address change
+    const rng = () => Math.random();
 
-    const marketIds = new Set<string>();
-    let wins = 0;
-    let losses = 0;
-
-    positions.forEach((position) => {
-      marketIds.add(position.marketId);
-      const pnl = computePnL(position);
-
-      if (pnl > 0) {
-        wins += 1;
-      } else if (pnl < 0) {
-        losses += 1;
-      }
-    });
-
-    const trades = wins + losses;
-    const winLossRatio = trades > 0 ? wins / trades : 0;
+    const totalPnL = (rng() - 0.5) * 2000; // -1000 to +1000
+    const totalVolume = 1000 + rng() * 9000; // 1k to 10k
+    const pnl30d = (rng() - 0.5) * 1000; // -500 to +500
+    const volume30d = 500 + rng() * 4500; // 500 to 5k
+    const marketsTraded = Math.floor(1 + rng() * 10); // 1-10
+    const wins = Math.floor(rng() * marketsTraded);
+    const losses = Math.max(marketsTraded - wins, 0);
+    const winLossRatio = marketsTraded > 0 ? wins / marketsTraded : 0;
 
     return {
       totalPnL,
       totalVolume,
       pnl30d,
       volume30d,
-      marketsTraded: marketIds.size,
+      marketsTraded,
       wins,
       losses,
       winLossRatio,
     };
-  }, [positions, positions30d]);
+  }, []);
 
-  const pnlSeries = useMemo(() => {
-    if (positions.length === 0) {
-      return [];
-    }
+  // Removed unused pnlSeries
 
-    const sorted = [...positions].sort((a, b) => {
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
 
-    let cumulative = 0;
-
-    return sorted.map((position) => {
-      cumulative += computePnL(position);
-      return {
-        date: new Date(position.createdAt),
-        value: cumulative,
-      };
-    });
-  }, [positions]);
-
-  const graphPath = useMemo(() => {
-    if (pnlSeries.length === 0) {
-      return "";
-    }
-
-    const width = 600;
-    const height = 220;
-    const values = pnlSeries.map((point) => point.value);
-    const minValue = Math.min(...values, 0);
-    const maxValue = Math.max(...values, 0);
-    const range = maxValue - minValue || 1;
-
-    return pnlSeries
-      .map((point, index) => {
-        const x = (width / Math.max(pnlSeries.length - 1, 1)) * index;
-        const y = height - ((point.value - minValue) / range) * height;
-        return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-      })
-      .join(" ");
-  }, [pnlSeries]);
 
   return (
     <>
@@ -284,8 +231,6 @@ export default function PortfolioPage() {
         <title>Portfolio | Tide Markets</title>
         <meta name="description" content="View your Tide Markets portfolio" />
       </Head>
-
-      <Header currentPath="/portfolio" />
 
       <main className={styles.main}>
         <section className={styles.heroSection}>
@@ -297,6 +242,7 @@ export default function PortfolioPage() {
         {!address ? (
           <div className={styles.emptyState}>
             <p>
+              lmao
               지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
               시도해주세요.
             </p>
@@ -307,11 +253,7 @@ export default function PortfolioPage() {
           </div>
         ) : error ? (
           <div className={styles.emptyState}>
-            <p>{error}</p>
-          </div>
-        ) : positions.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p>현재 포지션이 없습니다. 새로운 마켓에 참여해보세요.</p>
+            <p>{error.message}</p>
           </div>
         ) : (
           <>
