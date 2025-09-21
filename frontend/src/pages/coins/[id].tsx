@@ -96,7 +96,7 @@ const extractPriceFromQuestion = (question: string): number => {
 
 export default function CoinDetail() {
   const router = useRouter();
-  const { id } = router.query;
+  const { slug } = router.query;
 
   // Parse market data from query params
 
@@ -110,48 +110,14 @@ export default function CoinDetail() {
   const [showHedgeModal, setShowHedgeModal] = useState(false);
 
   const { data: marketData } = useQuery({
-    queryKey: ["marketData", id],
+    queryKey: ["marketData", slug],
     queryFn: async () => {
-      const response = await apiService.market.getBySlug(id as string);
+      const response = await apiService.market.getBySlug(slug as string);
 
       return response.data;
     },
-    enabled: Boolean(id),
+    enabled: Boolean(slug),
   }) as { data: MarketResponseDTO | undefined };
-
-  // // Market 정보를 가져와서 slug를 얻은 후 positions를 가져오는 함수
-  // const fetchMarketBySlug = useCallback(
-  //   async (marketId: string) => {
-  //     try {
-  //       // 모든 market을 가져와서 id로 찾기
-  //       const allMarkets = await apiService.market.getBySlug(id);
-  //       console.log("All markets:", allMarkets);
-  //
-  //       const foundMarket = allMarkets.data?.find(
-  //         (m: any) => m.id === marketId
-  //       );
-  //
-  //       if (foundMarket?.slug) {
-  //         console.log("Found market by id, using slug:", foundMarket.slug);
-  //         await fetchMarketPositions(foundMarket.slug);
-  //       } else {
-  //         console.error("No market found with id:", marketId);
-  //         setPositionsError("Market not found");
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to fetch market info:", error);
-  //       setPositionsError("Failed to fetch market information");
-  //     }
-  //   },
-  //   [fetchMarketPositions]
-  // );
-
-  // Fetch market positions when component mounts
-  // useEffect(() => {
-  //   if (id && typeof id === "string") {
-  //     fetchMarketBySlug(id);
-  //   }
-  // }, [id, fetchMarketBySlug]);
 
   const twentyFourHoursMs = 24 * 60 * 60 * 1000;
   const [historyStart] = useState(() => Date.now() - twentyFourHoursMs);
@@ -206,7 +172,7 @@ export default function CoinDetail() {
 
       setAmountInput(nextValue);
     },
-    [],
+    []
   );
 
   const handleAmountBlur = useCallback(() => {
@@ -227,9 +193,9 @@ export default function CoinDetail() {
   }, []);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["coin-detail", id],
-    queryFn: () => fetchCoinDetail(id as string),
-    enabled: !!id,
+    queryKey: ["coin-detail", slug],
+    queryFn: () => fetchCoinDetail(slug as string),
+    enabled: !!slug,
     staleTime: 1000 * 60,
   });
 
@@ -430,7 +396,7 @@ export default function CoinDetail() {
   // Ensure Range never mounts with out-of-bounds values
   const rangeStep = useMemo(
     () => Math.max(1, (domain[1] - domain[0]) / 1000),
-    [domain],
+    [domain]
   );
 
   const clampedPriceRange = useMemo(() => {
@@ -467,7 +433,7 @@ export default function CoinDetail() {
       const binStart = min + i * binSize;
       const binEnd = min + (i + 1) * binSize;
       const count = prices.filter(
-        (price) => price >= binStart && price < binEnd,
+        (price) => price >= binStart && price < binEnd
       ).length;
       const probability = count / prices.length;
 
@@ -528,7 +494,7 @@ export default function CoinDetail() {
   const selectedBins = bins
     .filter(
       (bin) =>
-        bin.price >= clampedPriceRange[0] && bin.price < clampedPriceRange[1],
+        bin.price >= clampedPriceRange[0] && bin.price < clampedPriceRange[1]
     )
     .map((bin) => bin.index);
 
@@ -589,7 +555,17 @@ export default function CoinDetail() {
         return;
       }
 
-      // TODO: add api to add positions
+      try {
+        await apiService.market.createPosition({
+          marketSlug: String(slug),
+          userAddress: walletAddress,
+          amount: amountParsed as bigint,
+          lowerBound: BigInt(lowerTick),
+          upperBound: BigInt(upperTick),
+        });
+      } catch (err) {
+        console.error("Failed to persist position:", err);
+      }
 
       toast.success("Successfully placed bet");
     } catch (e) {
@@ -650,7 +626,7 @@ export default function CoinDetail() {
               <p className={styles.resolutionDate}>
                 {marketData?.endDate
                   ? `Resolves at ${new Date(
-                      marketData.endDate,
+                      marketData.endDate
                     ).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "long",
