@@ -28,10 +28,11 @@ enum MarketStatus {
 }
 
 model Market {
-  id       String       @id @default(cuid())
-  question String
-  token    String       @default("0")
-  status   MarketStatus @default(OPEN)
+  id        String       @id @default(cuid())
+  onChainId BigInt       @default(0)
+  question  String
+  token     String       @default("0")
+  status    MarketStatus @default(OPEN)
 
   tags              String[]
   profileImage      String?
