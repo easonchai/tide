@@ -24,7 +24,7 @@ import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 import HedgeModal from "@/components/HedgeModal";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import toast from "react-hot-toast";
-import { marketContract } from "@/config/config";
+import { config, marketContract } from "@/config/config";
 import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
 import { MarketResponseDTO } from "@/types/market";
 import { parseUnits } from "viem";
@@ -580,7 +580,7 @@ export default function CoinDetail() {
 
       if (!tx) return;
 
-      const receipt = await waitForTransactionReceipt(readConfig, {
+      const receipt = await waitForTransactionReceipt(config, {
         hash: tx,
       });
 
@@ -588,6 +588,8 @@ export default function CoinDetail() {
         toast.error("Bet transaction reverted");
         return;
       }
+
+      // TODO: add api to add positions
 
       toast.success("Successfully placed bet");
     } catch (e) {

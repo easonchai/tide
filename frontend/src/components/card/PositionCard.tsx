@@ -1,25 +1,73 @@
+import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
+import { config, marketContract } from "@/config/config";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import React from "react";
+import React, { useState } from "react";
+import toast from "react-hot-toast";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 
 interface PositionCardProps {
   profileImage?: string;
   question: string;
   invested: number;
-  currentValue: number;
   endDate: Date;
+  positionOnChainId: string;
 }
 
 export default function PositionCard({
   profileImage,
+  positionOnChainId,
   question,
   invested,
-  currentValue,
   endDate,
 }: PositionCardProps) {
   const hedge = true;
+  const [isSelling, setIsSelling] = useState(false);
+  const { address } = useAccount();
+  const { data: calculatedCloseProceeds = BigInt(0) } = useReadContract({
+    address: marketContract,
+    abi: cLMSRMarketCoreABI,
+    functionName: "calculateCloseProceeds",
+    args: [positionOnChainId],
+    query: {
+      enabled: Boolean(positionOnChainId),
+    },
+  }) as { data: bigint };
+  const { writeContractAsync } = useWriteContract();
 
-  const handleSell = async (e: React.MouseEvent<HTMLButtonElement>) => {};
+  const handleSell = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!address) {
+      toast.error("Please connect your wallet");
+      return;
+    }
+    setIsSelling(true);
+    try {
+      const tx = await writeContractAsync({
+        address: marketContract,
+        abi: cLMSRMarketCoreABI,
+        functionName: "calculateCloseProceeds",
+        args: [positionOnChainId],
+      });
+
+      if (!tx) return;
+
+      const receipt = await waitForTransactionReceipt(config, { hash: tx });
+
+      if (receipt.status === "reverted") {
+        toast.error("Sell position failed");
+        return
+      }
+
+      // TODO: add api call to close position
+
+      toast.success("Successfully sold position");
+    } catch (e) {
+      console.error("Error selling position");
+    } finally {
+      setIsSelling(false);
+    }
+  };
 
   return (
     <div className="w-[322px] h-[248px] rounded-md bg-[#51D5EB1A] pt-3.5 pb-4 px-4 flex flex-col">
@@ -62,10 +110,12 @@ export default function PositionCard({
           <div
             className={cn(
               "text-2xl font-semibold",
-              currentValue > invested ? "text-[#22AB88]" : "text-[#DE4346]",
+              calculatedCloseProceeds > invested
+                ? "text-[#22AB88]"
+                : "text-[#DE4346]",
             )}
           >
-            ${currentValue}
+            ${calculatedCloseProceeds}
           </div>
         </div>
       </div>
