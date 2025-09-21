@@ -80,26 +80,26 @@ export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartPr
   }, [data, candleHistory]);
 
   return (
-    <div className={styles.chartContainer}>
+    <div className="w-full h-full">
       <ResponsiveContainer width="100%" height="100%" debounce={1}>
         <RechartsLineChart 
           data={chartData} 
           margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-          width={400}
-          height={400}
+          width={282}
+          height={99}
         >
           <CartesianGrid stroke="transparent" />
           <XAxis 
             dataKey="index" 
             tick={false} 
-            axisLine={{ stroke: '#d3e3ea', strokeWidth: 4 }} 
+            axisLine={{ stroke: '#d3e3ea', strokeWidth: 1 }} 
             tickLine={false}
             height={10}
           />
           <YAxis 
             domain={["dataMin - 10", "dataMax + 10"]} 
             tick={false} 
-            axisLine={{ stroke: '#d3e3ea', strokeWidth: 4 }}
+            axisLine={{ stroke: '#d3e3ea', strokeWidth: 1 }}
             tickLine={false}
             width={10}
           />
@@ -111,7 +111,7 @@ export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartPr
             type="linear" 
             dataKey="value" 
             stroke="#3de1f3" 
-            strokeWidth={4} 
+            strokeWidth={1} 
             dot={false} 
             activeDot={{ r: 6 }}
             isAnimationActive={false}
