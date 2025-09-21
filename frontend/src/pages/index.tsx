@@ -30,6 +30,78 @@ type Market = {
   resolvedAt: string | null;
 };
 
+const shortenAddress = (address: string) =>
+  `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+const isIgnorableWalletConnectError = (error: unknown) => {
+  const message =
+    typeof error === "string"
+      ? error
+      : (error as Error | undefined)?.message ?? "";
+
+  if (!message) {
+    return false;
+  }
+
+  return [
+    "Record was recently deleted",
+    "No matching key",
+    "Pending session not found",
+    "session topic doesn't exist",
+  ].some((fragment) => message.includes(fragment));
+};
+
+const formatEthBalance = (weiHex: string) => {
+  try {
+    const wei = BigInt(weiHex);
+    const etherWhole = wei / 10n ** 18n;
+    const etherFraction = wei % 10n ** 18n;
+
+    if (etherFraction === 0n) {
+      return etherWhole.toString();
+    }
+
+    const fraction = etherFraction.toString().padStart(18, "0").slice(0, 4);
+    const trimmedFraction = fraction.replace(/0+$/, "");
+
+    return `${etherWhole.toString()}${
+      trimmedFraction ? `.${trimmedFraction}` : ""
+    }`;
+  } catch (error) {
+    console.error("ETH 잔액 포맷 실패", error);
+    return "0";
+  }
+};
+
+const clearWalletConnectStorage = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    const storage = window.localStorage;
+
+    Object.keys(storage)
+      .filter((key) => key.startsWith("wc@"))
+      .forEach((key) => storage.removeItem(key));
+  } catch (error) {
+    console.warn("WalletConnect 스토리지 초기화 실패", error);
+  }
+};
+
+const fetchEthPrice = async (): Promise<number | null> => {
+  try {
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
+    );
+    const data = await response.json();
+    return data.ethereum?.usd || null;
+  } catch (error) {
+    console.error("ETH 가격 조회 실패", error);
+    return null;
+  }
+};
+
 export default function Home() {
   const router = useRouter();
   const { walletAddress } = useWallet();
@@ -46,7 +118,7 @@ export default function Home() {
   // Markets state
   const [markets, setMarkets] = useState<Market[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Market | null>(null);
-  
+
   const trackColors = useMemo(() => {
     if (
       typeof window !== "undefined" &&
@@ -196,7 +268,12 @@ export default function Home() {
                         </div>
                       </div>
                       <div
-                        onClick={() => router.push(`/coins/${marketItem.slug}`)}
+                        onClick={() =>
+                          router.push({
+                            pathname: `/coins/${marketItem.slug}`,
+                            query: { marketData: JSON.stringify(marketItem) },
+                          })
+                        }
                         className={styles.chevron}
                       >
                         ›
@@ -226,7 +303,12 @@ export default function Home() {
                     {/* Trade and Quick Bet Buttons */}
                     <div className={styles.actionButtons}>
                       <button
-                        onClick={() => router.push(`/coins/${marketItem.slug}`)}
+                        onClick={() =>
+                          router.push({
+                            pathname: `/coins/${marketItem.slug}`,
+                            query: { marketData: JSON.stringify(marketItem) },
+                          })
+                        }
                         className={styles.tradeButton}
                       >
                         Trade

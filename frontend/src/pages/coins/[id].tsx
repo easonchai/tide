@@ -94,26 +94,10 @@ export default function CoinDetail() {
     setPositionsError(null);
 
     try {
-      console.log("=== Fetching Market Positions ===");
-      console.log("Slug:", slug);
-      console.log("API URL:", `/api/markets/positions/market/${slug}`);
-
       const response = await apiService.market.getPositionsByMarket(slug);
-      console.log("Full response:", response);
-      console.log("Response status:", response.status);
-      console.log("Response data:", response.data);
-      console.log("Data type:", typeof response.data);
-      console.log("Data length:", response.data?.length);
 
       setMarketPositions(response.data || []);
     } catch (error) {
-      console.error("=== Failed to fetch market positions ===");
-      console.error("Error:", error);
-      console.error(
-        "Error message:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
-      console.error("Error response:", (error as any)?.response);
       setPositionsError(
         error instanceof Error ? error.message : "Failed to fetch positions"
       );
@@ -127,8 +111,6 @@ export default function CoinDetail() {
   const fetchMarketBySlug = useCallback(
     async (marketId: string) => {
       try {
-        console.log("Fetching market info for ID:", marketId);
-
         // 모든 market을 가져와서 id로 찾기
         const allMarkets = await apiService.market.getAll();
         console.log("All markets:", allMarkets);
@@ -152,13 +134,18 @@ export default function CoinDetail() {
     [fetchMarketPositions]
   );
 
-  // Fetch market positions when component mounts or id changes
+  // Fetch market positions when component mounts or when we have market data
   useEffect(() => {
-    if (id && typeof id === "string") {
-      // URL 파라미터로 받은 id는 실제 market의 id이므로, 먼저 market 정보를 가져와서 slug를 얻어야 함
+    if (marketData?.slug) {
+      console.log("marketData", marketData);
+      // If we have market data with slug, use it directly
+      void fetchMarketPositions(marketData.slug);
+    } else if (id && typeof id === "string") {
+      // Otherwise, fetch market info by ID first
+      console.log("---2");
       fetchMarketBySlug(id);
     }
-  }, [id, fetchMarketBySlug]);
+  }, [marketData?.slug, id, fetchMarketBySlug, fetchMarketPositions]);
 
   const amount = useMemo(() => {
     const normalized = amountInput.replace(/,/g, ".").trim();
@@ -217,11 +204,6 @@ export default function CoinDetail() {
     });
   }, []);
 
-
-
-
-
-
   // Price range slider state
   const [priceRange, setPriceRange] = useState<[number, number]>([
     114700, 116700,
@@ -235,7 +217,9 @@ export default function CoinDetail() {
     staleTime: 1000 * 60,
   });
 
-  if (isLoading) {
+  // If we have market data from props, we can render immediately
+  // Otherwise, wait for the API data to load
+  if (!marketData && isLoading) {
     return (
       <div className={styles.container}>
         <div className={styles.loading}>Loading market data...</div>
@@ -243,7 +227,7 @@ export default function CoinDetail() {
     );
   }
 
-  if (isError || !data) {
+  if (!marketData && (isError || !data)) {
     return (
       <div className={styles.container}>
         <div className={styles.error}>Unable to load market data</div>
@@ -251,7 +235,42 @@ export default function CoinDetail() {
     );
   }
 
-  const { coin, chart, probability } = data;
+  // Use market data if available, otherwise fall back to fetched data
+  const coin = marketData
+    ? {
+        id: marketData.id,
+        symbol: "BTC",
+        name: marketData.question,
+        image: marketData.profileImage || "/bitcoin-icon.png",
+        currentPrice: extractPriceFromQuestion(marketData.question),
+        priceChangePercentage24h: null,
+      }
+    : data?.coin;
+
+  // Use mock data for chart and probability (in production, these should come from separate APIs)
+  const chart = data?.chart || [
+    { time: "2024-01-01T00:00:00Z", price: 114000 },
+    { time: "2024-01-01T01:00:00Z", price: 114500 },
+    { time: "2024-01-01T02:00:00Z", price: 115000 },
+    { time: "2024-01-01T03:00:00Z", price: 115500 },
+    { time: "2024-01-01T04:00:00Z", price: 116000 },
+    { time: "2024-01-01T05:00:00Z", price: 116500 },
+    { time: "2024-01-01T06:00:00Z", price: 117000 },
+  ];
+
+  const probability = data?.probability || [
+    { price: 110000, probability: 0.05 },
+    { price: 111000, probability: 0.08 },
+    { price: 112000, probability: 0.12 },
+    { price: 113000, probability: 0.15 },
+    { price: 114000, probability: 0.18 },
+    { price: 115000, probability: 0.2 },
+    { price: 116000, probability: 0.15 },
+    { price: 117000, probability: 0.12 },
+    { price: 118000, probability: 0.08 },
+    { price: 119000, probability: 0.05 },
+    { price: 120000, probability: 0.02 },
+  ];
 
   // Create $100 bin structure for LMSR calculations (Signals 스타일)
   const binSize = 100;
@@ -300,26 +319,43 @@ export default function CoinDetail() {
   const winProbability = lmsrResult.winProbability;
   const receiveIfWin = lmsrResult.receiveIfWin;
 
-
   return (
     <Layout
       title={`${coin.name} Market - Tide Markets`}
       description={`${coin.name} market analysis and prediction`}
     >
-
       <div className={styles.container}>
         {/* Event Details Section */}
         <div className={styles.eventSection}>
           <div className={styles.eventHeader}>
             <div className={styles.eventIcon}>
-              <div className={styles.bitcoinIcon}>B</div>
+              {marketData?.profileImage ? (
+                <img
+                  src={marketData.profileImage}
+                  alt="Market Icon"
+                  className={styles.marketIcon}
+                />
+              ) : (
+                <div className={styles.bitcoinIcon}>B</div>
+              )}
             </div>
             <div className={styles.eventDetails}>
               <h1 className={styles.eventTitle}>
-                Bitcoin Closing Price on Sep 21
+                {marketData?.question || "Loading..."}
               </h1>
               <p className={styles.resolutionDate}>
-                Resolves at September 22, 2025 at 08:00 AM GMT+9
+                {marketData?.endDate
+                  ? `Resolves at ${new Date(
+                      marketData.endDate
+                    ).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZoneName: "short",
+                    })}`
+                  : "Loading resolution date..."}
               </p>
             </div>
           </div>
@@ -537,7 +573,9 @@ export default function CoinDetail() {
             <div className={styles.cardValue}>
               {currencyFormatter.format(amount || 0)}
             </div>
-            <div className={styles.cardSubtext}>Balance: $0</div>
+            <div className={styles.cardSubtext}>
+              Balance: {usdBalance || "$0"}
+            </div>
           </div>
 
           {/* Receive if you win */}
@@ -553,57 +591,21 @@ export default function CoinDetail() {
             </div>
           </div>
 
-          {/* Market Positions */}
-          <div className={styles.positionsSection}>
-            <div className={styles.cardLabel}>Market Positions</div>
-            {isLoadingPositions ? (
-              <div className={styles.loadingPositions}>
-                Loading positions...
-              </div>
-            ) : positionsError ? (
-              <div className={styles.errorPositions}>
-                Error: {positionsError}
-              </div>
-            ) : marketPositions.length > 0 ? (
-              <div className={styles.positionsList}>
-                {marketPositions.map((position, index) => (
-                  <div
-                    key={position.id || index}
-                    className={styles.positionItem}
-                  >
-                    <div className={styles.positionInfo}>
-                      <span className={styles.positionUser}>
-                        {position.userAddress
-                          ? shortenAddress(position.userAddress)
-                          : "Unknown"}
-                      </span>
-                      <span className={styles.positionAmount}>
-                        {position.amount
-                          ? currencyFormatter.format(position.amount)
-                          : "$0"}
-                      </span>
-                    </div>
-                    <div className={styles.positionStatus}>
-                      {position.isClosed ? "Closed" : "Open"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.noPositions}>No positions found</div>
-            )}
-          </div>
-
           {/* Place Bet Button */}
           <button
             className={styles.placeBetButton}
             onClick={() => {
               if (!walletAddress) {
-                connectWallet();
+                // If wallet is not connected, redirect to connect wallet
+                // The header will handle the wallet connection
+                alert(
+                  "Please connect your wallet using the Connect Wallet button in the header"
+                );
                 return;
               }
 
               if (amount <= 0) {
+                alert("Please enter a valid amount");
                 return;
               }
 
@@ -612,10 +614,17 @@ export default function CoinDetail() {
                 amount,
                 priceRange,
                 winProbability,
+                walletAddress,
               });
+
+              // TODO: Implement actual betting logic here
+              alert(
+                `Bet placed: $${amount} on price range $${priceRange[0]} - $${priceRange[1]}`
+              );
             }}
+            disabled={!walletAddress || amount <= 0}
           >
-            {walletAddress ? "Place Bet" : "Connect Wallet"}
+            {walletAddress ? "Place Bet" : "Connect Wallet First"}
           </button>
         </div>
       </div>

@@ -75,6 +75,14 @@
   font-weight: 700;
 }
 
+.marketIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(81, 213, 235, 0.3);
+}
+
 .eventDetails {
   flex: 1;
 }
@@ -82,13 +90,13 @@
 .eventTitle {
   font-size: 24px;
   font-weight: 700;
-  color: #9ca3af;
+  color: #ffffff;
   margin: 0 0 8px 0;
 }
 
 .resolutionDate {
   font-size: 14px;
-  color: #9ca3af;
+  color: #ffffff;
   margin: 0;
 }
 
@@ -98,6 +106,9 @@
   border-radius: 12px;
   padding: 24px;
   min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .chartContainer {
@@ -105,6 +116,22 @@
   width: 100%;
   height: 100%;
   border-radius: 8px;
+}
+
+.topChartContainer {
+  flex: 1;
+  position: relative;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(81, 213, 235, 0.2);
+}
+
+.bottomChartContainer {
+  flex: 1;
+  position: relative;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(81, 213, 235, 0.2);
 }
 
 .chartPlaceholder {
@@ -124,13 +151,14 @@
   position: absolute;
   right: 20px;
   top: 20px;
-  bottom: 40px;
+  bottom: 20px;
   width: 80px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
   pointer-events: none;
+  z-index: 10;
 }
 
 .rangeTrack {
@@ -197,10 +225,11 @@
 /* Sidebar */
 .sidebar {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 300px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 500px;
+  max-height: 300px;
 }
 
 /* Card Styles */
@@ -209,10 +238,43 @@
 .amountCard,
 .receiveCard {
   background: #1f2937;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 8px;
+  padding: 12px;
   text-align: center;
   transition: background-color 0.2s ease;
+}
+
+/* Cards that span full width */
+.amountCard,
+.receiveCard {
+  grid-column: 1 / -1;
+}
+
+/* Place Bet Button - centered */
+.placeBetButton {
+  grid-column: 1 / -1;
+  justify-self: center;
+  background: #51d5eb;
+  color: #0f1419;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: auto;
+}
+
+.placeBetButton:hover:not(:disabled) {
+  background: #3bc5d8;
+}
+
+.placeBetButton:disabled {
+  background: #6b7280;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .priceCard:hover,
@@ -223,7 +285,7 @@
 }
 
 .amountCard .amountInput {
-  margin: 12px 0 8px;
+  margin: 8px 0 6px;
 }
 
 .amountCard .amountInputField::placeholder {
@@ -231,21 +293,21 @@
 }
 
 .cardLabel {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: #9ca3af;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .cardValue {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: #f9fafb;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .cardSubtext {
-  font-size: 12px;
+  font-size: 10px;
   color: #6b7280;
 }
 
@@ -324,14 +386,17 @@
 }
 
 .amountInputField {
-  background: #374151;
+  background: transparent;
   border: 1px solid #4b5563;
-  border-radius: 8px;
-  padding: 12px 40px 12px 12px;
+  border-radius: 6px;
+  padding: 8px 32px 8px 8px;
   color: #f9fafb;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  width: 100%;
+  width: 30%;
+  margin-left: auto;
+  margin-right: 50;
+  text-align: center;
   transition: border-color 0.2s ease;
 }
 
@@ -412,23 +477,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-
-.placeBetButton {
-  background: #51d5eb;
-  color: #0f1419;
-  border: none;
-  border-radius: 12px;
-  padding: 16px 24px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  margin-top: auto;
-}
-
-.placeBetButton:hover {
-  background: #3bc5d8;
 }
 
 .identity {
@@ -1059,8 +1107,15 @@
 
   .rangeInputField,
   .amountInputField {
-    background: #1f2937;
+    background: transparent;
     border-color: #374151;
+  }
+
+  .amountInputField {
+    width: 30%;
+    margin-left: auto;
+    margin-right: 0;
+    text-align: center;
   }
 
   .rangeInputField:focus,
@@ -1081,9 +1136,16 @@
     color: #0f1419;
   }
 
-  .placeBetButton:hover {
+  .placeBetButton:hover:not(:disabled) {
     background: #3bc5d8;
     color: #0f1419;
+  }
+
+  .placeBetButton:disabled {
+    background: #6b7280;
+    color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 
   .backButton {
@@ -1170,6 +1232,8 @@
   .sidebar {
     flex: none;
     max-width: none;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .eventTitle {
@@ -1224,11 +1288,11 @@
   .probabilityCard,
   .amountCard,
   .receiveCard {
-    padding: 16px;
+    padding: 10px;
   }
 
   .cardValue {
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .overlayRangeSlider {
