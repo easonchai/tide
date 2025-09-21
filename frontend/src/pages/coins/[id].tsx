@@ -15,15 +15,23 @@ import { Range, Direction } from "react-range";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import React from "react";
 
+import Image from "next/image";
+
 import { betOnPriceRange } from "@/utils/lmsr";
 import { apiService } from "@/utils/apiService";
 import styles from "@/styles/CoinDetail.module.css";
-import { useWallet } from "@/contexts/WalletContext";
 import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 import HedgeModal from "@/components/HedgeModal";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import toast from "react-hot-toast";
+import { marketContract } from "@/config/config";
+import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
+import { MarketResponseDTO } from "@/types/market";
+import { parseUnits } from "viem";
+import { waitForTransactionReceipt } from "wagmi/actions";
 
-const shortenAddress = (address: string) =>
-  `${address.slice(0, 6)}...${address.slice(-4)}`;
+// const shortenAddress = (address: string) =>
+//   `${address.slice(0, 6)}...${address.slice(-4)}`;
 
 type ChartPoint = {
   time: string;
@@ -88,78 +96,62 @@ const extractPriceFromQuestion = (question: string): number => {
 
 export default function CoinDetail() {
   const router = useRouter();
-  const { id, marketData: marketDataString } = router.query;
+  const { id } = router.query;
 
   // Parse market data from query params
-  const marketData = marketDataString
-    ? JSON.parse(marketDataString as string)
-    : null;
 
   const [amountInput, setAmountInput] = useState("100");
-  const { walletAddress, connectWallet } = useWallet();
+  const [isBetting, setIsBetting] = useState(false);
+  const { address: walletAddress } = useAccount();
 
-  // Market positions states
-  const [marketPositions, setMarketPositions] = useState<any[]>([]);
-  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
-  const [positionsError, setPositionsError] = useState<string | null>(null);
+  const { writeContractAsync } = useWriteContract();
 
   // Hedge modal state
   const [showHedgeModal, setShowHedgeModal] = useState(false);
 
-  // Fetch market positions data
-  const fetchMarketPositions = useCallback(async (slug: string) => {
-    if (!slug) return;
+  const { data: marketData } = useQuery({
+    queryKey: ["marketData", id],
+    queryFn: async () => {
+      const response = await apiService.market.getBySlug(id as string);
 
-    setIsLoadingPositions(true);
-    setPositionsError(null);
-
-    try {
-      const response = await apiService.market.getPositionsByMarket(slug);
-
-      setMarketPositions(response.data || []);
-    } catch (error) {
-      setPositionsError(
-        error instanceof Error ? error.message : "Failed to fetch positions"
-      );
-      setMarketPositions([]);
-    } finally {
-      setIsLoadingPositions(false);
-    }
-  }, []);
-
-  // Market 정보를 가져와서 slug를 얻은 후 positions를 가져오는 함수
-  const fetchMarketBySlug = useCallback(
-    async (marketId: string) => {
-      try {
-        // 모든 market을 가져와서 id로 찾기
-        const allMarkets = await apiService.market.getAll();
-        console.log("All markets:", allMarkets);
-
-        const foundMarket = allMarkets.data?.find(
-          (m: any) => m.id === marketId
-        );
-
-        if (foundMarket?.slug) {
-          console.log("Found market by id, using slug:", foundMarket.slug);
-          await fetchMarketPositions(foundMarket.slug);
-        } else {
-          console.error("No market found with id:", marketId);
-          setPositionsError("Market not found");
-        }
-      } catch (error) {
-        console.error("Failed to fetch market info:", error);
-        setPositionsError("Failed to fetch market information");
-      }
+      return response.data;
     },
-    [fetchMarketPositions]
-  );
+    enabled: Boolean(id),
+  }) as { data: MarketResponseDTO | undefined };
+
+  // // Market 정보를 가져와서 slug를 얻은 후 positions를 가져오는 함수
+  // const fetchMarketBySlug = useCallback(
+  //   async (marketId: string) => {
+  //     try {
+  //       // 모든 market을 가져와서 id로 찾기
+  //       const allMarkets = await apiService.market.getBySlug(id);
+  //       console.log("All markets:", allMarkets);
+  //
+  //       const foundMarket = allMarkets.data?.find(
+  //         (m: any) => m.id === marketId
+  //       );
+  //
+  //       if (foundMarket?.slug) {
+  //         console.log("Found market by id, using slug:", foundMarket.slug);
+  //         await fetchMarketPositions(foundMarket.slug);
+  //       } else {
+  //         console.error("No market found with id:", marketId);
+  //         setPositionsError("Market not found");
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to fetch market info:", error);
+  //       setPositionsError("Failed to fetch market information");
+  //     }
+  //   },
+  //   [fetchMarketPositions]
+  // );
 
   // Fetch market positions when component mounts
-  useEffect(() => {
-    if (id && typeof id === "string") {
-      fetchMarketBySlug(id);
-    }
-  }, [id, fetchMarketBySlug]);
+  // useEffect(() => {
+  //   if (id && typeof id === "string") {
+  //     fetchMarketBySlug(id);
+  //   }
+  // }, [id, fetchMarketBySlug]);
 
   const twentyFourHoursMs = 24 * 60 * 60 * 1000;
   const [historyStart] = useState(() => Date.now() - twentyFourHoursMs);
@@ -170,7 +162,7 @@ export default function CoinDetail() {
     startTime: historyStart,
     endTime: null,
     testnet: false,
-    enabled: true,
+    enabled: Boolean(marketData && marketData.token),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -214,7 +206,7 @@ export default function CoinDetail() {
 
       setAmountInput(nextValue);
     },
-    []
+    [],
   );
 
   const handleAmountBlur = useCallback(() => {
@@ -406,6 +398,57 @@ export default function CoinDetail() {
     });
   }, [domain, initialPriceRange]);
 
+  const { data: calculatedCost } = useReadContract({
+    address: marketContract,
+    abi: cLMSRMarketCoreABI,
+    functionName: "calculateOpenCost",
+    args: [
+      marketData?.onChainId,
+      priceRange[0],
+      priceRange[1],
+      parseUnits(amountInput, 6),
+    ],
+    query: {
+      enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
+    },
+  }) as { data: bigint | undefined };
+
+  const { data: calculatedQuantityFromCost } = useReadContract({
+    address: marketContract,
+    abi: cLMSRMarketCoreABI,
+    functionName: "calculateQuantityFromCost",
+    args: [
+      marketData?.onChainId,
+      priceRange[0],
+      priceRange[1],
+      parseUnits(amountInput, 6),
+    ],
+    query: {
+      enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
+    },
+  }) as { data: bigint | undefined };
+  // Ensure Range never mounts with out-of-bounds values
+  const rangeStep = useMemo(
+    () => Math.max(1, (domain[1] - domain[0]) / 1000),
+    [domain],
+  );
+
+  const clampedPriceRange = useMemo(() => {
+    const clamp = (value: number) =>
+      Math.min(Math.max(value, domain[0]), domain[1]);
+
+    let min = clamp(priceRange[0]);
+    let max = clamp(priceRange[1]);
+
+    // Ensure strictly increasing and at least one step apart
+    if (min >= max || max - min < rangeStep) {
+      min = domain[0];
+      max = Math.min(domain[1], domain[0] + rangeStep);
+    }
+
+    return [min, max] as [number, number];
+  }, [priceRange, domain, rangeStep]);
+
   // Generate probability distribution from real data
   const probability = useMemo(() => {
     if (!hypeHistory || !hypeHistory.length) {
@@ -424,7 +467,7 @@ export default function CoinDetail() {
       const binStart = min + i * binSize;
       const binEnd = min + (i + 1) * binSize;
       const count = prices.filter(
-        (price) => price >= binStart && price < binEnd
+        (price) => price >= binStart && price < binEnd,
       ).length;
       const probability = count / prices.length;
 
@@ -483,7 +526,10 @@ export default function CoinDetail() {
 
   // Calculate which bins are in the selected range (정확한 범위 계산)
   const selectedBins = bins
-    .filter((bin) => bin.price >= priceRange[0] && bin.price < priceRange[1])
+    .filter(
+      (bin) =>
+        bin.price >= clampedPriceRange[0] && bin.price < clampedPriceRange[1],
+    )
     .map((bin) => bin.index);
 
   // Use LMSR calculation for accurate predictions
@@ -491,6 +537,69 @@ export default function CoinDetail() {
 
   const winProbability = lmsrResult.winProbability;
   const receiveIfWin = lmsrResult.receiveIfWin;
+
+  const handlePlaceBet = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!walletAddress) {
+      // If wallet is not connected, redirect to connect wallet
+      // The header will handle the wallet connection
+      toast.error("Please connect your wallet");
+      return;
+    }
+
+    if (calculatedQuantityFromCost === undefined) {
+      toast.error("Cost loading");
+      return;
+    }
+
+    if (!marketData) {
+      toast.error("Error fetching market data");
+      return;
+    }
+
+    if (amount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    setIsBetting(true);
+
+    // TODO: Add min max validation
+    try {
+      const marketId = marketData.onChainId;
+      const lowerTick = priceRange[0];
+      const upperTick = priceRange[1];
+      const amountParsed = calculatedQuantityFromCost;
+      const maxCost = parseUnits(amountInput, 6);
+
+      const tx = await writeContractAsync({
+        address: marketContract,
+        abi: cLMSRMarketCoreABI,
+        functionName: "openPosition",
+        args: [marketId, lowerTick, upperTick, amountParsed, maxCost],
+      });
+
+      if (!tx) return;
+
+      const receipt = await waitForTransactionReceipt(readConfig, {
+        hash: tx,
+      });
+
+      if (receipt.status === "reverted") {
+        toast.error("Bet transaction reverted");
+        return;
+      }
+
+      toast.success("Successfully placed bet");
+    } catch (e) {
+      console.error("Error placing bet");
+      return;
+    } finally {
+      setIsBetting(false);
+    }
+
+    // Show hedge modal after successful bet
+    setShowHedgeModal(true);
+  };
 
   // If we have market data from props, we can render immediately
   // Otherwise, wait for the API data to load
@@ -521,9 +630,11 @@ export default function CoinDetail() {
           <div className={styles.eventHeader}>
             <div className={styles.eventIcon}>
               {marketData?.profileImage ? (
-                <img
+                <Image
                   src={marketData.profileImage}
                   alt="Market Icon"
+                  width={48}
+                  height={48}
                   className={styles.marketIcon}
                 />
               ) : (
@@ -537,7 +648,7 @@ export default function CoinDetail() {
               <p className={styles.resolutionDate}>
                 {marketData?.endDate
                   ? `Resolves at ${new Date(
-                      marketData.endDate
+                      marketData.endDate,
                     ).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "long",
@@ -607,13 +718,13 @@ export default function CoinDetail() {
                     connectNulls={false}
                   />
                   <ReferenceLine
-                    y={priceRange[1]}
+                    y={clampedPriceRange[1]}
                     stroke="#dc2626"
                     strokeWidth={2}
                     strokeDasharray="5 5"
                   />
                   <ReferenceLine
-                    y={priceRange[0]}
+                    y={clampedPriceRange[0]}
                     stroke="#16a34a"
                     strokeWidth={2}
                     strokeDasharray="5 5"
@@ -624,8 +735,8 @@ export default function CoinDetail() {
               {/* Range Slider Overlay  todo: make align line and slider*/}
               <div className={styles.rangeSliderOverlay}>
                 <Range
-                  values={priceRange}
-                  step={Math.max(1, (domain[1] - domain[0]) / 1000)}
+                  values={clampedPriceRange}
+                  step={rangeStep}
                   min={domain[0]}
                   max={domain[1]}
                   onChange={(values) => {
@@ -707,7 +818,7 @@ export default function CoinDetail() {
                       position: "absolute",
                       right: "0px",
                       top: `${
-                        ((domain[1] - priceRange[1]) /
+                        ((domain[1] - clampedPriceRange[1]) /
                           (domain[1] - domain[0])) *
                         100
                       }%`,
@@ -715,7 +826,7 @@ export default function CoinDetail() {
                     }}
                   >
                     <span className={styles.rangePrice}>
-                      {currencyFormatter.format(priceRange[1])}
+                      {currencyFormatter.format(clampedPriceRange[1])}
                     </span>
                   </div>
                   <div
@@ -724,7 +835,7 @@ export default function CoinDetail() {
                       position: "absolute",
                       right: "0px",
                       top: `${
-                        ((domain[1] - priceRange[0]) /
+                        ((domain[1] - clampedPriceRange[0]) /
                           (domain[1] - domain[0])) *
                         100
                       }%`,
@@ -732,7 +843,7 @@ export default function CoinDetail() {
                     }}
                   >
                     <span className={styles.rangePrice}>
-                      {currencyFormatter.format(priceRange[0])}
+                      {currencyFormatter.format(clampedPriceRange[0])}
                     </span>
                   </div>
                 </div>
@@ -812,37 +923,7 @@ export default function CoinDetail() {
           {/* Place Bet Button */}
           <button
             className={styles.placeBetButton}
-            onClick={() => {
-              if (!walletAddress) {
-                // If wallet is not connected, redirect to connect wallet
-                // The header will handle the wallet connection
-                alert(
-                  "Please connect your wallet using the Connect Wallet button in the header"
-                );
-                return;
-              }
-
-              if (amount <= 0) {
-                alert("Please enter a valid amount");
-                return;
-              }
-
-              // 실제 베팅 로직 구현
-              console.log("Placing bet:", {
-                amount,
-                priceRange,
-                winProbability,
-                walletAddress,
-              });
-
-              // TODO: Implement actual betting logic here
-              alert(
-                `Bet placed: $${amount} on price range $${priceRange[0]} - $${priceRange[1]}`
-              );
-
-              // Show hedge modal after successful bet
-              setShowHedgeModal(true);
-            }}
+            onClick={handlePlaceBet}
             disabled={!walletAddress || amount <= 0}
           >
             {walletAddress ? "Place Bet" : "Connect Wallet First"}
@@ -855,11 +936,11 @@ export default function CoinDetail() {
         <HedgeModal
           isOpen={showHedgeModal}
           onClose={() => setShowHedgeModal(false)}
-          token={marketData.token || ''}
+          token={marketData.token || ""}
           currentPrice={coin?.currentPrice || 0}
           betAmount={amount}
-          priceRange={priceRange}
-          question={marketData.question || ''}
+          priceRange={clampedPriceRange}
+          question={marketData.question || ""}
         />
       )}
     </Layout>
