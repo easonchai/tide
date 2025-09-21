@@ -3,6 +3,28 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Range, getTrackBackground } from "react-range";
 import styles from "@/styles/Home.module.css";
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
+import { apiService } from "@/utils/apiService";
+
+// Destructure apiService
+const { market } = apiService;
+
+// Question data type
+type Question = {
+  id: string;
+  question: string;
+  address: string;
+  status: string;
+  tags: string[];
+  profileImage: string;
+  slug: string;
+  fee: string;
+  volume: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  resolvedAt: string | null;
+};
 
 const shortenAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -38,7 +60,9 @@ const formatEthBalance = (weiHex: string) => {
     const fraction = etherFraction.toString().padStart(18, "0").slice(0, 4);
     const trimmedFraction = fraction.replace(/0+$/, "");
 
-    return `${etherWhole.toString()}${trimmedFraction ? `.${trimmedFraction}` : ""}`;
+    return `${etherWhole.toString()}${
+      trimmedFraction ? `.${trimmedFraction}` : ""
+    }`;
   } catch (error) {
     console.error("ETH 잔액 포맷 실패", error);
     return "0";
@@ -68,13 +92,20 @@ export default function Home() {
 
   const [showPredictionModal, setShowPredictionModal] = useState(false);
   const [betAmount, setBetAmount] = useState(100);
-  const [priceRange, setPriceRange] = useState<[number, number]>([95000, 99000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    95000, 99000,
+  ]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
+
+  // Questions state
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [questionsError, setQuestionsError] = useState<string | null>(null);
   const trackColors = useMemo(() => {
     if (
       typeof window !== "undefined" &&
@@ -88,35 +119,32 @@ export default function Home() {
   const providerRef = useRef<EthereumProvider | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchWalletBalance = useCallback(
-    async (address: string) => {
-      const provider = providerRef.current;
+  const fetchWalletBalance = useCallback(async (address: string) => {
+    const provider = providerRef.current;
 
-      if (!provider) {
-        return;
+    if (!provider) {
+      return;
+    }
+
+    setWalletBalance(null);
+    setIsFetchingBalance(true);
+
+    try {
+      const balanceHex = (await provider.request({
+        method: "eth_getBalance",
+        params: [address, "latest"],
+      })) as string;
+
+      setWalletBalance(formatEthBalance(balanceHex));
+    } catch (error) {
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("지갑 잔액 조회 실패", error);
       }
-
       setWalletBalance(null);
-      setIsFetchingBalance(true);
-
-      try {
-        const balanceHex = (await provider.request({
-          method: "eth_getBalance",
-          params: [address, "latest"],
-        })) as string;
-
-        setWalletBalance(formatEthBalance(balanceHex));
-      } catch (error) {
-        if (!isIgnorableWalletConnectError(error)) {
-          console.error("지갑 잔액 조회 실패", error);
-        }
-        setWalletBalance(null);
-      } finally {
-        setIsFetchingBalance(false);
-      }
-    },
-    []
-  );
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  }, []);
 
   const handleAccountsChanged = useCallback(
     (accounts: string[]) => {
@@ -230,7 +258,13 @@ export default function Home() {
     } finally {
       setIsConnecting(false);
     }
-  }, [fetchWalletBalance, handleAccountsChanged, handleDisconnect, isConnecting, walletAddress]);
+  }, [
+    fetchWalletBalance,
+    handleAccountsChanged,
+    handleDisconnect,
+    isConnecting,
+    walletAddress,
+  ]);
 
   const disconnectWallet = useCallback(async () => {
     const provider = providerRef.current;
@@ -269,6 +303,29 @@ export default function Home() {
       clearWalletConnectStorage();
     }
   }, [handleAccountsChanged, handleDisconnect]);
+
+  // Fetch questions
+  const fetchQuestions = useCallback(async () => {
+    setIsLoadingQuestions(true);
+    setQuestionsError(null);
+
+    try {
+      const response = await market.getAll({
+        status: "OPEN",
+      });
+      console.log(response);
+      setQuestions(response.data || []);
+    } catch (error) {
+      console.error("질문 목록 조회 실패", error);
+      setQuestionsError("질문 목록을 불러오는데 실패했습니다.");
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchQuestions();
+  }, [fetchQuestions]);
 
   useEffect(() => {
     return () => {
@@ -512,6 +569,71 @@ export default function Home() {
       </header>
 
       <div className={styles.container}>
+        {/* Questions Section */}
+        <section className={styles.questionsSection}>
+          <div className={styles.questionsHeader}>
+            <h2 className={styles.questionsTitle}>Active Questions</h2>
+            {isLoadingQuestions && (
+              <div className={styles.loading}>Loading...</div>
+            )}
+            {questionsError && (
+              <div className={styles.error}>{questionsError}</div>
+            )}
+          </div>
+
+          <div className={styles.questionsList}>
+            {questions.map((question) => (
+              <div key={question.id} className={styles.questionCard}>
+                <div className={styles.questionHeader}>
+                  <div className={styles.questionProfile}>
+                    <img
+                      src={question.profileImage}
+                      alt="Profile"
+                      className={styles.questionProfileImage}
+                    />
+                    <span className={styles.questionAddress}>
+                      {shortenAddress(question.address)}
+                    </span>
+                  </div>
+                  <div className={styles.questionStatus}>
+                    <span
+                      className={`${styles.statusBadge} ${
+                        styles[question.status.toLowerCase()]
+                      }`}
+                    >
+                      {question.status}
+                    </span>
+                  </div>
+                </div>
+
+                <h3 className={styles.questionText}>{question.question}</h3>
+
+                <div className={styles.questionTags}>
+                  {question.tags.map((tag) => (
+                    <span key={tag} className={styles.tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className={styles.questionFooter}>
+                  <div className={styles.questionStats}>
+                    <span className={styles.volume}>
+                      Volume: ${(Number(question.volume) / 1e18).toFixed(2)}
+                    </span>
+                    <span className={styles.fee}>
+                      Fee: {(Number(question.fee) / 1e18).toFixed(4)} ETH
+                    </span>
+                  </div>
+                  <div className={styles.questionEndDate}>
+                    Ends: {new Date(question.endDate).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <main className={styles.main}>
           {!showPredictionModal ? (
             // Bitcoin Card View
