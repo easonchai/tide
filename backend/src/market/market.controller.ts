@@ -12,7 +12,8 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { MarketService } from './market.service';
 import { Market } from '@prisma/client';
-import { CreateMarketDto, UpdateMarketDto, MarketResponseDto } from './dto';
+import { CreateMarketDto, UpdateMarketDto } from './dto/market.dto';
+import { MarketResponseDto } from './dto/market-response.dto';
 
 @ApiTags('Markets')
 @Controller('markets')
