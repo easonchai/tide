@@ -1,10 +1,10 @@
-import { Controller, Post, Get, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Post, Param, Logger, Body } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiParam,
-  ApiBody,
   ApiResponse,
+  ApiBody,
 } from '@nestjs/swagger';
 import { OracleService } from './oracle.service';
 
@@ -24,9 +24,9 @@ export class OracleController {
     status: 400,
     description: 'Market not open or resolution failed',
   })
-  async manualResolveMarket(@Param('slug') slug: string) {
+  async resolveMarket(@Param('slug') slug: string) {
     this.logger.log(`Manual resolution request for market: ${slug}`);
-    return this.oracleService.manualResolveMarket(slug);
+    return this.oracleService.resolveMarket(slug);
   }
 
   @Post('test-price')
