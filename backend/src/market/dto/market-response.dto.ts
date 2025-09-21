@@ -15,6 +15,12 @@ export class MarketResponseDTO {
   question: string;
 
   @ApiProperty({
+    description: 'Token pair name for hyperliquid api',
+    example: '@107',
+  })
+  token: string;
+
+  @ApiProperty({
     description: 'Market status',
     enum: MarketStatus,
     example: MarketStatus.OPEN,

@@ -7,6 +7,7 @@ export enum MarketStatus {
 
 export interface CreateMarketDTO {
   question: string;
+  token: string;
   tags?: string[];
   profileImage?: string;
   slug: string;
@@ -15,6 +16,7 @@ export interface CreateMarketDTO {
 
 export interface UpdateMarketDTO {
   question?: string;
+  token?: string;
   status?: MarketStatus;
   tags?: string[];
   profileImage?: string;
@@ -24,6 +26,7 @@ export interface UpdateMarketDTO {
 export interface MarketResponseDTO {
   id: string;
   question: string;
+  token: string;
   status: MarketStatus;
   tags: string[];
   profileImage: string | null;

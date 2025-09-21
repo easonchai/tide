@@ -30,7 +30,7 @@ enum MarketStatus {
 model Market {
   id       String       @id @default(cuid())
   question String
-  // creator       String
+  token    String       @default("0")
   status   MarketStatus @default(OPEN)
 
   tags              String[]

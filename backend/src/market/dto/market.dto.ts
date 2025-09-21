@@ -29,6 +29,14 @@ export class CreateMarketDTO {
   question: string;
 
   @ApiProperty({
+    description: 'Token pair name for hyperliquid api',
+    example: '@107',
+  })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @ApiProperty({
     description: 'Market tags',
     example: ['crypto', 'bitcoin', 'price-prediction'],
     type: [String],
