@@ -70,18 +70,10 @@ public/robots.txt
 storybook-static
 
 # NestJS specific
-/dist
-/node_modules
-/test
+dist/
+node_modules/
 build/
-/uploads
-/public
 combined.log
 error.log
-.eslintrc.js
-.prettierrc
 .vscode
-nest-cli.json
 ormconfig.json
-tsconfig.build.json
-tsconfig.json
