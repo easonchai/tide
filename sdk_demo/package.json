@@ -1,0 +1,32 @@
+{
+  "name": "hyperliquid_sdk_demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "candles": "ts-node getCandlestickData.ts",
+    "positions": "ts-node checkPositions.ts",
+    "trade:perp": "ts-node tradePerp.ts",
+    "trade:spot": "ts-node tradeSpot.ts",
+    "trade:spot:manual": "ts-node tradeSpotManual.ts",
+    "transfer": "ts-node transferBetweenPerpAndSpot.ts",
+    "build": "tsc",
+    "start": "node dist/getCandlestickData.js",
+    "builder:approve": "ts-node approveBuilder.ts",
+    "live:candle": "ts-node live-candle.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nktkas/hyperliquid": "^0.24.3",
+    "dotenv": "^17.2.2",
+    "viem": "^2.37.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
