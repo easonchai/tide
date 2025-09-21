@@ -4,6 +4,8 @@ import { ReactNode } from "react";
 import { useWallet } from "@/contexts/WalletContext";
 import styles from "@/styles/Layout.module.css";
 import { Toaster } from "react-hot-toast";
+import Image from "next/image";
+import Link from "next/link";
 
 interface LayoutProps {
   children: ReactNode;
@@ -48,33 +50,41 @@ export default function Layout({
         <header className={styles.header}>
           <div className={styles.headerContent}>
             <div className={styles.flexCompacted}>
-              <div className={styles.brand}>
+              <Link className={styles.brand} href="/">
                 <div className={styles.logo}>
-                  <img src="/logo.svg" alt="Tide Logo" width="52" height="32" />
+                  <Image
+                    src="/logo.svg"
+                    alt="Tide Logo"
+                    width={52}
+                    height={32}
+                    className="object-contain"
+                  />
                 </div>
-                <img
+                <Image
                   src="/tide-text.svg"
                   alt="Tide"
                   className={styles.brandText}
+                  width={72.13}
+                  height={24}
                 />
-              </div>
+              </Link>
 
               <nav className={styles.navigation}>
-                <a
+                <Link
                   href="/"
                   className={`${styles.navLink} ${isActivePage("/") ? styles.active : ""}`}
                 >
                   Markets
-                </a>
-                <a href="#" className={styles.navLink}>
+                </Link>
+                <Link href="#" className={styles.navLink}>
                   Portfolio
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/news"
                   className={`${styles.navLink} ${isActivePage("/news") ? styles.active : ""}`}
                 >
                   News Feed
-                </a>
+                </Link>
               </nav>
             </div>
 
