@@ -52,7 +52,7 @@ export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartPr
   }, [coin]); // Only recalculate when coin changes
   
   const { data: candleHistory } = useCandleHistoryQuery({
-    coin,
+    token: coin,
     interval: '1m',
     startTime: historyStart,
     endTime: null,
