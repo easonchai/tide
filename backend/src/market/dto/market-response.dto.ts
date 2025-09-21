@@ -28,20 +28,6 @@ export class MarketResponseDTO {
   status: MarketStatus;
 
   @ApiProperty({
-    description: 'Summary of the market',
-    example: 'This market predicts Bitcoin price movement',
-    nullable: true,
-  })
-  marketSummary: string | null;
-
-  @ApiProperty({
-    description: 'Market rules and conditions',
-    example: 'Market resolves based on CoinGecko price at end of 2024',
-    nullable: true,
-  })
-  rules: string | null;
-
-  @ApiProperty({
     description: 'Market tags',
     example: ['crypto', 'bitcoin', 'price-prediction'],
     type: [String],
@@ -119,6 +105,12 @@ export class NFTPositionResponseDTO {
     example: 'clx1234567890abcdef',
   })
   userId: string;
+
+  @ApiProperty({
+    description: 'The on chain NFT ID of the position',
+    example: '42',
+  })
+  onChainId: string;
 
   @ApiProperty({
     description: 'The amount of the position',

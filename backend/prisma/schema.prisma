@@ -34,11 +34,9 @@ model Market {
   // creator       String
   status   MarketStatus @default(OPEN)
 
-  marketSummary String?  @db.Text
-  rules         String?  @db.Text
-  tags          String[]
-  profileImage  String?
-  slug          String   @unique
+  tags         String[]
+  profileImage String?
+  slug         String   @unique
 
   // collateralToken    String
   // oracle             String
@@ -56,9 +54,10 @@ model Market {
 }
 
 model NFTPosition {
-  id       String @id @default(cuid())
-  marketId String
-  userId   String
+  id        String @id @default(cuid())
+  marketId  String
+  userId    String
+  onChainId String
 
   amount     BigInt
   payout     BigInt?
@@ -72,24 +71,6 @@ model NFTPosition {
   market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  perpetualPositions PerpetualPosition[]
-
   @@index([marketId])
   @@index([userId])
-}
-
-model PerpetualPosition {
-  id            String @id @default(cuid())
-  nftPositionId String
-
-  amount BigInt
-  // TODO: Check hyperliquid for required attributes
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  deletedAt DateTime?
-
-  nftPosition NFTPosition @relation(fields: [nftPositionId], references: [id], onDelete: Cascade)
-
-  @@index([nftPositionId])
 }

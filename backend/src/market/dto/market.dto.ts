@@ -36,24 +36,6 @@ export class CreateMarketDTO {
   address: string;
 
   @ApiProperty({
-    description: 'Summary of the market',
-    example: 'This market predicts Bitcoin price movement',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  marketSummary?: string;
-
-  @ApiProperty({
-    description: 'Market rules and conditions',
-    example: 'Market resolves based on CoinGecko price at end of 2024',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  rules?: string;
-
-  @ApiProperty({
     description: 'Market tags',
     example: ['crypto', 'bitcoin', 'price-prediction'],
     type: [String],
@@ -126,24 +108,6 @@ export class UpdateMarketDTO {
   status?: MarketStatus;
 
   @ApiProperty({
-    description: 'Summary of the market',
-    example: 'This market predicts Bitcoin price movement',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  marketSummary?: string;
-
-  @ApiProperty({
-    description: 'Market rules and conditions',
-    example: 'Market resolves based on CoinGecko price at end of 2024',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  rules?: string;
-
-  @ApiProperty({
     description: 'Market tags',
     example: ['crypto', 'bitcoin', 'price-prediction'],
     type: [String],
@@ -197,6 +161,14 @@ export class CreateNFTPositionDTO {
   })
   @IsEthereumAddress()
   userAddress: string;
+
+  @ApiProperty({
+    description: 'The on chain NFT ID of the position',
+    example: '42',
+  })
+  @IsString()
+  @IsNotEmpty()
+  onChainId: string;
 
   @ApiProperty({
     description: 'The amount of the position',
