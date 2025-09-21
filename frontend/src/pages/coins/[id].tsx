@@ -16,7 +16,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Range, Direction } from "react-range";
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import React from "react";
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
 import type { AxiosError } from "axios";
@@ -153,6 +153,11 @@ export default function CoinDetail() {
   const providerRef = useRef<EthereumProvider | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
 
+  // Market positions states
+  const [marketPositions, setMarketPositions] = useState<any[]>([]);
+  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
+  const [positionsError, setPositionsError] = useState<string | null>(null);
+
   const registerUser = useCallback(async (address: string) => {
     try {
       await apiService.user.create({ address });
@@ -169,6 +174,36 @@ export default function CoinDetail() {
       }
     }
   }, []);
+
+  // Fetch market positions data
+  const fetchMarketPositions = useCallback(async (slug: string) => {
+    if (!slug) return;
+
+    setIsLoadingPositions(true);
+    setPositionsError(null);
+
+    try {
+      console.log("Fetching market positions for slug:", slug);
+      const response = await apiService.market.getPositionsByMarket(slug);
+      console.log("Market positions response:", response.data);
+      setMarketPositions(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch market positions:", error);
+      setPositionsError(
+        error instanceof Error ? error.message : "Failed to fetch positions"
+      );
+      setMarketPositions([]);
+    } finally {
+      setIsLoadingPositions(false);
+    }
+  }, []);
+
+  // Fetch market positions when component mounts or id changes
+  useEffect(() => {
+    if (id && typeof id === "string") {
+      fetchMarketPositions(id);
+    }
+  }, [id, fetchMarketPositions]);
 
   const amount = useMemo(() => {
     const normalized = amountInput.replace(/,/g, ".").trim();
@@ -916,6 +951,47 @@ export default function CoinDetail() {
                 ? (receiveIfWin / amount).toFixed(2) + "x"
                 : "x0.00"}
             </div>
+          </div>
+
+          {/* Market Positions */}
+          <div className={styles.positionsSection}>
+            <div className={styles.cardLabel}>Market Positions</div>
+            {isLoadingPositions ? (
+              <div className={styles.loadingPositions}>
+                Loading positions...
+              </div>
+            ) : positionsError ? (
+              <div className={styles.errorPositions}>
+                Error: {positionsError}
+              </div>
+            ) : marketPositions.length > 0 ? (
+              <div className={styles.positionsList}>
+                {marketPositions.map((position, index) => (
+                  <div
+                    key={position.id || index}
+                    className={styles.positionItem}
+                  >
+                    <div className={styles.positionInfo}>
+                      <span className={styles.positionUser}>
+                        {position.userAddress
+                          ? shortenAddress(position.userAddress)
+                          : "Unknown"}
+                      </span>
+                      <span className={styles.positionAmount}>
+                        {position.amount
+                          ? currencyFormatter.format(position.amount)
+                          : "$0"}
+                      </span>
+                    </div>
+                    <div className={styles.positionStatus}>
+                      {position.isClosed ? "Closed" : "Open"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.noPositions}>No positions found</div>
+            )}
           </div>
 
           {/* Place Bet Button */}

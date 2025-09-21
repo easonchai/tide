@@ -1,0 +1,413 @@
+.header {
+  background: #0e1b24;
+  border-bottom: 1px solid #1f2937;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+.brandLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.brandName {
+  font-size: 20px;
+  font-weight: 700;
+  color: #51d5eb;
+}
+
+.navigation {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.navLink {
+  color: #94a3b8;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: #f8fafc;
+}
+
+.navLinkActive {
+  color: #f8fafc;
+  position: relative;
+}
+
+.navLinkActive::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #51d5eb;
+  border-radius: 999px;
+}
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  color: #e2e8f0;
+}
+
+.heroSection {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  font-size: 36px;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 16px;
+}
+
+.addressBox {
+  background: rgba(81, 213, 235, 0.08);
+  border: 1px solid rgba(81, 213, 235, 0.18);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.addressLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.addressValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f8fafc;
+  word-break: break-all;
+}
+
+.emptyState {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #cbd5f5;
+  font-size: 16px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.summaryCard {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.summaryLabel {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.summaryValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.summaryPositive {
+  font-size: 24px;
+  font-weight: 700;
+  color: #22c55e;
+}
+
+.summaryNegative {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f87171;
+}
+
+.statsSection {
+  margin-bottom: 2.5rem;
+}
+
+.sectionTitle {
+  font-size: 22px;
+  margin: 0 0 1.5rem 0;
+  color: #f8fafc;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+
+.statCard {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.statLabel {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.graphSection {
+  margin-bottom: 2.5rem;
+}
+
+.graphHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.graphRange {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.graphContainer {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.graphSvg {
+  width: 100%;
+  height: 220px;
+}
+
+.graphLine {
+  fill: none;
+  stroke: #51d5eb;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.graphEmpty {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.positionsSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.positionsColumn {
+  flex: 1 1 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionSubtitle {
+  font-size: 20px;
+  margin: 0;
+  color: #f8fafc;
+}
+
+.positionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.positionCard {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.positionHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.positionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.positionImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.positionIconText {
+  font-size: 18px;
+}
+
+.positionMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.positionQuestion {
+  font-size: 16px;
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.positionStatus {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+.positionStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.positionStats div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.positionStats dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.positionStats dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.emptyPositions {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .heroSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .graphHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .headerContent {
+    flex-direction: column;
+    height: auto;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .navigation {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .heroSection {
+    text-align: center;
+  }
+
+  .addressBox {
+    align-self: center;
+  }
+
+  .positionsSection {
+    flex-direction: column;
+  }
+}

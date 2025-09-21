@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Range, getTrackBackground } from "react-range";
@@ -470,10 +471,17 @@ export default function Home() {
           </div>
 
           <nav className={styles.navigation}>
-            <a href="#" className={styles.navLink}>
+            <Link href="/" className={styles.navLink}>
               Markets
-            </a>
-            <a href="#" className={styles.navLink}>
+            </Link>
+            <Link
+              href={
+                walletAddress
+                  ? `/portfolio?address=${walletAddress}`
+                  : "/portfolio"
+              }
+              className={styles.navLink}
+            >
               Portfolio
             </a>
             <a href="/news" className={styles.navLink}>
