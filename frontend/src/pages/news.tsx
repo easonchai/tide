@@ -197,7 +197,7 @@ export default function News() {
       }
     });
     if (node) observer.current.observe(node);
-  }, [loadingMore, hasMore, loadMoreData]);
+  }, [loadingMore, hasMore]);
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -252,7 +252,7 @@ export default function News() {
           {/* Single Column News Feed */}
           <div className={styles.newsFeed}>
             {loading ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
+              <div className={styles.loadingState}>
                 Loading latest business news...
               </div>
             ) : (
@@ -337,30 +337,24 @@ export default function News() {
           {/* Loading More Indicator */}
           {loadingMore && (
             <div className={styles.loadingMore}>
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
-                Loading more news...
-              </div>
+              Loading more news...
             </div>
           )}
 
           {/* End of Results */}
           {!hasMore && !loading && filteredNews.length > 0 && (
             <div className={styles.endOfResults}>
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
-                {activeTab === "all" 
-                  ? "No more news articles to load"
-                  : `No more ${activeTab} articles available. Try "All News" for more content.`
-                }
-              </div>
+              {activeTab === "all" 
+                ? "No more news articles to load"
+                : `No more ${activeTab} articles available. Try "All News" for more content.`
+              }
             </div>
           )}
 
           {/* No Results for Filter */}
           {!loading && filteredNews.length === 0 && newsData.length > 0 && (
             <div className={styles.endOfResults}>
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
-                No {activeTab} articles found. Try a different category or "All News".
-              </div>
+              No {activeTab} articles found. Try a different category or "All News".
             </div>
           )}
 

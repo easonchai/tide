@@ -9,14 +9,17 @@ import {
   Tooltip,
 } from 'recharts';
 import styles from '../styles/Chart.module.css';
+import { useCandleHistoryQuery } from '@/hooks/useCandleHistoryQuery';
 
 export type LineChartPoint = {
   index: number;
   value: number;
+  timestamp?: number;
 };
 
 export interface PriceLineChartProps {
   data?: LineChartPoint[];
+  coin?: string;
 }
 
 const defaultData: LineChartPoint[] = [
@@ -41,19 +44,78 @@ const defaultData: LineChartPoint[] = [
   { index: 18, value: 132 },
 ];
 
-export default function PriceLineChart({ data = defaultData }: PriceLineChartProps): React.ReactElement {
+export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartProps): React.ReactElement {
+  // Use static historyStart to prevent constant reloading
+  const historyStart = React.useMemo(() => {
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    return Date.now() - twentyFourHoursMs;
+  }, [coin]); // Only recalculate when coin changes
+  
+  const { data: candleHistory } = useCandleHistoryQuery({
+    coin,
+    interval: '1m',
+    startTime: historyStart,
+    endTime: null,
+    testnet: false,
+    enabled: true,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+  });
+
+  // Transform candle data to chart format
+  const chartData = React.useMemo(() => {
+    if (data) return data;
+    
+    if (candleHistory?.length) {
+      return candleHistory.map((candle, index) => ({
+        index,
+        value: parseFloat(candle.c), // Close price
+        timestamp: candle.T,
+      }));
+    }
+    
+    return defaultData;
+  }, [data, candleHistory]);
+
   return (
     <div className={styles.chartContainer}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsLineChart data={data} margin={{ top: 20, right: 24, bottom: 20, left: 24 }}>
+      <ResponsiveContainer width="100%" height="100%" debounce={1}>
+        <RechartsLineChart 
+          data={chartData} 
+          margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+          width={400}
+          height={400}
+        >
           <CartesianGrid stroke="transparent" />
-          <XAxis dataKey="index" tick={false} axisLine={{ stroke: '#d3e3ea', strokeWidth: 3 }} />
-          <YAxis domain={["dataMin - 10", "dataMax + 10"]} tick={false} axisLine={{ stroke: '#d3e3ea', strokeWidth: 3 }} />
+          <XAxis 
+            dataKey="index" 
+            tick={false} 
+            axisLine={{ stroke: '#d3e3ea', strokeWidth: 4 }} 
+            tickLine={false}
+            height={10}
+          />
+          <YAxis 
+            domain={["dataMin - 10", "dataMax + 10"]} 
+            tick={false} 
+            axisLine={{ stroke: '#d3e3ea', strokeWidth: 4 }}
+            tickLine={false}
+            width={10}
+          />
           <Tooltip
             contentStyle={{ backgroundColor: '#0f2a31', border: '1px solid #12323b', color: '#e6f4f1' }}
             cursor={{ stroke: '#1e4a56', strokeWidth: 1 }}
           />
-          <Line type="linear" dataKey="value" stroke="#3de1f3" strokeWidth={4} dot={false} activeDot={{ r: 6 }} />
+          <Line 
+            type="linear" 
+            dataKey="value" 
+            stroke="#3de1f3" 
+            strokeWidth={4} 
+            dot={false} 
+            activeDot={{ r: 6 }}
+            isAnimationActive={false}
+          />
         </RechartsLineChart>
       </ResponsiveContainer>
     </div>
