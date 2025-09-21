@@ -101,7 +101,7 @@ export class OracleService {
     endDate: Date,
   ): Promise<any> {
     try {
-      const transport = new HttpTransport({ isTestnet: true });
+      const transport = new HttpTransport({ isTestnet: false });
       const infoClient = new InfoClient({ transport });
 
       const candleTime = new Date(endDate.getTime() - 60 * 1000);
@@ -175,7 +175,7 @@ export class OracleService {
   }
 
   /**
-   * Mock smart contract interaction for sending price data
+   * Mock smart contract interaction for sending close price
    * @param {string} marketAddress - The smart contract address to send price data to
    * @param {any} priceData - Price data object containing open, high, low, close, volume, and timestamp
    * @returns {Promise<string>} Mock transaction hash for the blockchain interaction
@@ -184,10 +184,9 @@ export class OracleService {
     marketAddress: string,
     priceData: any,
   ): Promise<string> {
-    // Mock implementation - replace with actual smart contract call
+    const closePrice = priceData.close;
     this.logger.log(
-      `Sending price data to smart contract ${marketAddress}:`,
-      priceData,
+      `Sending close price ${closePrice} to smart contract ${marketAddress}`,
     );
 
     // Simulate blockchain transaction
