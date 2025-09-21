@@ -11,6 +11,7 @@ import {
   IsEthereumAddress,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export enum MarketStatus {
   OPEN = 'OPEN',
@@ -72,7 +73,7 @@ export class CreateMarketDTO {
     required: false,
   })
   @IsOptional()
-  @IsNumberString({}, { message: 'Fee must be a valid number string' })
+  @Transform(({ value }) => BigInt(value))
   fee?: bigint;
 
   @ApiProperty({
@@ -133,7 +134,7 @@ export class UpdateMarketDTO {
     required: false,
   })
   @IsOptional()
-  @IsNumberString({}, { message: 'Fee must be a valid number string' })
+  @Transform(({ value }) => BigInt(value))
   fee?: bigint;
 
   @ApiProperty({
@@ -174,24 +175,24 @@ export class CreateNFTPositionDTO {
     description: 'The amount of the position',
     example: '10000000',
   })
-  @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => BigInt(value))
   amount: bigint;
 
   @ApiProperty({
     description: 'The lower bound of the position',
     example: '10000000',
   })
-  @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => BigInt(value))
   lowerBound: bigint;
 
   @ApiProperty({
     description: 'The upper bound of the position',
     example: '10000000',
   })
-  @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => BigInt(value))
   upperBound: bigint;
 
   @ApiProperty({
@@ -200,7 +201,7 @@ export class CreateNFTPositionDTO {
     required: false,
   })
   @IsOptional()
-  @IsString()
+  @Transform(({ value }) => BigInt(value))
   payout?: bigint;
 }
 
@@ -209,7 +210,7 @@ export class CloseNFTPositionDTO {
     description: 'The payout amount for the position',
     example: '10000000',
   })
-  @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => BigInt(value))
   payout: bigint;
 }
