@@ -6,9 +6,9 @@ import {
   IsEnum,
   IsDateString,
   Matches,
-  Length,
   IsUrl,
   IsNumberString,
+  IsEthereumAddress,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -31,16 +31,8 @@ export class CreateMarketDTO {
   @ApiProperty({
     description: 'The unique address of the market',
     example: '0x1234567890abcdef1234567890abcdef12345678',
-    minLength: 42,
-    maxLength: 42,
   })
-  @IsString()
-  @IsNotEmpty()
-  @Length(42, 42, { message: 'Address must be exactly 42 characters long' })
-  @Matches(/^0x[a-fA-F0-9]{40}$/, {
-    message:
-      'Address must be a valid Ethereum address (0x followed by 40 hexadecimal characters)',
-  })
+  @IsEthereumAddress()
   address: string;
 
   @ApiProperty({
@@ -188,4 +180,64 @@ export class UpdateMarketDTO {
   @IsOptional()
   @IsDateString({}, { message: 'End date must be a valid ISO date string' })
   endDate?: string;
+}
+
+export class CreateNFTPositionDTO {
+  @ApiProperty({
+    description: 'The market slug for the NFT position',
+    example: 'bitcoin-100k-2024',
+  })
+  @IsString()
+  @IsNotEmpty()
+  marketSlug: string;
+
+  @ApiProperty({
+    description: 'The user address for the NFT position',
+    example: '0x1234567890abcdef1234567890abcdef12345678',
+  })
+  @IsEthereumAddress()
+  userAddress: string;
+
+  @ApiProperty({
+    description: 'The amount of the position',
+    example: '10000000',
+  })
+  @IsString()
+  @IsNotEmpty()
+  amount: bigint;
+
+  @ApiProperty({
+    description: 'The lower bound of the position',
+    example: '10000000',
+  })
+  @IsString()
+  @IsNotEmpty()
+  lowerBound: bigint;
+
+  @ApiProperty({
+    description: 'The upper bound of the position',
+    example: '10000000',
+  })
+  @IsString()
+  @IsNotEmpty()
+  upperBound: bigint;
+
+  @ApiProperty({
+    description: 'The payout amount for the position',
+    example: '10000000',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  payout?: bigint;
+}
+
+export class CloseNFTPositionDTO {
+  @ApiProperty({
+    description: 'The payout amount for the position',
+    example: '10000000',
+  })
+  @IsString()
+  @IsNotEmpty()
+  payout: bigint;
 }

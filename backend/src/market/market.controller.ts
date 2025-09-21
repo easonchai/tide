@@ -6,19 +6,38 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { MarketService } from './market.service';
-import { Market } from '@prisma/client';
-import { CreateMarketDTO, UpdateMarketDTO } from './dto/market.dto';
-import { MarketResponseDTO } from './dto/market-response.dto';
+import { Market, NFTPosition } from '@prisma/client';
+import {
+  CreateMarketDTO,
+  UpdateMarketDTO,
+  CreateNFTPositionDTO,
+  CloseNFTPositionDTO,
+} from './dto/market.dto';
+import {
+  MarketResponseDTO,
+  NFTPositionResponseDTO,
+} from './dto/market-response.dto';
+import { MarketTransactionService } from './providers/market-transaction.service';
 
 @ApiTags('Markets')
 @Controller('markets')
 export class MarketController {
-  constructor(private readonly marketService: MarketService) {}
+  constructor(
+    private readonly marketService: MarketService,
+    private readonly marketTransactionService: MarketTransactionService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -37,6 +56,115 @@ export class MarketController {
     @Body() createMarketData: CreateMarketDTO,
   ): Promise<Market> {
     return this.marketService.createMarket(createMarketData);
+  }
+
+  // NFT Position endpoints (placed before query routes to avoid conflicts)
+  @Post('positions')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new NFT position' })
+  @ApiResponse({
+    status: 201,
+    description: 'NFT position created successfully',
+    type: NFTPositionResponseDTO,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid data format',
+  })
+  @ApiResponse({ status: 404, description: 'Market or user not found' })
+  async createNFTPosition(
+    @Body() createPositionData: CreateNFTPositionDTO,
+  ): Promise<NFTPosition> {
+    const data = {
+      market: { connect: { slug: createPositionData.marketSlug } },
+      user: { connect: { address: createPositionData.userAddress } },
+      amount: BigInt(createPositionData.amount),
+      lowerBound: BigInt(createPositionData.lowerBound),
+      upperBound: BigInt(createPositionData.upperBound),
+      payout: BigInt(createPositionData.payout || '0'),
+    };
+    return this.marketTransactionService.createNFTPosition(data);
+  }
+
+  @Get('positions/user/:address')
+  @ApiOperation({ summary: 'Get all NFT positions for a user' })
+  @ApiParam({
+    name: 'address',
+    description: 'User address',
+    example: '0x1234567890abcdef1234567890abcdef12345678',
+  })
+  @ApiQuery({
+    name: 'includeClosed',
+    description: 'Include closed positions',
+    required: false,
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of NFT positions for the user',
+    type: [NFTPositionResponseDTO],
+  })
+  async getNFTPositionsByUser(
+    @Param('address') address: string,
+    @Query('includeClosed') includeClosed?: boolean,
+  ): Promise<NFTPosition[]> {
+    return this.marketTransactionService.getNFTPositionsByUser(
+      address,
+      includeClosed || false,
+    );
+  }
+
+  @Get('positions/market/:slug')
+  @ApiOperation({ summary: 'Get all NFT positions for a market' })
+  @ApiParam({
+    name: 'slug',
+    description: 'Market slug',
+    example: 'bitcoin-100k-2024',
+  })
+  @ApiQuery({
+    name: 'includeClosed',
+    description: 'Include closed positions',
+    required: false,
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of NFT positions for the market',
+    type: [NFTPositionResponseDTO],
+  })
+  async getNFTPositionsByMarket(
+    @Param('slug') slug: string,
+    @Query('includeClosed') includeClosed?: boolean,
+  ): Promise<NFTPosition[]> {
+    return this.marketTransactionService.getNFTPositionsByMarket(
+      slug,
+      includeClosed || false,
+    );
+  }
+
+  @Put('positions/:id/close')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Close an NFT position (sell/redeem/delete)' })
+  @ApiParam({
+    name: 'id',
+    description: 'NFT position ID',
+    example: 'clx1234567890abcdef',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'NFT position closed successfully',
+    type: NFTPositionResponseDTO,
+  })
+  @ApiResponse({ status: 404, description: 'NFT position not found' })
+  @ApiResponse({ status: 400, description: 'NFT position already closed' })
+  async closeNFTPosition(
+    @Param('id') id: string,
+    @Body() closePositionData: CloseNFTPositionDTO,
+  ): Promise<NFTPosition> {
+    return this.marketTransactionService.closeNFTPosition(
+      id,
+      BigInt(closePositionData.payout),
+    );
   }
 
   @Get()

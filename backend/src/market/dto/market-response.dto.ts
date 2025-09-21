@@ -100,3 +100,91 @@ export class MarketResponseDTO {
   })
   resolvedAt: Date | null;
 }
+
+export class NFTPositionResponseDTO {
+  @ApiProperty({
+    description: 'Unique identifier for the NFT position',
+    example: 'clx1234567890abcdef',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'The market ID for the NFT position',
+    example: 'clx1234567890abcdef',
+  })
+  marketId: string;
+
+  @ApiProperty({
+    description: 'The user ID for the NFT position',
+    example: 'clx1234567890abcdef',
+  })
+  userId: string;
+
+  @ApiProperty({
+    description: 'The amount of the position',
+    example: '100000000',
+  })
+  amount: bigint;
+
+  @ApiProperty({
+    description: 'The payout amount for the position',
+    example: '100000000',
+  })
+  payout: bigint;
+
+  @ApiProperty({
+    description: 'The lower bound of the position',
+    example: '100000000',
+  })
+  lowerBound: bigint;
+
+  @ApiProperty({
+    description: 'The upper bound of the position',
+    example: '100000000',
+  })
+  upperBound: bigint;
+
+  @ApiProperty({
+    description: 'Date when the NFT position was created',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    description: 'Date when the NFT position was last updated',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  updatedAt: Date;
+
+  @ApiProperty({
+    description: 'Date when the NFT position was soft deleted',
+    example: '2024-01-01T00:00:00.000Z',
+    nullable: true,
+  })
+  deletedAt: Date | null;
+
+  @ApiProperty({
+    description: 'The market associated with this position',
+    type: MarketResponseDTO,
+  })
+  market?: MarketResponseDTO;
+
+  @ApiProperty({
+    description: 'The user associated with this position',
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      address: { type: 'string' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+      deletedAt: { type: 'string', format: 'date-time', nullable: true },
+    },
+  })
+  user?: {
+    id: string;
+    address: string;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+  };
+}

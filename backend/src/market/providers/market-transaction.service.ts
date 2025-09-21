@@ -54,7 +54,7 @@ export class MarketTransactionService {
    * - Selling positions (with payout amount)
    * - Redeeming positions (with payout amount)
    * @param {string} id - The id of the NFT position to close
-   * @param {bigint} payout - The payout amount for the position (0 for deletions)
+   * @param {bigint} payout - The payout amount for the position
    * @returns {Promise<NFTPosition>} The closed NFT position with updated payout
    */
   async closeNFTPosition(id: string, payout: bigint): Promise<NFTPosition> {
