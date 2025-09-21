@@ -63,8 +63,8 @@ export class OracleService {
         return;
       }
 
-      // Scale close price (e.g., 62.2) by 1e6 → 62200000 (raw settlement value)
-      const scaledSettlement = BigInt(Math.round(priceData.close * 1e6));
+      // Scale close price (e.g., 62.2) by 1e8 → 6,220,000,000 (raw settlement value for 2-decimal ticks)
+      const scaledSettlement = BigInt(Math.round(priceData.close * 1e8));
 
       if (market.onChainId === null || market.onChainId === undefined) {
         throw new Error(`onChainId not set for market ${market.slug}`);
