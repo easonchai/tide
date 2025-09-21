@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title Vault
@@ -263,6 +262,7 @@ contract Vault is Ownable, ReentrancyGuard, Pausable {
         
         // Update token info
         supportedTokens[request.token].totalWithdrawn += request.amount;
+        supportedTokens[request.token].totalDeposited -= request.amount;
         currentTotalDeposits -= request.amount;
         
         // Transfer tokens to user
@@ -300,6 +300,7 @@ contract Vault is Ownable, ReentrancyGuard, Pausable {
         
         // Update token info
         supportedTokens[token].totalWithdrawn += amount;
+        supportedTokens[token].totalDeposited -= amount;
         currentTotalDeposits -= amount;
         
         // Transfer tokens to user
@@ -454,16 +455,16 @@ contract Vault is Ownable, ReentrancyGuard, Pausable {
 
     /**
      * @dev Get contract statistics
-     * @return totalUsers Total number of users
-     * @return currentTotalDeposits Current total deposits
-     * @return maxTotalDeposits Maximum total deposits allowed
-     * @return emergencyWithdrawalsEnabled Whether emergency withdrawals are enabled
+     * @return _totalUsers Total number of users
+     * @return _currentTotalDeposits Current total deposits
+     * @return _maxTotalDeposits Maximum total deposits allowed
+     * @return _emergencyWithdrawalsEnabled Whether emergency withdrawals are enabled
      */
     function getContractStats() external view returns (
-        uint256 totalUsers,
-        uint256 currentTotalDeposits,
-        uint256 maxTotalDeposits,
-        uint256 emergencyWithdrawalsEnabled
+        uint256 _totalUsers,
+        uint256 _currentTotalDeposits,
+        uint256 _maxTotalDeposits,
+        uint256 _emergencyWithdrawalsEnabled
     ) {
         return (
             totalUsers,
