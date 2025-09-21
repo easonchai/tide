@@ -44,7 +44,7 @@ export class OracleController {
           type: 'string',
           format: 'date-time',
           description: 'Date to fetch price data for',
-          example: '2024-01-15T10:30:00.000Z',
+          example: '2025-09-21T00:00:00.000Z',
         },
       },
       required: ['coinSymbol', 'endDate'],
@@ -63,7 +63,7 @@ export class OracleController {
     const endDate = new Date(body.endDate);
     if (isNaN(endDate.getTime())) {
       throw new Error(
-        'Invalid endDate format. Use ISO 8601 format (e.g., 2024-01-15T10:30:00.000Z)',
+        'Invalid endDate format. Use ISO 8601 format (e.g., 2025-09-21T00:00:00.000Z)',
       );
     }
 
