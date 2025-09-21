@@ -58,7 +58,6 @@ export class MarketController {
     return this.marketService.createMarket(createMarketData);
   }
 
-  // NFT Position endpoints (placed before query routes to avoid conflicts)
   @Post('positions')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new NFT position' })
