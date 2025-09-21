@@ -84,19 +84,21 @@ export class MarketTransactionService {
   }
 
   /**
-   * Retrieves all active NFT positions for a specific user
-   * @param {string} userId - The user ID to get positions for
+   * Retrieves all active NFT positions for a specific user by address
+   * @param {string} userAddress - The user address to get positions for
    * @param {boolean} includeClosed - Whether to include closed positions (default: false)
    * @returns {Promise<NFTPosition[]>} Array of NFT positions for the user
    */
   async getNFTPositionsByUser(
-    userId: string,
+    userAddress: string,
     includeClosed: boolean = false,
   ): Promise<NFTPosition[]> {
-    this.logger.log(`Getting NFT positions for user: ${userId}`);
+    this.logger.log(`Getting NFT positions for user address: ${userAddress}`);
     try {
       const whereClause: Prisma.NFTPositionWhereInput = {
-        userId,
+        user: {
+          address: userAddress,
+        },
       };
 
       if (!includeClosed) {
@@ -115,12 +117,12 @@ export class MarketTransactionService {
       });
 
       this.logger.log(
-        `Found ${nftPositions.length} NFT positions for user: ${userId}`,
+        `Found ${nftPositions.length} NFT positions for user address: ${userAddress}`,
       );
       return nftPositions;
     } catch (error) {
       this.logger.error(
-        `Failed to get NFT positions for user: ${error.message}`,
+        `Failed to get NFT positions for user address: ${error.message}`,
         error.stack,
       );
       throw error;
@@ -128,19 +130,21 @@ export class MarketTransactionService {
   }
 
   /**
-   * Retrieves all active NFT positions for a specific market
-   * @param {string} marketId - The market ID to get positions for
+   * Retrieves all active NFT positions for a specific market by slug
+   * @param {string} marketSlug - The market slug to get positions for
    * @param {boolean} includeClosed - Whether to include closed positions (default: false)
    * @returns {Promise<NFTPosition[]>} Array of NFT positions for the market
    */
   async getNFTPositionsByMarket(
-    marketId: string,
+    marketSlug: string,
     includeClosed: boolean = false,
   ): Promise<NFTPosition[]> {
-    this.logger.log(`Getting NFT positions for market: ${marketId}`);
+    this.logger.log(`Getting NFT positions for market slug: ${marketSlug}`);
     try {
       const whereClause: Prisma.NFTPositionWhereInput = {
-        marketId,
+        market: {
+          slug: marketSlug,
+        },
       };
 
       if (!includeClosed) {
@@ -159,12 +163,12 @@ export class MarketTransactionService {
       });
 
       this.logger.log(
-        `Found ${nftPositions.length} NFT positions for market: ${marketId}`,
+        `Found ${nftPositions.length} NFT positions for market slug: ${marketSlug}`,
       );
       return nftPositions;
     } catch (error) {
       this.logger.error(
-        `Failed to get NFT positions for market: ${error.message}`,
+        `Failed to get NFT positions for market slug: ${error.message}`,
         error.stack,
       );
       throw error;
