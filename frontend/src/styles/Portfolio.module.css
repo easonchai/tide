@@ -1,0 +1,729 @@
+.header {
+  background: #0e1b24;
+  border-bottom: 1px solid #1f2937;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+.brandLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.brandName {
+  font-size: 20px;
+  font-weight: 700;
+  color: #51d5eb;
+}
+
+.navigation {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.navLink {
+  color: #94a3b8;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: #f8fafc;
+}
+
+.navLinkActive {
+  color: #f8fafc;
+  position: relative;
+}
+
+.navLinkActive::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #51d5eb;
+  border-radius: 999px;
+}
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  color: #e2e8f0;
+}
+
+.heroSection {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  font-size: 36px;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 16px;
+}
+
+.addressBox {
+  background: rgba(81, 213, 235, 0.08);
+  border: 1px solid rgba(81, 213, 235, 0.18);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.addressLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.addressValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f8fafc;
+  word-break: break-all;
+}
+
+.emptyState {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #cbd5f5;
+  font-size: 16px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.summaryCard {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summaryLabel {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.summaryValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.statsSection {
+  margin-bottom: 2.5rem;
+}
+
+.sectionTitle {
+  font-size: 22px;
+  margin: 0 0 1.5rem 0;
+  color: #f8fafc;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+
+.statCard {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.statLabel {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.graphSection {
+  margin-bottom: 2.5rem;
+}
+
+.graphHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.graphRange {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.graphContainer {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.graphSvg {
+  width: 100%;
+  height: 220px;
+}
+
+.graphLine {
+  fill: none;
+  stroke: #51d5eb;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.graphEmpty {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.positionsSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.positionsColumn {
+  flex: 1 1 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionSubtitle {
+  font-size: 20px;
+  margin: 0;
+  color: #f8fafc;
+}
+
+.positionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.positionCard {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.positionHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.positionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.positionImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.positionIconText {
+  font-size: 18px;
+}
+
+.positionMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.positionQuestion {
+  font-size: 16px;
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.positionStatus {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+
+.positionStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.positionStats div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.positionStats dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.positionStats dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.emptyPositions {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .heroSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .graphHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .headerContent {
+    flex-direction: column;
+    height: auto;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .navigation {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .heroSection {
+    text-align: center;
+  }
+
+  .addressBox {
+    align-self: center;
+  }
+
+  .positionsSection {
+    flex-direction: column;
+  }
+}
+
+/* Dashboard Row Layout */
+.dashboardRow {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  align-items: flex-start;
+}
+
+.dashboardRow .summaryGrid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboardRow .statsSection {
+  flex: 1;
+  min-width: 300px;
+  align-self: flex-start;
+}
+
+.dashboardRow .graphSection {
+  flex: 1;
+  min-width: 400px;
+}
+
+/* User Statistics Styles */
+.statsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #1f2937;
+  border-radius: 8px;
+  border: 1px solid #374151;
+}
+
+.primaryStats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.primaryStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.primaryStatLabel {
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.primaryStatValue {
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.secondaryStats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.secondaryStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.secondaryStatLabel {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.secondaryStatValue {
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Tab Styles */
+.tabContainer {
+  width: 100%;
+}
+
+.tabHeader {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #374151;
+}
+
+.tabButton {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tabButton:hover {
+  color: #f8fafc;
+}
+
+.tabActive {
+  color: #51d5eb;
+}
+
+/* Positions Grid */
+.positionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.positionCard {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.positionCard:hover {
+  border-color: #51d5eb;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(81, 213, 235, 0.1);
+}
+
+.positionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.positionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.positionImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.positionIconText {
+  color: #51d5eb;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.positionMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.positionQuestion {
+  display: block;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+  word-wrap: break-word;
+}
+
+.positionEndDate {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.positionStatus {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statusOpen {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.statusClosed {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.positionStats {
+  margin-bottom: 1.5rem;
+}
+
+.investmentRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.investmentItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statLabel {
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.statValue {
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.valuePositive {
+  color: #22c55e;
+}
+
+.valueNegative {
+  color: #ef4444;
+}
+
+.positionActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.sellButton {
+  background: #51d5eb;
+  color: #0e1b24;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sellButton:hover {
+  background: #3bc4d9;
+  transform: translateY(-1px);
+}
+
+.sellButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .dashboardRow {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .dashboardRow .summaryGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .dashboardRow .statsSection,
+  .dashboardRow .graphSection {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboardRow .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .positionsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabHeader {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tabButton {
+    border-bottom: 1px solid #374151;
+    border-radius: 0;
+  }
+
+  .tabActive {
+    border-bottom-color: #51d5eb;
+  }
+}

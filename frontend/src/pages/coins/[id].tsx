@@ -1,7 +1,5 @@
-import Head from "next/head";
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/router";
+import Layout from "@/components/Layout";
 import { useQuery } from "@tanstack/react-query";
 import {
   LineChart,
@@ -11,79 +9,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   ReferenceLine,
 } from "recharts";
 import { Range, Direction } from "react-range";
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import React from "react";
-import type { EthereumProvider } from "@walletconnect/ethereum-provider";
-import type { AxiosError } from "axios";
 
 import { betOnPriceRange } from "@/utils/lmsr";
 import { apiService } from "@/utils/apiService";
 import styles from "@/styles/CoinDetail.module.css";
-import headerStyles from "@/styles/Home.module.css";
+import { useWallet } from "@/contexts/WalletContext";
 
 const shortenAddress = (address: string) =>
   `${address.slice(0, 6)}...${address.slice(-4)}`;
-
-const isIgnorableWalletConnectError = (error: unknown) => {
-  const message =
-    typeof error === "string"
-      ? error
-      : (error as Error | undefined)?.message ?? "";
-
-  if (!message) {
-    return false;
-  }
-
-  return [
-    "Record was recently deleted",
-    "No matching key",
-    "Pending session not found",
-    "session topic doesn't exist",
-  ].some((fragment) => message.includes(fragment));
-};
-
-const formatEthBalance = (weiHex: string) => {
-  try {
-    const wei = BigInt(weiHex);
-    const etherWhole = wei / 10n ** 18n;
-    const etherFraction = wei % 10n ** 18n;
-
-    if (etherFraction === 0n) {
-      return etherWhole.toString();
-    }
-
-    const fraction = etherFraction.toString().padStart(18, "0").slice(0, 4);
-    const trimmedFraction = fraction.replace(/0+$/, "");
-
-    return `${etherWhole.toString()}${
-      trimmedFraction ? `.${trimmedFraction}` : ""
-    }`;
-  } catch (error) {
-    console.error("ETH 잔액 포맷 실패", error);
-    return "0";
-  }
-};
-
-const clearWalletConnectStorage = () => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    const storage = window.localStorage;
-
-    Object.keys(storage)
-      .filter((key) => key.startsWith("wc@"))
-      .forEach((key) => storage.removeItem(key));
-  } catch (error) {
-    console.warn("WalletConnect 스토리지 초기화 실패", error);
-  }
-};
 
 type ChartPoint = {
   time: string;
@@ -140,35 +78,87 @@ const percentageFormatter = new Intl.NumberFormat("en-US", {
 export default function CoinDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const [shares, setShares] = useState(1);
   const [amountInput, setAmountInput] = useState("100");
+  const { walletAddress, connectWallet } = useWallet();
 
-  // Wallet states
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState<string | null>(null);
-  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
-  const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
-  const providerRef = useRef<EthereumProvider | null>(null);
-  const connectWrapperRef = useRef<HTMLDivElement | null>(null);
+  // Market positions states
+  const [marketPositions, setMarketPositions] = useState<any[]>([]);
+  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
+  const [positionsError, setPositionsError] = useState<string | null>(null);
 
-  const registerUser = useCallback(async (address: string) => {
+  // Fetch market positions data
+  const fetchMarketPositions = useCallback(async (slug: string) => {
+    if (!slug) return;
+
+    setIsLoadingPositions(true);
+    setPositionsError(null);
+
     try {
-      await apiService.user.create({ address });
+      console.log("=== Fetching Market Positions ===");
+      console.log("Slug:", slug);
+      console.log("API URL:", `/api/markets/positions/market/${slug}`);
+
+      const response = await apiService.market.getPositionsByMarket(slug);
+      console.log("Full response:", response);
+      console.log("Response status:", response.status);
+      console.log("Response data:", response.data);
+      console.log("Data type:", typeof response.data);
+      console.log("Data length:", response.data?.length);
+
+      setMarketPositions(response.data || []);
     } catch (error) {
-      const axiosError = error as AxiosError | undefined;
-      const status = axiosError?.response?.status;
-
-      if (status === 409) {
-        return;
-      }
-
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("사용자 등록 실패", error);
-      }
+      console.error("=== Failed to fetch market positions ===");
+      console.error("Error:", error);
+      console.error(
+        "Error message:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+      console.error("Error response:", (error as any)?.response);
+      setPositionsError(
+        error instanceof Error ? error.message : "Failed to fetch positions"
+      );
+      setMarketPositions([]);
+    } finally {
+      setIsLoadingPositions(false);
     }
   }, []);
+
+  // Market 정보를 가져와서 slug를 얻은 후 positions를 가져오는 함수
+  const fetchMarketBySlug = useCallback(
+    async (marketId: string) => {
+      try {
+        console.log("Fetching market info for ID:", marketId);
+
+        // 모든 market을 가져와서 id로 찾기
+        const allMarkets = await apiService.market.getAll();
+        console.log("All markets:", allMarkets);
+
+        const foundMarket = allMarkets.data?.find(
+          (m: any) => m.id === marketId
+        );
+
+        if (foundMarket?.slug) {
+          console.log("Found market by id, using slug:", foundMarket.slug);
+          await fetchMarketPositions(foundMarket.slug);
+        } else {
+          console.error("No market found with id:", marketId);
+          setPositionsError("Market not found");
+        }
+      } catch (error) {
+        console.error("Failed to fetch market info:", error);
+        setPositionsError("Failed to fetch market information");
+      }
+    },
+    [fetchMarketPositions]
+  );
+
+  // Fetch market positions when component mounts or id changes
+  useEffect(() => {
+    if (id && typeof id === "string") {
+      // URL 파라미터로 받은 id는 실제 market의 id이므로, 먼저 market 정보를 가져와서 slug를 얻어야 함
+      fetchMarketBySlug(id);
+    }
+  }, [id, fetchMarketBySlug]);
 
   const amount = useMemo(() => {
     const normalized = amountInput.replace(/,/g, ".").trim();
@@ -227,171 +217,15 @@ export default function CoinDetail() {
     });
   }, []);
 
-  const fetchWalletBalance = useCallback(async (address: string) => {
-    const provider = providerRef.current;
 
-    if (!provider) {
-      return;
-    }
 
-    setWalletBalance(null);
-    setIsFetchingBalance(true);
 
-    try {
-      const balanceHex = (await provider.request({
-        method: "eth_getBalance",
-        params: [address, "latest"],
-      })) as string;
 
-      setWalletBalance(formatEthBalance(balanceHex));
-    } catch (error) {
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("지갑 잔액 조회 실패", error);
-      }
-      setWalletBalance(null);
-    } finally {
-      setIsFetchingBalance(false);
-    }
-  }, []);
-
-  const handleAccountsChanged = useCallback(
-    (accounts: string[]) => {
-      const nextAccount = accounts?.[0] ?? null;
-      setWalletAddress(nextAccount);
-
-      if (nextAccount) {
-        void registerUser(nextAccount);
-        void fetchWalletBalance(nextAccount);
-      } else {
-        setWalletBalance(null);
-      }
-
-      setShowDisconnectTooltip(false);
-    },
-    [fetchWalletBalance, registerUser]
-  );
-
-  const handleDisconnect = useCallback(() => {
-    setWalletAddress(null);
-    setWalletBalance(null);
-    setShowDisconnectTooltip(false);
-    providerRef.current = null;
-  }, []);
-
-  const connectWallet = useCallback(async () => {
-    if (isConnecting || walletAddress) {
-      return;
-    }
-
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-
-    if (!projectId) {
-      setConnectError("WalletConnect 프로젝트 ID가 설정되어 있지 않습니다.");
-      return;
-    }
-
-    setShowDisconnectTooltip(false);
-    setIsConnecting(true);
-    setConnectError(null);
-
-    try {
-      if (!providerRef.current) {
-        const { EthereumProvider } = await import(
-          "@walletconnect/ethereum-provider"
-        );
-
-        const provider = await EthereumProvider.init({
-          projectId,
-          showQrModal: true,
-          chains: [1],
-          optionalChains: [137, 42161, 10],
-          methods: ["eth_sendTransaction", "personal_sign"],
-          optionalMethods: [
-            "eth_accounts",
-            "eth_requestAccounts",
-            "eth_sign",
-            "eth_signTypedData",
-            "eth_getBalance",
-          ],
-          events: ["chainChanged", "accountsChanged"],
-          optionalEvents: ["disconnect"],
-        });
-
-        provider.on("accountsChanged", handleAccountsChanged);
-        provider.on("disconnect", handleDisconnect);
-
-        providerRef.current = provider;
-      }
-
-      let accounts: string[] = [];
-
-      if (!providerRef.current.connected) {
-        accounts =
-          ((await providerRef.current.connect().catch((error) => {
-            if (!isIgnorableWalletConnectError(error)) {
-              console.error("WalletConnect 연결 실패", error);
-              setConnectError("지갑 연결에 실패했습니다.");
-            }
-            throw error;
-          })) as string[]) ?? [];
-      } else {
-        accounts = (providerRef.current.accounts as string[]) ?? [];
-      }
-
-      const account = accounts?.[0];
-
-      if (account) {
-        setWalletAddress(account);
-        void registerUser(account);
-        void fetchWalletBalance(account);
-      }
-    } catch (error) {
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("WalletConnect 연결 실패", error);
-        setConnectError("지갑 연결에 실패했습니다.");
-      }
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [
-    fetchWalletBalance,
-    handleAccountsChanged,
-    handleDisconnect,
-    isConnecting,
-    registerUser,
-    walletAddress,
-  ]);
-
-  const disconnectWallet = useCallback(async () => {
-    const provider = providerRef.current;
-
-    if (!provider) {
-      return;
-    }
-
-    try {
-      if (provider.connected) {
-        await provider.disconnect();
-      }
-    } catch (error) {
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("WalletConnect 연결 해제 실패", error);
-      }
-    } finally {
-      handleDisconnect();
-      clearWalletConnectStorage();
-    }
-  }, [handleDisconnect]);
 
   // Price range slider state
   const [priceRange, setPriceRange] = useState<[number, number]>([
     114700, 116700,
   ]);
-  const step = 100;
   const domain: [number, number] = [110000, 120000];
 
   const { data, isLoading, isError } = useQuery({
@@ -460,217 +294,18 @@ export default function CoinDetail() {
     .filter((bin) => bin.price >= priceRange[0] && bin.price < priceRange[1])
     .map((bin) => bin.index);
 
-  // 각 bin별 probability 계산 (LMSR 기반)
-  const binProbabilities = bins.map((bin, index) => {
-    // LMSR 확률 계산: P_i = exp(q_i / b) / sum(exp(q_j / b))
-    const b = 100; // LMSR 파라미터
-    const totalExpQ = q.reduce((sum, qValue) => sum + Math.exp(qValue / b), 0);
-    const probability = Math.exp(q[index] / b) / totalExpQ;
-
-    return {
-      ...bin,
-      lmsrProbability: probability,
-      isSelected: selectedBins.includes(index),
-    };
-  });
-
   // Use LMSR calculation for accurate predictions
   const lmsrResult = betOnPriceRange(q, selectedBins, amount);
 
   const winProbability = lmsrResult.winProbability;
   const receiveIfWin = lmsrResult.receiveIfWin;
 
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: Array<{ value: number }>;
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className={styles.tooltip}>
-          <p className={styles.tooltipLabel}>{`Time: ${label}`}</p>
-          <p className={styles.tooltipValue}>
-            {`Price: ${currencyFormatter.format(payload[0].value)}`}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const ProbabilityTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: Array<{ value: number }>;
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className={styles.tooltip}>
-          <p
-            className={styles.tooltipLabel}
-          >{`Price: ${currencyFormatter.format(Number(label))}`}</p>
-          <p className={styles.tooltipValue}>
-            {`Probability: ${percentageFormatter.format(payload[0].value)}`}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
-    <>
-      <Head>
-        <title>{coin.name} Market - Tide Markets</title>
-        <meta
-          name="description"
-          content={`${coin.name} market analysis and prediction`}
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      {/* Header */}
-      <header className={headerStyles.header}>
-        <div className={headerStyles.headerContent}>
-          <div className={headerStyles.brand}>
-            <div className={headerStyles.logo}>
-              <img
-                src="/tide-logo.svg"
-                alt="Tide Logo"
-                width="48"
-                height="48"
-              />
-            </div>
-            <span className={headerStyles.brandName}>Tide</span>
-          </div>
-
-          <nav className={headerStyles.navigation}>
-            <a href="#" className={headerStyles.navLink}>
-              Markets
-            </a>
-            <a href="#" className={headerStyles.navLink}>
-              Portfolio
-            </a>
-          </nav>
-
-          <div className={headerStyles.headerActions}>
-            <div className={headerStyles.walletInfo}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 12V7H5a2 2 0 01-2-2V5a2 2 0 012-2h14v4"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M3 5v14a2 2 0 002 2h16v-5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx="16"
-                  cy="12"
-                  r="2"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </svg>
-              {walletAddress && (
-                <span className={headerStyles.walletAmount}>
-                  {isFetchingBalance
-                    ? "Loading..."
-                    : walletBalance
-                    ? `${walletBalance} ETH`
-                    : "-"}
-                </span>
-              )}
-            </div>
-            <div
-              className={headerStyles.connectWrapper}
-              ref={connectWrapperRef}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  if (walletAddress) {
-                    setShowDisconnectTooltip((prev) => !prev);
-                    return;
-                  }
-
-                  if (!isConnecting) {
-                    void connectWallet();
-                  }
-                }}
-                disabled={isConnecting}
-                className={`${headerStyles.connectButton} ${
-                  walletAddress ? headerStyles.connectButtonConnected : ""
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle
-                    cx="12"
-                    cy="7"
-                    r="4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                </svg>
-                <span>
-                  {walletAddress
-                    ? shortenAddress(walletAddress)
-                    : isConnecting
-                    ? "Connecting..."
-                    : "Connect"}
-                </span>
-              </button>
-              {connectError && (
-                <span className={headerStyles.connectError}>
-                  {connectError}
-                </span>
-              )}
-              {walletAddress && showDisconnectTooltip && (
-                <div className={headerStyles.disconnectTooltip}>
-                  <span className={headerStyles.disconnectLabel}>
-                    Connected
-                  </span>
-                  <span className={headerStyles.disconnectAddress}>
-                    {shortenAddress(walletAddress)}
-                  </span>
-                  <button
-                    type="button"
-                    className={headerStyles.disconnectAction}
-                    onClick={() => {
-                      setShowDisconnectTooltip(false);
-                      void disconnectWallet();
-                    }}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+    <Layout
+      title={`${coin.name} Market - Tide Markets`}
+      description={`${coin.name} market analysis and prediction`}
+    >
 
       <div className={styles.container}>
         {/* Event Details Section */}
@@ -918,6 +553,47 @@ export default function CoinDetail() {
             </div>
           </div>
 
+          {/* Market Positions */}
+          <div className={styles.positionsSection}>
+            <div className={styles.cardLabel}>Market Positions</div>
+            {isLoadingPositions ? (
+              <div className={styles.loadingPositions}>
+                Loading positions...
+              </div>
+            ) : positionsError ? (
+              <div className={styles.errorPositions}>
+                Error: {positionsError}
+              </div>
+            ) : marketPositions.length > 0 ? (
+              <div className={styles.positionsList}>
+                {marketPositions.map((position, index) => (
+                  <div
+                    key={position.id || index}
+                    className={styles.positionItem}
+                  >
+                    <div className={styles.positionInfo}>
+                      <span className={styles.positionUser}>
+                        {position.userAddress
+                          ? shortenAddress(position.userAddress)
+                          : "Unknown"}
+                      </span>
+                      <span className={styles.positionAmount}>
+                        {position.amount
+                          ? currencyFormatter.format(position.amount)
+                          : "$0"}
+                      </span>
+                    </div>
+                    <div className={styles.positionStatus}>
+                      {position.isClosed ? "Closed" : "Open"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.noPositions}>No positions found</div>
+            )}
+          </div>
+
           {/* Place Bet Button */}
           <button
             className={styles.placeBetButton}
@@ -943,6 +619,6 @@ export default function CoinDetail() {
           </button>
         </div>
       </div>
-    </>
+    </Layout>
   );
 }
