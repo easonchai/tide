@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Layout from "@/components/Layout";
 import styles from "@/styles/News.module.css";
 import { fetchCryptoPrices, fetchBusinessNews } from "@/utils/externalApiService";
@@ -114,19 +114,34 @@ const mockNews: NewsItem[] = [
 ];
 
 export default function News() {
-  const [newsData, setNewsData] = useState<NewsItem[]>(mockNews);
+  const [newsData, setNewsData] = useState<NewsItem[]>([]);
   const [pricesData, setPricesData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalResults, setTotalResults] = useState(0);
+  const itemsPerPage = 20;
+  const observer = useRef<IntersectionObserver>();
 
+  // Initial data load
   useEffect(() => {
-    const loadData = async () => {
+    const loadInitialData = async () => {
+      setLoading(true);
+      setCurrentPage(1);
+      setHasMore(true);
+      
       try {
         const [newsResponse, pricesResponse] = await Promise.all([
-          fetchBusinessNews(),
+          fetchBusinessNews(1, itemsPerPage),
           fetchCryptoPrices()
         ]);
         
-        setNewsData(newsResponse);
+        setNewsData(newsResponse.articles);
+        setTotalResults(newsResponse.totalResults);
+        // Check if there are more articles based on total results and current page
+        setHasMore(newsResponse.totalResults > newsResponse.articles.length);
         setPricesData(pricesResponse);
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -142,12 +157,47 @@ export default function News() {
       }
     };
 
-    loadData();
+    loadInitialData();
+  }, [activeTab]); // Refetch when tab changes
+
+  // Load more data function
+  const loadMoreData = async () => {
+    if (loadingMore || !hasMore) return;
     
-    // Refresh data every 5 minutes
-    const interval = setInterval(loadData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const newsResponse = await fetchBusinessNews(nextPage, itemsPerPage);
+      
+      if (newsResponse.articles.length > 0) {
+        setNewsData(prev => {
+          const newData = [...prev, ...newsResponse.articles];
+          // Check if we have more articles available
+          setHasMore(newData.length < totalResults);
+          return newData;
+        });
+        setCurrentPage(nextPage);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Failed to load more data:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Intersection observer callback
+  const lastNewsElementRef = useCallback((node: HTMLElement | null) => {
+    if (loadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMoreData();
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loadingMore, hasMore, loadMoreData]);
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -172,6 +222,11 @@ export default function News() {
       .replace(/\s+ago/, '');
   };
 
+  // Filter news based on active tab
+  const filteredNews = activeTab === "all" 
+    ? newsData 
+    : newsData.filter(item => item.category === activeTab);
+
   return (
     <Layout 
       title="Crypto News - Tide Markets" 
@@ -179,6 +234,21 @@ export default function News() {
     >
       <div className={styles.container}>
         <main className={styles.main}>
+          {/* Tab Headers */}
+          <div className={styles.tabContainer}>
+            <div className={styles.tabHeaders}>
+              {["all", "fed", "crypto", "market", "regulation"].map((tab) => (
+                <button
+                  key={tab}
+                  className={`${styles.tabButton} ${activeTab === tab ? styles.tabActive : ''}`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab === "all" ? "All News" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          
           {/* Single Column News Feed */}
           <div className={styles.newsFeed}>
             {loading ? (
@@ -186,8 +256,12 @@ export default function News() {
                 Loading latest business news...
               </div>
             ) : (
-              newsData.map((item) => (
-              <article key={item.id} className={styles.newsCard}>
+              filteredNews.map((item, index) => (
+              <article 
+                key={item.id} 
+                className={styles.newsCard}
+                ref={index === filteredNews.length - 1 ? lastNewsElementRef : null}
+              >
                 {/* News Image */}
                 {item.url && (
                   <div className={styles.newsImage}>
@@ -259,6 +333,36 @@ export default function News() {
               ))
             )}
           </div>
+
+          {/* Loading More Indicator */}
+          {loadingMore && (
+            <div className={styles.loadingMore}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
+                Loading more news...
+              </div>
+            </div>
+          )}
+
+          {/* End of Results */}
+          {!hasMore && !loading && filteredNews.length > 0 && (
+            <div className={styles.endOfResults}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
+                {activeTab === "all" 
+                  ? "No more news articles to load"
+                  : `No more ${activeTab} articles available. Try "All News" for more content.`
+                }
+              </div>
+            </div>
+          )}
+
+          {/* No Results for Filter */}
+          {!loading && filteredNews.length === 0 && newsData.length > 0 && (
+            <div className={styles.endOfResults}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#6B7280' }}>
+                No {activeTab} articles found. Try a different category or "All News".
+              </div>
+            </div>
+          )}
 
           {/* Market Summary */}
           <div className={styles.marketSummary}>
