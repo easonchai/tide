@@ -5,7 +5,6 @@ import Layout from "@/components/Layout";
 import { useWallet } from "@/contexts/WalletContext";
 import styles from "@/styles/Home.module.css";
 import { apiService } from "@/utils/apiService";
-import Header from "@/component/header";
 
 // Destructure apiService
 const { market } = apiService;
