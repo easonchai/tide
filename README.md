@@ -1,4 +1,6 @@
-## Tide — Continuous Scalar Prediction Markets on Hyperliquid
+## Tide — Social-Driven, Scalar Prediction Markets on Hyperliquid
+
+![Tide Logo](frontend/public/tide.jpg)
 
 Tide brings continuous scalar prediction markets to Hyperliquid by pairing a CLMSR on‑chain market maker with HyperCore data and execution. Traders express views over a price range, concentrating liquidity into a single curve with probabilities that always sum to 100%. The platform spans a web app and APIs that interacts with HyperEVM for trading and settlement, with live data and instant hedging powered by HyperCore.
 
@@ -71,6 +73,13 @@ The Tide web app provides:
 - One‑click hedging on Hyperliquid perps from the same screen.
 
 We source candlestick data directly from HyperCore to power frontend charts and the live price feed. Example historical candles hook:
+```ts
+// frontend/src/hooks/useCandleHistoryQuery.ts (essentials)
+const transport = new HttpTransport({ isTestnet: true });
+const info = new InfoClient({ transport });
+return info.candleSnapshot({ coin: token, interval, startTime, endTime });
+```
+
 This drives real‑time price context and helps users place more informed bets or hedges.
 
 ## Backend (API + Oracle)
