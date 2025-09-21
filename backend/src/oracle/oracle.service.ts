@@ -228,13 +228,14 @@ export class OracleService {
   }
 
   /**
-   * Calculates the execution window (current time + 1 minute buffer)
+   * Calculates the execution window for markets that ended at least 1 minute ago
+   * Only processes markets that have already ended to ensure price data is finalized
    * @returns {{ windowStart: Date; windowEnd: Date }} Object containing start and end dates for the execution window
    */
   private getExecutionWindow(): { windowStart: Date; windowEnd: Date } {
     const now = new Date();
-    const windowStart = new Date(now.getTime() - 60 * 1000);
-    const windowEnd = new Date(now.getTime() + 60 * 1000);
+    const windowStart = new Date(now.getTime() - 2 * 60 * 1000); // 2 minutes ago
+    const windowEnd = new Date(now.getTime() - 60 * 1000); // 1 minute ago
 
     return { windowStart, windowEnd };
   }
