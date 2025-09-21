@@ -19,8 +19,10 @@ import { Range, Direction } from "react-range";
 import { useState, useCallback, useMemo, useRef } from "react";
 import React from "react";
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
+import type { AxiosError } from "axios";
 
 import { betOnPriceRange } from "@/utils/lmsr";
+import { apiService } from "@/utils/apiService";
 import styles from "@/styles/CoinDetail.module.css";
 import headerStyles from "@/styles/Home.module.css";
 
@@ -151,6 +153,23 @@ export default function CoinDetail() {
   const providerRef = useRef<EthereumProvider | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
 
+  const registerUser = useCallback(async (address: string) => {
+    try {
+      await apiService.user.create({ address });
+    } catch (error) {
+      const axiosError = error as AxiosError | undefined;
+      const status = axiosError?.response?.status;
+
+      if (status === 409) {
+        return;
+      }
+
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("사용자 등록 실패", error);
+      }
+    }
+  }, []);
+
   const amount = useMemo(() => {
     const normalized = amountInput.replace(/,/g, ".").trim();
 
@@ -241,6 +260,7 @@ export default function CoinDetail() {
       setWalletAddress(nextAccount);
 
       if (nextAccount) {
+        void registerUser(nextAccount);
         void fetchWalletBalance(nextAccount);
       } else {
         setWalletBalance(null);
@@ -248,7 +268,7 @@ export default function CoinDetail() {
 
       setShowDisconnectTooltip(false);
     },
-    [fetchWalletBalance]
+    [fetchWalletBalance, registerUser]
   );
 
   const handleDisconnect = useCallback(() => {
@@ -326,6 +346,7 @@ export default function CoinDetail() {
 
       if (account) {
         setWalletAddress(account);
+        void registerUser(account);
         void fetchWalletBalance(account);
       }
     } catch (error) {
@@ -341,6 +362,7 @@ export default function CoinDetail() {
     handleAccountsChanged,
     handleDisconnect,
     isConnecting,
+    registerUser,
     walletAddress,
   ]);
 

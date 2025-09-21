@@ -4,13 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Range, getTrackBackground } from "react-range";
 import styles from "@/styles/Home.module.css";
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
+import type { AxiosError } from "axios";
 import { apiService } from "@/utils/apiService";
 
 // Destructure apiService
 const { market } = apiService;
 
-// Question data type
-type Question = {
+// Market data type (from API response)
+type Market = {
   id: string;
   question: string;
   address: string;
@@ -18,8 +19,8 @@ type Question = {
   tags: string[];
   profileImage: string;
   slug: string;
-  fee: string;
-  volume: string;
+  fee: number;
+  volume: number;
   endDate: string;
   createdAt: string;
   updatedAt: string;
@@ -104,10 +105,9 @@ export default function Home() {
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
 
-  // Questions state
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
-  const [questionsError, setQuestionsError] = useState<string | null>(null);
+  // Markets state
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState<Market | null>(null);
   const trackColors = useMemo(() => {
     if (
       typeof window !== "undefined" &&
@@ -120,6 +120,23 @@ export default function Home() {
   }, []);
   const providerRef = useRef<EthereumProvider | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  const registerUser = useCallback(async (address: string) => {
+    try {
+      await apiService.user.create({ address });
+    } catch (error) {
+      const axiosError = error as AxiosError | undefined;
+      const status = axiosError?.response?.status;
+
+      if (status === 409) {
+        return;
+      }
+
+      if (!isIgnorableWalletConnectError(error)) {
+        console.error("사용자 등록 실패", error);
+      }
+    }
+  }, []);
 
   const fetchWalletBalance = useCallback(async (address: string) => {
     const provider = providerRef.current;
@@ -154,6 +171,7 @@ export default function Home() {
       setWalletAddress(nextAccount);
 
       if (nextAccount) {
+        void registerUser(nextAccount);
         void fetchWalletBalance(nextAccount);
       } else {
         setWalletBalance(null);
@@ -161,7 +179,7 @@ export default function Home() {
 
       setShowDisconnectTooltip(false);
     },
-    [fetchWalletBalance]
+    [fetchWalletBalance, registerUser]
   );
 
   const handleDisconnect = useCallback(() => {
@@ -238,6 +256,7 @@ export default function Home() {
 
       if (accounts?.length) {
         setWalletAddress(accounts[0]);
+        void registerUser(accounts[0]);
         void fetchWalletBalance(accounts[0]);
         setShowDisconnectTooltip(false);
       }
@@ -265,6 +284,7 @@ export default function Home() {
     handleAccountsChanged,
     handleDisconnect,
     isConnecting,
+    registerUser,
     walletAddress,
   ]);
 
@@ -306,28 +326,23 @@ export default function Home() {
     }
   }, [handleAccountsChanged, handleDisconnect]);
 
-  // Fetch questions
-  const fetchQuestions = useCallback(async () => {
-    setIsLoadingQuestions(true);
-    setQuestionsError(null);
-
+  // Fetch markets
+  const fetchMarkets = useCallback(async () => {
     try {
       const response = await market.getAll({
         status: "OPEN",
       });
-      console.log(response);
-      setQuestions(response.data || []);
+      const marketsData = response.data || [];
+      setMarkets(marketsData);
+      setCurrentQuestion(marketsData[0] || null);
     } catch (error) {
-      console.error("질문 목록 조회 실패", error);
-      setQuestionsError("질문 목록을 불러오는데 실패했습니다.");
-    } finally {
-      setIsLoadingQuestions(false);
+      console.error("Markets 조회 실패", error);
     }
   }, []);
 
   useEffect(() => {
-    void fetchQuestions();
-  }, [fetchQuestions]);
+    void fetchMarkets();
+  }, [fetchMarkets]);
 
   useEffect(() => {
     return () => {
@@ -373,14 +388,23 @@ export default function Home() {
     };
   }, [showDisconnectTooltip]);
 
-  // Bitcoin data matching the design
-  const bitcoin = {
-    id: "bitcoin",
-    symbol: "btc",
-    name: "Bitcoin",
-    currentPrice: 96582,
-    priceChangePercentage24h: 2.34,
-    volume: "2.1B",
+  // Extract price from question text
+  const extractPriceFromQuestion = (question: string): number => {
+    const match = question.match(/\$([\d,]+)/);
+    return match ? parseInt(match[1].replace(/,/g, "")) : 0;
+  };
+
+  // Format volume from wei to k Vol format
+  const formatVolume = (volume: number): string => {
+    if (volume === 0) return "0";
+    const ethVolume = volume / 1e18;
+    // Always show in k units (divide by 1000)
+    return `${(ethVolume / 1000).toFixed(1)}k`;
+  };
+
+  // Format fee from wei to ETH
+  const formatFee = (fee: number): string => {
+    return (fee / 1e18).toFixed(4);
   };
 
   // Market distribution data
@@ -566,64 +590,76 @@ export default function Home() {
                 Predict Price Ranges Across Top Crypto Markets
               </h2>
 
-              {/* Bitcoin Card View */}
-              <div className={styles.card}>
-                {/* Header with icon, name, and chevron */}
-                <div className={styles.cardHeader}>
-                  <div className={styles.coinInfo}>
-                    <div className={styles.coinIcon}>
-                      <span className={styles.iconText}>BT</span>
-                    </div>
-                    <div className={styles.coinDetails}>
-                      <h2 className={styles.coinSymbol}>BTC</h2>
-                      <p className={styles.coinName}>{bitcoin.name}</p>
-                    </div>
-                  </div>
-                  <div
-                    onClick={() => router.push(`/coins/${bitcoin.id}`)}
-                    className={styles.chevron}
-                  >
-                    ›
-                  </div>
-                </div>
-
-                {/* Price and Volume Section */}
-                <div className={styles.priceVolumeSection}>
-                  <div className={styles.priceInfo}>
-                    <div className={styles.priceContainer}>
-                      <span className={styles.price}>
-                        ${bitcoin.currentPrice.toLocaleString()}
-                      </span>
-                      <div className={styles.priceChange}>
-                        <span className={styles.arrow}>↗</span>
-                        <span className={styles.positive}>
-                          +{bitcoin.priceChangePercentage24h}%
-                        </span>
+              {/* Question Card View */}
+              <div className={styles.cardList}>
+                {markets.map((marketItem) => (
+                  <div key={marketItem.id} className={styles.card}>
+                    {/* Header with icon, name, and chevron */}
+                    <div className={styles.cardHeader}>
+                      <div className={styles.coinInfo}>
+                        <div className={styles.coinIcon}>
+                          {marketItem.profileImage ? (
+                            <img
+                              src={marketItem.profileImage}
+                              alt="Profile"
+                              className={styles.profileImage}
+                            />
+                          ) : (
+                            <span className={styles.iconText}>Q</span>
+                          )}
+                        </div>
+                        <div className={styles.coinDetails}>
+                          <p className={styles.coinName}>{marketItem.question}</p>
+                        </div>
+                      </div>
+                      <div
+                        onClick={() => router.push(`/coins/${marketItem.id}`)}
+                        className={styles.chevron}
+                      >
+                        ›
                       </div>
                     </div>
-                  </div>
 
-                  <div className={styles.volumeInfo}>
-                    <p className={styles.volumeLabel}>Volume</p>
-                    <p className={styles.volumeValue}>${bitcoin.volume}</p>
-                  </div>
-                </div>
+                    {/* Price and Volume Section */}
+                    <div className={styles.priceVolumeSection}>
+                      <div className={styles.priceInfo}>
+                        <div className={styles.priceContainer}>
+                          <span className={styles.price}>
+                            $
+                            {extractPriceFromQuestion(
+                              marketItem.question
+                            ).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
 
-                {/* Trade and Quick Bet Buttons */}
-                <div className={styles.actionButtons}>
-                  <button
-                    onClick={() => router.push(`/coins/${bitcoin.id}`)}
-                    className={styles.tradeButton}
-                  >
-                    Trade
-                  </button>
-                  <button
-                    onClick={() => setShowPredictionModal(true)}
-                    className={styles.quickBetButton}
-                  >
-                    Quick Bet
-                  </button>
-                </div>
+                      <div className={styles.volumeInfo}>
+                        <p className={styles.volumeValue}>
+                          ${formatVolume(marketItem.volume)} Vol
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Trade and Quick Bet Buttons */}
+                    <div className={styles.actionButtons}>
+                      <button
+                        onClick={() => router.push(`/coins/${marketItem.id}`)}
+                        className={styles.tradeButton}
+                      >
+                        Trade
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCurrentQuestion(marketItem);
+                          setShowPredictionModal(true);
+                        }}
+                        className={styles.quickBetButton}
+                      >
+                        Quick Bet
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </>
           ) : (
@@ -633,11 +669,19 @@ export default function Home() {
               <div className={styles.predictionHeader}>
                 <div className={styles.coinInfo}>
                   <div className={styles.coinIcon}>
-                    <span className={styles.iconText}>BT</span>
+                    {currentQuestion?.profileImage ? (
+                      <img
+                        src={currentQuestion.profileImage}
+                        alt="Profile"
+                        className={styles.profileImage}
+                      />
+                    ) : (
+                      <span className={styles.iconText}>Q</span>
+                    )}
                   </div>
                   <div className={styles.coinDetails}>
-                    <h2 className={styles.coinSymbol}>BTC</h2>
-                    <p className={styles.coinName}>{bitcoin.name}</p>
+                    <h2 className={styles.coinSymbol}>PRED</h2>
+                    <p className={styles.coinName}>Prediction</p>
                   </div>
                 </div>
                 <div className={styles.closeButton}>
@@ -655,12 +699,17 @@ export default function Home() {
                 <div className={styles.predictionPriceInfo}>
                   <div className={styles.priceContainer}>
                     <span className={styles.predictionPrice}>
-                      ${bitcoin.currentPrice.toLocaleString()}
+                      $
+                      {currentQuestion
+                        ? extractPriceFromQuestion(
+                            currentQuestion.question
+                          ).toLocaleString()
+                        : "0"}
                     </span>
                     <div className={styles.predictionPriceChange}>
                       <span className={styles.arrow}>↗</span>
                       <span className={styles.positive}>
-                        +{bitcoin.priceChangePercentage24h}%
+                        {/* Price change removed */}
                       </span>
                     </div>
                   </div>
@@ -668,7 +717,10 @@ export default function Home() {
                 <div className={styles.predictionVolumeInfo}>
                   <p className={styles.predictionVolumeLabel}>Volume</p>
                   <p className={styles.predictionVolumeValue}>
-                    ${bitcoin.volume}
+                    $
+                    {currentQuestion
+                      ? `${formatVolume(currentQuestion.volume)} Vol`
+                      : "0 Vol"}
                   </p>
                 </div>
               </div>
