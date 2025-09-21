@@ -11,7 +11,8 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { User } from '@prisma/client';
-import { CreateUserDto, UserResponseDto } from './dto';
+import { CreateUserDto } from './dto/user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @ApiTags('Users')
 @Controller('users')
