@@ -39,7 +39,7 @@ export interface MarketResponseDTO {
 export interface CreateNFTPositionDTO {
   marketSlug: string;
   userAddress: string;
-  onChainId: string;
+  onChainId?: string;
   amount: bigint;
   lowerBound: bigint;
   upperBound: bigint;
@@ -54,7 +54,7 @@ export interface NFTPositionResponseDTO {
   id: string;
   marketId: string;
   userId: string;
-  onChainId: string;
+  onChainId?: string;
   amount: bigint;
   payout: bigint;
   lowerBound: bigint;

@@ -142,7 +142,7 @@ export class CreateNFTPositionDTO {
     example: '42',
   })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   onChainId: string;
 
   @ApiProperty({
