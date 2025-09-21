@@ -77,6 +77,7 @@ export class MarketController {
     const data = {
       market: { connect: { slug: createPositionData.marketSlug } },
       user: { connect: { address: createPositionData.userAddress } },
+      onChainId: createPositionData.onChainId,
       amount: BigInt(createPositionData.amount),
       lowerBound: BigInt(createPositionData.lowerBound),
       upperBound: BigInt(createPositionData.upperBound),
@@ -173,7 +174,7 @@ export class MarketController {
     description: 'List of markets',
     type: [MarketResponseDTO],
   })
-  async getAllMarkets(): Promise<Market[]> {
+  async getAllMarkets(): Promise<(Market & { volume: bigint })[]> {
     return this.marketService.getAllMarkets();
   }
 
@@ -190,7 +191,9 @@ export class MarketController {
     type: MarketResponseDTO,
   })
   @ApiResponse({ status: 404, description: 'Market not found' })
-  async getMarketBySlug(@Param('slug') slug: string): Promise<Market | null> {
+  async getMarketBySlug(
+    @Param('slug') slug: string,
+  ): Promise<(Market & { volume: bigint }) | null> {
     return this.marketService.getMarket({ slug });
   }
 

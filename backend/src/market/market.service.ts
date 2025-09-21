@@ -29,26 +29,38 @@ export class MarketService {
   }
 
   /**
-   * Retrieves a market by unique identifier
+   * Retrieves a market by unique identifier with volume calculation
    * @param {Prisma.MarketWhereUniqueInput} where - Unique market identifier (id, address, or slug)
-   * @returns {Promise<Market | null>} The market or null if not found
+   * @returns {Promise<(Market & { volume: bigint }) | null>} The market with volume or null if not found
    */
   async getMarket(
     where: Prisma.MarketWhereUniqueInput,
-  ): Promise<Market | null> {
+  ): Promise<(Market & { volume: bigint }) | null> {
     const market = await this.prisma.market.findUnique({
       where,
     });
 
-    return market;
+    if (!market) {
+      return null;
+    }
+
+    // Calculate volume for this market
+    const volume = await this.calculateMarketVolume(market.slug);
+
+    return {
+      ...market,
+      volume,
+    };
   }
 
   /**
-   * Retrieves all markets with optional filtering
+   * Retrieves all markets with optional filtering and volume calculation
    * @param {Prisma.MarketFindManyArgs} args - Optional filtering and pagination arguments
-   * @returns {Promise<Market[]>} Array of markets
+   * @returns {Promise<(Market & { volume: bigint })[]>} Array of markets with volume
    */
-  async getAllMarkets(args?: Prisma.MarketFindManyArgs): Promise<Market[]> {
+  async getAllMarkets(
+    args?: Prisma.MarketFindManyArgs,
+  ): Promise<(Market & { volume: bigint })[]> {
     const defaultArgs: Prisma.MarketFindManyArgs = {
       where: {
         deletedAt: null,
@@ -59,7 +71,20 @@ export class MarketService {
       ...args,
     };
 
-    return this.prisma.market.findMany(defaultArgs);
+    const markets = await this.prisma.market.findMany(defaultArgs);
+
+    // Calculate volume for each market
+    const marketsWithVolume = await Promise.all(
+      markets.map(async (market) => {
+        const volume = await this.calculateMarketVolume(market.slug);
+        return {
+          ...market,
+          volume,
+        };
+      }),
+    );
+
+    return marketsWithVolume;
   }
 
   /**
@@ -112,6 +137,43 @@ export class MarketService {
     } catch (error) {
       this.logger.error(
         `Failed to delete market: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Calculates the total volume for a market by summing amount + payout for all positions
+   * @param {string} marketSlug - The slug of the market to calculate volume for
+   * @returns {Promise<bigint>} The total volume of the market
+   */
+  private async calculateMarketVolume(marketSlug: string): Promise<bigint> {
+    this.logger.log(`Calculating volume for market: ${marketSlug}`);
+    try {
+      const positions = await this.prisma.nFTPosition.findMany({
+        where: {
+          market: {
+            slug: marketSlug,
+          },
+        },
+        select: {
+          amount: true,
+          payout: true,
+        },
+      });
+
+      const totalVolume = positions.reduce((sum, position) => {
+        return sum + position.amount + position.payout;
+      }, BigInt(0));
+
+      this.logger.log(
+        `Market volume calculated: ${totalVolume.toString()} for ${positions.length} positions`,
+      );
+      return totalVolume;
+    } catch (error) {
+      this.logger.error(
+        `Failed to calculate market volume: ${error.message}`,
         error.stack,
       );
       throw error;

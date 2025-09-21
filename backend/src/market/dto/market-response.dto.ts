@@ -54,6 +54,12 @@ export class MarketResponseDTO {
   fee: bigint;
 
   @ApiProperty({
+    description: 'Total trading volume for this market',
+    example: '1500000000000',
+  })
+  volume: bigint;
+
+  @ApiProperty({
     description: 'Market end date',
     example: '2024-12-31T23:59:59Z',
     nullable: true,
