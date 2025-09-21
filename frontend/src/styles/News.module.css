@@ -1,0 +1,502 @@
+/* News Page Styles */
+.container {
+  min-height: 100vh;
+  background: #0E1B24;
+  color: #ffffff;
+}
+
+.loadingMessage {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+/* Header */
+.header {
+  background: #1f2937;
+  border-bottom: 1px solid #374151;
+  padding: 0 1rem;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  background: #0f766e;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brandName {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.navigation {
+  display: flex;
+  gap: 32px;
+}
+
+.navLink {
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: #51D5EB;
+}
+
+.navLink.active {
+  color: #51D5EB;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.walletInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.connectWrapper {
+  position: relative;
+}
+
+.connectButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #51D5EB;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.connectButton:hover {
+  background: #3eb8d1;
+}
+
+/* Main Content */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Page Header */
+.pageHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.pageTitle {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #51D5EB 0%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pageSubtitle {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.filterButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filterButton:hover {
+  background: rgba(81, 213, 235, 0.2);
+  border-color: #51D5EB;
+}
+
+.filterButton.active {
+  background: #51D5EB;
+  border-color: #51D5EB;
+  color: #0f0f23;
+  font-weight: 600;
+}
+
+/* News Grid */
+.newsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+/* Single Column News Feed */
+.newsFeed {
+  max-width: 1200px;
+  margin: 0 auto 3rem auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.newsCard {
+  background: #51D5EB1A;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* News Card for Grid Layout */
+.newsGrid .newsCard {
+  padding: 1.5rem;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+/* News Image */
+.newsImage {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.newsCard:hover .cardImage {
+  transform: scale(1.05);
+}
+
+.imageOverlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
+/* Card Content */
+.cardContent {
+  padding: 1.5rem;
+}
+
+
+/* Card Header */
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.category {
+  background: #51D5EB;
+  color: #0f0f23;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timeAgo {
+  color: #51D5EB;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.timestamp {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  text-align: right;
+  line-height: 1.2;
+}
+
+/* Card Content */
+.newsTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+  color: #ffffff;
+}
+
+.titleLink {
+  color: #ffffff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.titleLink:hover {
+  color: #51D5EB;
+  text-decoration: underline;
+}
+
+.newsSummary {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+/* Card Footer */
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.source {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sourceLabel {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sourceName {
+  color: #51D5EB;
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.sourceName:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.marketImpact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.impactLabel {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.impactValues {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.impactValue {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.impactValue.positive {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.impactValue.negative {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Market Summary */
+.marketSummary {
+  background: #51D5EB1A;
+  border: 1px solid rgba(81, 213, 235, 0.2);
+  border-radius: 20px;
+  padding: 2rem;
+}
+
+.summaryTitle {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: #ffffff;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.summaryCard {
+  background: rgba(81, 213, 235, 0.1);
+  border: 1px solid rgba(81, 213, 235, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.summaryCard:hover {
+  transform: translateY(-2px);
+  border-color: #51D5EB;
+  background: rgba(81, 213, 235, 0.15);
+}
+
+.summaryCard h3 {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summaryPrice {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.summaryChange {
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.summaryChange.positive {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.summaryChange.negative {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.summaryChange.neutral {
+  color: #51D5EB;
+  background: rgba(81, 213, 235, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .headerContent {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .navigation {
+    gap: 1rem;
+  }
+
+  .main {
+    padding: 1rem;
+  }
+
+  .newsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .newsFeed {
+    max-width: 100%;
+    margin: 0 0 2rem 0;
+    grid-template-columns: 1fr;
+  }
+
+  .newsImage {
+    height: 160px;
+  }
+
+  .cardContent {
+    padding: 1rem;
+  }
+
+  .cardFooter {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .marketImpact {
+    align-items: flex-start;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .newsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
