@@ -84,29 +84,19 @@ export class MarketTransactionService {
   }
 
   /**
-   * Retrieves all active NFT positions for a specific user by address
+   * Retrieves all NFT positions for a specific user by address
    * @param {string} userAddress - The user address to get positions for
-   * @param {boolean} includeClosed - Whether to include closed positions (default: false)
    * @returns {Promise<NFTPosition[]>} Array of NFT positions for the user
    */
-  async getNFTPositionsByUser(
-    userAddress: string,
-    includeClosed: boolean = false,
-  ): Promise<NFTPosition[]> {
+  async getNFTPositionsByUser(userAddress: string): Promise<NFTPosition[]> {
     this.logger.log(`Getting NFT positions for user address: ${userAddress}`);
     try {
-      const whereClause: Prisma.NFTPositionWhereInput = {
-        user: {
-          address: userAddress,
-        },
-      };
-
-      if (!includeClosed) {
-        whereClause.deletedAt = null;
-      }
-
       const nftPositions = await this.prisma.nFTPosition.findMany({
-        where: whereClause,
+        where: {
+          user: {
+            address: userAddress,
+          },
+        },
         include: {
           market: true,
           user: true,
@@ -130,29 +120,19 @@ export class MarketTransactionService {
   }
 
   /**
-   * Retrieves all active NFT positions for a specific market by slug
+   * Retrieves all NFT positions for a specific market by slug
    * @param {string} marketSlug - The market slug to get positions for
-   * @param {boolean} includeClosed - Whether to include closed positions (default: false)
    * @returns {Promise<NFTPosition[]>} Array of NFT positions for the market
    */
-  async getNFTPositionsByMarket(
-    marketSlug: string,
-    includeClosed: boolean = false,
-  ): Promise<NFTPosition[]> {
+  async getNFTPositionsByMarket(marketSlug: string): Promise<NFTPosition[]> {
     this.logger.log(`Getting NFT positions for market slug: ${marketSlug}`);
     try {
-      const whereClause: Prisma.NFTPositionWhereInput = {
-        market: {
-          slug: marketSlug,
-        },
-      };
-
-      if (!includeClosed) {
-        whereClause.deletedAt = null;
-      }
-
       const nftPositions = await this.prisma.nFTPosition.findMany({
-        where: whereClause,
+        where: {
+          market: {
+            slug: marketSlug,
+          },
+        },
         include: {
           market: true,
           user: true,

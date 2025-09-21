@@ -33,9 +33,10 @@ model Market {
   // creator       String
   status   MarketStatus @default(OPEN)
 
-  tags         String[]
-  profileImage String?
-  slug         String   @unique
+  tags              String[]
+  profileImage      String?
+  slug              String   @unique
+  resolutionOutcome String?
 
   // collateralToken    String
   // oracle             String
@@ -52,7 +53,7 @@ model Market {
 }
 
 model NFTPosition {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   marketId  String
   userId    String
   onChainId String?

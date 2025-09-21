@@ -94,12 +94,6 @@ export class MarketController {
     description: 'User address',
     example: '0x1234567890abcdef1234567890abcdef12345678',
   })
-  @ApiQuery({
-    name: 'includeClosed',
-    description: 'Include closed positions',
-    required: false,
-    type: Boolean,
-  })
   @ApiResponse({
     status: 200,
     description: 'List of NFT positions for the user',
@@ -107,12 +101,8 @@ export class MarketController {
   })
   async getNFTPositionsByUser(
     @Param('address') address: string,
-    @Query('includeClosed') includeClosed?: boolean,
   ): Promise<NFTPosition[]> {
-    return this.marketTransactionService.getNFTPositionsByUser(
-      address,
-      includeClosed || false,
-    );
+    return this.marketTransactionService.getNFTPositionsByUser(address);
   }
 
   @Get('positions/market/:slug')
@@ -122,12 +112,6 @@ export class MarketController {
     description: 'Market slug',
     example: 'bitcoin-100k-2024',
   })
-  @ApiQuery({
-    name: 'includeClosed',
-    description: 'Include closed positions',
-    required: false,
-    type: Boolean,
-  })
   @ApiResponse({
     status: 200,
     description: 'List of NFT positions for the market',
@@ -135,12 +119,8 @@ export class MarketController {
   })
   async getNFTPositionsByMarket(
     @Param('slug') slug: string,
-    @Query('includeClosed') includeClosed?: boolean,
   ): Promise<NFTPosition[]> {
-    return this.marketTransactionService.getNFTPositionsByMarket(
-      slug,
-      includeClosed || false,
-    );
+    return this.marketTransactionService.getNFTPositionsByMarket(slug);
   }
 
   @Put('positions/:id/close')
