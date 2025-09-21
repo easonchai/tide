@@ -11,11 +11,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 contract Buyback {
     // Token addresses
-    address public constant USDC = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     
-    // Token IDs for HyperCore
-    uint64 public constant USDC_TOKEN_ID = 1;
-    uint64 public constant HYPE_TOKEN_ID = 150;
+    // Token IDs for HyperCore are fetched dynamically using getTokenIndex()
     
     // Events
     event BuybackExecuted(
@@ -67,15 +65,18 @@ contract Buyback {
         // Bridge USDC to HyperCore
         CoreWriterLib.bridgeToCore(USDC, usdcAmount);
         
+        // Get real token IDs
+        uint64 hypeTokenId = getTokenId(0x0000000000000000000000000000000000000000); // HYPE address placeholder
+        
         // Convert to Core wei amounts
-        uint64 coreHypeAmount = HLConversions.evmToWei(HYPE_TOKEN_ID, expectedHypeAmount);
+        uint64 coreHypeAmount = HLConversions.evmToWei(hypeTokenId, expectedHypeAmount);
         
         // Execute the swap (this would be a real CoreWriter action in practice)
         // For now, we'll simulate by sending HYPE directly
         // In reality, you'd use CoreWriterLib to execute a spot trade
         
         // Send HYPE to caller
-        CoreWriterLib.spotSend(msg.sender, HYPE_TOKEN_ID, coreHypeAmount);
+        CoreWriterLib.spotSend(msg.sender, hypeTokenId, coreHypeAmount);
         
         emit BuybackExecuted(msg.sender, usdcAmount, expectedHypeAmount, hypePrice);
     }
@@ -85,8 +86,11 @@ contract Buyback {
      * @return price HYPE price in USDC (with 18 decimals)
      */
     function getHypePrice() public view returns (uint256) {
+        // Get HYPE token ID dynamically
+        uint64 hypeTokenId = getTokenId(0x0000000000000000000000000000000000000000); // HYPE address placeholder
+        
         // Get spot price for HYPE
-        uint64 spotPrice = PrecompileLib.spotPx(HYPE_TOKEN_ID);
+        uint64 spotPrice = PrecompileLib.spotPx(hypeTokenId);
         
         // Convert to 18 decimal format
         return uint256(spotPrice);
@@ -97,8 +101,26 @@ contract Buyback {
      * @return price USDC price (should be close to 1e18)
      */
     function getUSDCPrice() public view returns (uint256) {
-        uint64 spotPrice = PrecompileLib.spotPx(USDC_TOKEN_ID);
+        uint64 usdcTokenId = getRealUSDCTokenId();
+        uint64 spotPrice = PrecompileLib.spotPx(usdcTokenId);
         return uint256(spotPrice);
+    }
+    
+    /**
+     * @dev Get the real token ID for a given token address using PrecompileLib
+     * @param tokenAddress The EVM token address
+     * @return tokenId The corresponding HyperCore token ID
+     */
+    function getTokenId(address tokenAddress) public view returns (uint64) {
+        return PrecompileLib.getTokenIndex(tokenAddress);
+    }
+    
+    /**
+     * @dev Get the real USDC token ID from HyperCore
+     * @return tokenId The actual USDC token ID in HyperCore
+     */
+    function getRealUSDCTokenId() public view returns (uint64) {
+        return PrecompileLib.getTokenIndex(USDC);
     }
     
     /**
@@ -133,7 +155,8 @@ contract Buyback {
      * @dev Get HYPE balance of an address
      */
     function getHypeBalance(address account) external view returns (uint256) {
-        PrecompileLib.SpotBalance memory balance = PrecompileLib.spotBalance(account, HYPE_TOKEN_ID);
+        uint64 hypeTokenId = getTokenId(0x0000000000000000000000000000000000000000); // HYPE address placeholder
+        PrecompileLib.SpotBalance memory balance = PrecompileLib.spotBalance(account, hypeTokenId);
         return balance.total;
     }
     

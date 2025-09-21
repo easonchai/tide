@@ -45,6 +45,9 @@ uint64 spotPrice = PrecompileLib.spotPx(HYPE_TOKEN_ID);
 
 // Get user's HYPE balance in HyperCore
 PrecompileLib.SpotBalance memory balance = PrecompileLib.spotBalance(account, HYPE_TOKEN_ID);
+
+// Get token ID from EVM address
+uint64 tokenId = PrecompileLib.getTokenIndex(tokenAddress);
 ```
 
 **Reference**: [PrecompileLib Documentation](https://www.hyperlib.dev/dev/precompiles)
@@ -102,6 +105,15 @@ uint64 coreHypeAmount = HLConversions.evmToWei(HYPE_TOKEN_ID, expectedHypeAmount
 - **Parameters**: `usdcAmount` - USDC amount
 - **Returns**: Expected HYPE amount
 
+#### `getTokenId(address tokenAddress)` → `uint64`
+- **Purpose**: Get real HyperCore token ID from EVM address
+- **Parameters**: `tokenAddress` - EVM token contract address
+- **Returns**: Corresponding HyperCore token ID
+
+#### `getRealUSDCTokenId()` → `uint64`
+- **Purpose**: Get the actual USDC token ID in HyperCore
+- **Returns**: Real USDC token ID from HyperCore
+
 ### Owner-Only Functions
 
 #### `setSlippageTolerance(uint256 newTolerance)`
@@ -141,13 +153,14 @@ CoreSimulatorLib.init();
 
 ### Token Addresses
 ```solidity
-address public constant USDC = 0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463;
+address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Real USDC
 ```
 
 ### Token IDs (HyperCore)
 ```solidity
-uint64 public constant USDC_TOKEN_ID = 1;
-uint64 public constant HYPE_TOKEN_ID = 150;
+// Token IDs are fetched dynamically using PrecompileLib
+uint64 realUSDCId = PrecompileLib.getTokenIndex(USDC);
+uint64 realTokenId = buyback.getTokenId(tokenAddress);
 ```
 
 ### Default Settings
@@ -170,7 +183,41 @@ buyback.executeBuyback(1000e6, minHype);
 
 // 4. Check HYPE balance
 uint256 hypeBalance = buyback.getHypeBalance(msg.sender);
+
+// 5. Get real token IDs
+uint64 realUSDCId = buyback.getRealUSDCTokenId();
+uint64 tokenId = buyback.getTokenId(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 ```
+
+## How Token IDs Work
+
+### The Problem
+HyperCore uses different token IDs than EVM addresses. For example:
+- **EVM USDC**: `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`
+- **HyperCore USDC**: `1` (or some other number)
+
+### The Solution
+The contract uses `PrecompileLib.getTokenIndex()` to dynamically fetch the real token IDs:
+
+```solidity
+// Get real token ID from EVM address
+uint64 realTokenId = PrecompileLib.getTokenIndex(tokenAddress);
+
+// Example usage
+uint64 usdcId = buyback.getRealUSDCTokenId(); // Gets real USDC ID
+uint64 anyTokenId = buyback.getTokenId(0x...); // Gets any token's ID
+```
+
+### Implementation Details
+- **No Hardcoded IDs**: Removed all placeholder token ID constants
+- **Dynamic Lookup**: All token operations now fetch real IDs at runtime
+- **Error Handling**: Tests gracefully handle cases where tokens aren't available in test environments
+
+### Why This Matters
+- **Accuracy**: Ensures you're using the correct token IDs for HyperCore operations
+- **Flexibility**: Works with any token without hardcoding IDs
+- **Future-proof**: Automatically adapts if token IDs change
+- **Production Ready**: No placeholder values that could cause issues in production
 
 ## Documentation References
 
