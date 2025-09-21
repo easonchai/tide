@@ -123,17 +123,6 @@ export default function Home() {
     testnet: false,
   });
 
-  useEffect(() => {
-    if (!hypeCandle) return;
-    // Console log ISO timestamp and current close price
-    // Candle numbers are strings; keep as-is or parse if needed
-    console.log(
-      "[HYPE/USDC 1m]",
-      new Date(hypeCandle.T).toISOString(),
-      hypeCandle.c
-    );
-  }, [hypeCandle]);
-
   // Fetch markets
   const fetchMarkets = useCallback(async () => {
     try {

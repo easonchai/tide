@@ -230,61 +230,6 @@ export default function CoinDetail() {
     });
   }, []);
 
-  // Calculate price range and domain from real data
-  const {
-    dataMinPrice,
-    dataMaxPrice,
-    dataAvgPrice,
-    domain,
-    initialPriceRange,
-  } = useMemo(() => {
-    if (!hypeHistory || !hypeHistory.length) {
-      return {
-        dataMinPrice: 110000,
-        dataMaxPrice: 120000,
-        dataAvgPrice: 115000,
-        domain: [110000, 120000] as [number, number],
-        initialPriceRange: [114700, 116700] as [number, number],
-      };
-    }
-
-    const prices = hypeHistory.map((candle) => parseFloat(candle.c));
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-
-    // Add some padding to the domain
-    const padding = (max - min) * 0.1;
-    const domainMin = Math.max(0, min - padding);
-    const domainMax = max + padding;
-
-    // Set initial price range to be around the average
-    const rangePadding = (max - min) * 0.1;
-    const rangeMin = Math.max(domainMin, avg - rangePadding);
-    const rangeMax = Math.min(domainMax, avg + rangePadding);
-
-    return {
-      dataMinPrice: min,
-      dataMaxPrice: max,
-      dataAvgPrice: avg,
-      domain: [domainMin, domainMax] as [number, number],
-      initialPriceRange: [rangeMin, rangeMax] as [number, number],
-    };
-  }, [hypeHistory]);
-
-  // Price range slider state - initialize with domain values
-  const [priceRange, setPriceRange] = useState<[number, number]>(() => {
-    // Initialize with domain values to avoid Range error
-    return [domain[0], domain[1]];
-  });
-
-  // Update price range when initial data is available
-  useEffect(() => {
-    if (initialPriceRange[0] !== 0 && initialPriceRange[1] !== 0) {
-      setPriceRange(initialPriceRange);
-    }
-  }, [initialPriceRange]);
-
   const { data, isLoading, isError } = useQuery({
     queryKey: ["coin-detail", id],
     queryFn: () => fetchCoinDetail(id as string),
@@ -315,6 +260,145 @@ export default function CoinDetail() {
       price: parseFloat(candle.c), // close price
     }));
   }, [hypeHistory]);
+
+  const {
+    dataMinPrice,
+    dataMaxPrice,
+    dataAvgPrice,
+    domain,
+    initialPriceRange,
+    yAxisFormatter,
+  } = useMemo(() => {
+    if (chart.length > 0) {
+      const prices = chart.map((point) => point.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+
+      const range = Math.max(max - min, 1);
+      const padding = range * 0.1;
+      const domainMin = Math.max(0, min - padding);
+      const domainMax = max + padding;
+
+      const rangePadding = range * 0.1;
+      const rangeMin = Math.max(domainMin, avg - rangePadding);
+      const rangeMax = Math.min(domainMax, avg + rangePadding);
+
+      // Determine appropriate scaling based on price range
+      const maxPrice = Math.max(max, domainMax);
+      let scale = 1;
+      let suffix = "";
+
+      if (maxPrice >= 1000000000) {
+        scale = 1000000000;
+        suffix = "B";
+      } else if (maxPrice >= 1000000) {
+        scale = 1000000;
+        suffix = "M";
+      } else if (maxPrice >= 1000) {
+        scale = 1000;
+        suffix = "k";
+      }
+
+      const formatter = (value: number) =>
+        `$${(value / scale).toFixed(1)}${suffix}`;
+
+      return {
+        dataMinPrice: min,
+        dataMaxPrice: max,
+        dataAvgPrice: avg,
+        domain: [domainMin, domainMax] as [number, number],
+        initialPriceRange: [rangeMin, rangeMax] as [number, number],
+        yAxisFormatter: formatter,
+      };
+    }
+
+    const currentPrice = coin?.currentPrice ?? 0;
+    const basePrice = currentPrice > 0 ? currentPrice : 10000;
+    const padding = Math.max(basePrice * 0.15, 1000);
+    const domainMin = Math.max(0, basePrice - padding);
+    const domainMax = basePrice + padding;
+
+    const rangePadding = Math.max(basePrice * 0.05, 500);
+    const rangeMin = Math.max(domainMin, basePrice - rangePadding);
+    const rangeMax = Math.min(domainMax, basePrice + rangePadding);
+
+    // Determine appropriate scaling based on current price
+    const maxPrice = Math.max(basePrice, domainMax);
+    let scale = 1;
+    let suffix = "";
+
+    if (maxPrice >= 1000000000) {
+      scale = 1000000000;
+      suffix = "B";
+    } else if (maxPrice >= 1000000) {
+      scale = 1000000;
+      suffix = "M";
+    } else if (maxPrice >= 1000) {
+      scale = 1000;
+      suffix = "k";
+    }
+
+    const formatter = (value: number) =>
+      `$${(value / scale).toFixed(1)}${suffix}`;
+
+    return {
+      dataMinPrice: Math.max(domainMin, basePrice - padding / 2),
+      dataMaxPrice: Math.min(domainMax, basePrice + padding / 2),
+      dataAvgPrice: basePrice,
+      domain: [domainMin, domainMax] as [number, number],
+      initialPriceRange: [rangeMin, rangeMax] as [number, number],
+      yAxisFormatter: formatter,
+    };
+  }, [chart, coin?.currentPrice]);
+
+  const [priceRange, setPriceRange] = useState<[number, number]>(() => [
+    domain[0],
+    domain[1],
+  ]);
+
+  useEffect(() => {
+    setPriceRange((prevRange) => {
+      const clamp = (value: number) =>
+        Math.min(Math.max(value, domain[0]), domain[1]);
+
+      const clampedPrev: [number, number] = [
+        clamp(prevRange[0]),
+        clamp(prevRange[1]),
+      ];
+
+      const prevIsValid =
+        clampedPrev[0] < clampedPrev[1] &&
+        clampedPrev[0] >= domain[0] &&
+        clampedPrev[1] <= domain[1];
+
+      if (prevIsValid) {
+        if (
+          clampedPrev[0] === prevRange[0] &&
+          clampedPrev[1] === prevRange[1]
+        ) {
+          return prevRange;
+        }
+
+        return clampedPrev;
+      }
+
+      const initial: [number, number] = [
+        clamp(initialPriceRange[0]),
+        clamp(initialPriceRange[1]),
+      ];
+
+      if (initial[0] >= initial[1]) {
+        return [domain[0], domain[1]];
+      }
+
+      if (initial[0] === prevRange[0] && initial[1] === prevRange[1]) {
+        return prevRange;
+      }
+
+      return initial;
+    });
+  }, [domain, initialPriceRange]);
 
   // Generate probability distribution from real data
   const probability = useMemo(() => {
@@ -493,7 +577,7 @@ export default function CoinDetail() {
                   <YAxis
                     stroke="rgba(255, 255, 255, 0.6)"
                     fontSize={12}
-                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                    tickFormatter={yAxisFormatter}
                     domain={domain}
                   />
                   <Tooltip
@@ -611,12 +695,12 @@ export default function CoinDetail() {
                 <div className={styles.rangeLabels}>
                   <div className={styles.rangeLabel}>
                     <span className={styles.rangePrice}>
-                      ${(priceRange[1] / 1000).toFixed(1)}k
+                      {yAxisFormatter(priceRange[1])}
                     </span>
                   </div>
                   <div className={styles.rangeLabel}>
                     <span className={styles.rangePrice}>
-                      ${(priceRange[0] / 1000).toFixed(1)}k
+                      {yAxisFormatter(priceRange[0])}
                     </span>
                   </div>
                 </div>
