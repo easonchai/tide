@@ -70,7 +70,7 @@ export class OracleService {
         return;
       }
 
-      const txHash = await this.sendToSmartContract(market.address, priceData);
+      const txHash = await this.sendToSmartContract(market.slug, priceData);
 
       await this.prisma.market.update({
         where: { id: market.id },
@@ -219,7 +219,6 @@ export class OracleService {
         id: true,
         slug: true,
         question: true,
-        address: true,
         endDate: true,
       },
     });
@@ -242,7 +241,6 @@ export class OracleService {
         id: true,
         slug: true,
         question: true,
-        address: true,
         endDate: true,
         status: true,
       },
