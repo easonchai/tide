@@ -255,10 +255,12 @@ export default function CoinDetail() {
       return [];
     }
 
-    return hypeHistory.map((candle) => ({
-      time: new Date(candle.T).toISOString(),
-      price: parseFloat(candle.c), // close price
-    }));
+    return hypeHistory
+      .map((candle) => ({
+        time: new Date(candle.T).getTime(), // Use timestamp for better alignment
+        price: parseFloat(candle.c), // close price
+      }))
+      .sort((a, b) => a.time - b.time); // Sort by time to ensure proper order
   }, [hypeHistory]);
 
   const {
@@ -353,8 +355,8 @@ export default function CoinDetail() {
   }, [chart, coin?.currentPrice]);
 
   const [priceRange, setPriceRange] = useState<[number, number]>(() => [
-    domain[0],
-    domain[1],
+    initialPriceRange[0],
+    initialPriceRange[1],
   ]);
 
   useEffect(() => {
@@ -565,6 +567,9 @@ export default function CoinDetail() {
                     dataKey="time"
                     stroke="rgba(255, 255, 255, 0.6)"
                     fontSize={12}
+                    type="number"
+                    scale="time"
+                    domain={["dataMin", "dataMax"]}
                     tickFormatter={(value) => {
                       const date = new Date(value);
                       return date.toLocaleTimeString("en-US", {
@@ -589,12 +594,13 @@ export default function CoinDetail() {
                     }}
                   />
                   <Line
-                    type="monotone"
+                    type="linear"
                     dataKey="price"
                     stroke="#f97316"
                     strokeWidth={3}
                     dot={{ fill: "#f97316", strokeWidth: 2, r: 4 }}
                     activeDot={{ r: 6, stroke: "#f97316", strokeWidth: 2 }}
+                    connectNulls={false}
                   />
                   <ReferenceLine
                     y={priceRange[1]}
@@ -611,96 +617,118 @@ export default function CoinDetail() {
                 </LineChart>
               </ResponsiveContainer>
 
-              {/* Range Slider Overlay */}
+              {/* Range Slider Overlay  todo: make align line and slider*/}
               <div className={styles.rangeSliderOverlay}>
-                {priceRange[0] >= domain[0] && priceRange[1] <= domain[1] && (
-                  <Range
-                    values={priceRange}
-                    step={100}
-                    min={domain[0]}
-                    max={domain[1]}
-                    onChange={(values) => {
-                      setPriceRange(values as [number, number]);
-                    }}
-                    renderTrack={({ props, children }) => {
-                      const {
-                        key: trackKey,
-                        style,
-                        ...trackProps
-                      } = props as unknown as {
-                        key?: string | number;
-                        style?: React.CSSProperties;
-                        [key: string]: unknown;
-                      };
+                <Range
+                  values={priceRange}
+                  step={Math.max(1, (domain[1] - domain[0]) / 1000)}
+                  min={domain[0]}
+                  max={domain[1]}
+                  onChange={(values) => {
+                    console.log("Range onChange:", values);
+                    setPriceRange(values as [number, number]);
+                  }}
+                  renderTrack={({ props, children }) => {
+                    const {
+                      key: trackKey,
+                      style,
+                      ...trackProps
+                    } = props as unknown as {
+                      key?: string | number;
+                      style?: React.CSSProperties;
+                      [key: string]: unknown;
+                    };
 
-                      return (
-                        <div
-                          key={trackKey}
-                          {...trackProps}
-                          className={styles.rangeTrack}
-                          style={{
-                            ...style,
-                            height: "100%",
-                            width: "8px",
-                            background:
-                              "linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%)",
-                            borderRadius: "4px",
-                            border: "1px solid rgba(81, 213, 235, 0.3)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {children}
-                        </div>
-                      );
-                    }}
-                    renderThumb={({ props, index }) => {
-                      const {
-                        key: thumbKey,
-                        style,
-                        ...thumbProps
-                      } = props as unknown as {
-                        key?: string | number;
-                        style?: React.CSSProperties;
-                        [key: string]: unknown;
-                      };
+                    return (
+                      <div
+                        key={trackKey}
+                        {...trackProps}
+                        className={styles.rangeTrack}
+                        style={{
+                          ...style,
+                          height: "100%",
+                          width: "8px",
+                          background:
+                            "linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%)",
+                          borderRadius: "4px",
+                          border: "1px solid rgba(81, 213, 235, 0.3)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {children}
+                      </div>
+                    );
+                  }}
+                  renderThumb={({ props, index }) => {
+                    const {
+                      key: thumbKey,
+                      style,
+                      ...thumbProps
+                    } = props as unknown as {
+                      key?: string | number;
+                      style?: React.CSSProperties;
+                      [key: string]: unknown;
+                    };
 
-                      return (
-                        <div
-                          key={thumbKey}
-                          {...thumbProps}
-                          className={`${styles.rangeThumb} ${
-                            index === 0 ? styles.minThumb : styles.maxThumb
-                          }`}
-                          style={{
-                            ...style,
-                            height: "24px",
-                            width: "24px",
-                            borderRadius: "50%",
-                            backgroundColor:
-                              index === 0 ? "#16a34a" : "#dc2626",
-                            border: "3px solid #1f2937",
-                            boxShadow: "0 4px 12px rgba(81, 213, 235, 0.4)",
-                            cursor: "grab",
-                            transition:
-                              "transform 0.2s ease, box-shadow 0.2s ease",
-                          }}
-                        />
-                      );
-                    }}
-                    direction={Direction.Up}
-                  />
-                )}
+                    return (
+                      <div
+                        key={thumbKey}
+                        {...thumbProps}
+                        className={`${styles.rangeThumb} ${
+                          index === 0 ? styles.minThumb : styles.maxThumb
+                        }`}
+                        style={{
+                          ...style,
+                          height: "24px",
+                          width: "24px",
+                          borderRadius: "50%",
+                          backgroundColor: index === 0 ? "#16a34a" : "#dc2626",
+                          border: "3px solid #1f2937",
+                          boxShadow: "0 4px 12px rgba(81, 213, 235, 0.4)",
+                          cursor: "grab",
+                          transition:
+                            "transform 0.2s ease, box-shadow 0.2s ease",
+                        }}
+                      />
+                    );
+                  }}
+                  direction={Direction.Up}
+                />
 
                 {/* Range Labels */}
                 <div className={styles.rangeLabels}>
-                  <div className={styles.rangeLabel}>
+                  <div
+                    className={styles.rangeLabel}
+                    style={{
+                      position: "absolute",
+                      right: "0px",
+                      top: `${
+                        ((domain[1] - priceRange[1]) /
+                          (domain[1] - domain[0])) *
+                        100
+                      }%`,
+                      transform: "translateY(-50%)",
+                    }}
+                  >
                     <span className={styles.rangePrice}>
-                      {yAxisFormatter(priceRange[1])}
+                      {currencyFormatter.format(priceRange[1])}
                     </span>
                   </div>
-                  <div className={styles.rangeLabel}>
+                  <div
+                    className={styles.rangeLabel}
+                    style={{
+                      position: "absolute",
+                      right: "0px",
+                      top: `${
+                        ((domain[1] - priceRange[0]) /
+                          (domain[1] - domain[0])) *
+                        100
+                      }%`,
+                      transform: "translateY(-50%)",
+                    }}
+                  >
                     <span className={styles.rangePrice}>
-                      {yAxisFormatter(priceRange[0])}
+                      {currencyFormatter.format(priceRange[0])}
                     </span>
                   </div>
                 </div>
