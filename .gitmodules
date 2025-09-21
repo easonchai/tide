@@ -7,3 +7,6 @@
 [submodule "dapp/lib/prb-math"]
 	path = dapp/lib/prb-math
 	url = https://github.com/PaulRBerg/prb-math
+[submodule "dapp/lib/hyper-evm-lib"]
+	path = dapp/lib/hyper-evm-lib
+	url = https://github.com/hyperliquid-dev/hyper-evm-lib
