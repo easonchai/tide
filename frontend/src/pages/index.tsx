@@ -1,4 +1,5 @@
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Range, getTrackBackground } from "react-range";
 import styles from "@/styles/Home.module.css";
@@ -86,6 +87,7 @@ const clearWalletConnectStorage = () => {
 };
 
 export default function Home() {
+  const router = useRouter();
   const PRICE_MIN = 77000;
   const PRICE_MAX = 116000;
   const PRICE_STEP = 1000;
@@ -111,10 +113,10 @@ export default function Home() {
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches
     ) {
-      return ["#1f2937", "#10b981", "#1f2937"] as const;
+      return ["#1f2937", "#000000", "#1f2937"] as const;
     }
 
-    return ["#e5e7eb", "#059669", "#e5e7eb"] as const;
+    return ["#e5e7eb", "#000000", "#e5e7eb"] as const;
   }, []);
   const providerRef = useRef<EthereumProvider | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -433,22 +435,12 @@ export default function Home() {
         <div className={styles.headerContent}>
           <div className={styles.brand}>
             <div className={styles.logo}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M3 12L9 6L15 12L21 6"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M3 18L9 12L15 18L21 12"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <img
+                src="/tide-logo.svg"
+                alt="Tide Logo"
+                width="48"
+                height="48"
+              />
             </div>
             <span className={styles.brandName}>Tide</span>
           </div>
@@ -459,9 +451,6 @@ export default function Home() {
             </a>
             <a href="#" className={styles.navLink}>
               Portfolio
-            </a>
-            <a href="#" className={styles.navLink}>
-              Analytics
             </a>
           </nav>
 
@@ -569,124 +558,74 @@ export default function Home() {
       </header>
 
       <div className={styles.container}>
-        {/* Questions Section */}
-        <section className={styles.questionsSection}>
-          <div className={styles.questionsHeader}>
-            <h2 className={styles.questionsTitle}>Active Questions</h2>
-            {isLoadingQuestions && (
-              <div className={styles.loading}>Loading...</div>
-            )}
-            {questionsError && (
-              <div className={styles.error}>{questionsError}</div>
-            )}
-          </div>
-
-          <div className={styles.questionsList}>
-            {questions.map((question) => (
-              <div key={question.id} className={styles.questionCard}>
-                <div className={styles.questionHeader}>
-                  <div className={styles.questionProfile}>
-                    <img
-                      src={question.profileImage}
-                      alt="Profile"
-                      className={styles.questionProfileImage}
-                    />
-                    <span className={styles.questionAddress}>
-                      {shortenAddress(question.address)}
-                    </span>
-                  </div>
-                  <div className={styles.questionStatus}>
-                    <span
-                      className={`${styles.statusBadge} ${
-                        styles[question.status.toLowerCase()]
-                      }`}
-                    >
-                      {question.status}
-                    </span>
-                  </div>
-                </div>
-
-                <h3 className={styles.questionText}>{question.question}</h3>
-
-                <div className={styles.questionTags}>
-                  {question.tags.map((tag) => (
-                    <span key={tag} className={styles.tag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className={styles.questionFooter}>
-                  <div className={styles.questionStats}>
-                    <span className={styles.volume}>
-                      Volume: ${(Number(question.volume) / 1e18).toFixed(2)}
-                    </span>
-                    <span className={styles.fee}>
-                      Fee: {(Number(question.fee) / 1e18).toFixed(4)} ETH
-                    </span>
-                  </div>
-                  <div className={styles.questionEndDate}>
-                    Ends: {new Date(question.endDate).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <main className={styles.main}>
           {!showPredictionModal ? (
-            // Bitcoin Card View
-            <div className={styles.card}>
-              {/* Header with icon, name, and chevron */}
-              <div className={styles.cardHeader}>
-                <div className={styles.coinInfo}>
-                  <div className={styles.coinIcon}>
-                    <span className={styles.iconText}>BT</span>
-                  </div>
-                  <div className={styles.coinDetails}>
-                    <h2 className={styles.coinSymbol}>BTC</h2>
-                    <p className={styles.coinName}>{bitcoin.name}</p>
-                  </div>
-                </div>
-                <div
-                  onClick={() => setShowPredictionModal(true)}
-                  className={styles.chevron}
-                >
-                  ›
-                </div>
-              </div>
+            <>
+              {/* Section Title */}
+              <h2 className={styles.sectionTitle}>
+                Predict Price Ranges Across Top Crypto Markets
+              </h2>
 
-              {/* Price and Volume Section */}
-              <div className={styles.priceVolumeSection}>
-                <div className={styles.priceInfo}>
-                  <div className={styles.priceContainer}>
-                    <span className={styles.price}>
-                      ${bitcoin.currentPrice.toLocaleString()}
-                    </span>
-                    <div className={styles.priceChange}>
-                      <span className={styles.arrow}>↗</span>
-                      <span className={styles.positive}>
-                        +{bitcoin.priceChangePercentage24h}%
-                      </span>
+              {/* Bitcoin Card View */}
+              <div className={styles.card}>
+                {/* Header with icon, name, and chevron */}
+                <div className={styles.cardHeader}>
+                  <div className={styles.coinInfo}>
+                    <div className={styles.coinIcon}>
+                      <span className={styles.iconText}>BT</span>
+                    </div>
+                    <div className={styles.coinDetails}>
+                      <h2 className={styles.coinSymbol}>BTC</h2>
+                      <p className={styles.coinName}>{bitcoin.name}</p>
                     </div>
                   </div>
+                  <div
+                    onClick={() => router.push(`/coins/${bitcoin.id}`)}
+                    className={styles.chevron}
+                  >
+                    ›
+                  </div>
                 </div>
 
-                <div className={styles.volumeInfo}>
-                  <p className={styles.volumeLabel}>Volume</p>
-                  <p className={styles.volumeValue}>${bitcoin.volume}</p>
+                {/* Price and Volume Section */}
+                <div className={styles.priceVolumeSection}>
+                  <div className={styles.priceInfo}>
+                    <div className={styles.priceContainer}>
+                      <span className={styles.price}>
+                        ${bitcoin.currentPrice.toLocaleString()}
+                      </span>
+                      <div className={styles.priceChange}>
+                        <span className={styles.arrow}>↗</span>
+                        <span className={styles.positive}>
+                          +{bitcoin.priceChangePercentage24h}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.volumeInfo}>
+                    <p className={styles.volumeLabel}>Volume</p>
+                    <p className={styles.volumeValue}>${bitcoin.volume}</p>
+                  </div>
+                </div>
+
+                {/* Trade and Quick Bet Buttons */}
+                <div className={styles.actionButtons}>
+                  <button
+                    onClick={() => router.push(`/coins/${bitcoin.id}`)}
+                    className={styles.tradeButton}
+                  >
+                    Trade
+                  </button>
+                  <button
+                    onClick={() => setShowPredictionModal(true)}
+                    className={styles.quickBetButton}
+                  >
+                    Quick Bet
+                  </button>
                 </div>
               </div>
-
-              {/* Predict Range Button */}
-              <button
-                onClick={() => setShowPredictionModal(true)}
-                className={styles.predictButton}
-              >
-                Predict Range
-              </button>
-            </div>
+            </>
           ) : (
             // Prediction View
             <div className={styles.predictionView}>
@@ -822,10 +761,10 @@ export default function Home() {
                 </div>
                 <div className={styles.rangeValues}>
                   <span className={styles.rangeMin}>
-                    ${priceRange[0].toLocaleString()}
+                    {`$${priceRange[0].toLocaleString()}`}
                   </span>
                   <span className={styles.rangeMax}>
-                    ${priceRange[1].toLocaleString()}
+                    {`$${priceRange[1].toLocaleString()}`}
                   </span>
                 </div>
               </div>
