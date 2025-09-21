@@ -1,4 +1,5 @@
 import axios from "axios";
+import { serializeBigInt } from "@/utils/bigIntSerializer";
 import { CreateUserDTO } from "@/types/user";
 import {
   CreateMarketDTO,
@@ -14,6 +15,23 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+api.interceptors.request.use(
+  (config) => {
+    if (config.data) {
+      config.data = serializeBigInt(config.data);
+    }
+
+    if (config.params) {
+      config.params = serializeBigInt(config.params);
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const apiService = {
   user: {
