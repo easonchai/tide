@@ -5,6 +5,9 @@ import Layout from "@/components/Layout";
 import { useWallet } from "@/contexts/WalletContext";
 import styles from "@/styles/Home.module.css";
 import { apiService } from "@/utils/apiService";
+import { useHyperliquidCandles } from "@/hooks/useHyperliquidCandles";
+import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
+import { InfoClient, HttpTransport } from "@nktkas/hyperliquid";
 
 // Destructure apiService
 const { market } = apiService;
@@ -54,6 +57,38 @@ export default function Home() {
 
     return ["#e5e7eb", "#000000", "#e5e7eb"];
   }, []);
+
+  // Hyperliquid live candle for HYPE/USDC (mainnet)
+  const { latest: hypeCandle } = useHyperliquidCandles({ baseOrPair: 'HYPE', interval: '1m', testnet: false });
+
+  useEffect(() => {
+    if (!hypeCandle) return;
+    // Console log ISO timestamp and current close price
+    // Candle numbers are strings; keep as-is or parse if needed
+    console.log('[HYPE/USDC 1m]', new Date(hypeCandle.T).toISOString(), hypeCandle.c);
+  }, [hypeCandle]);
+
+  // Fetch last 24h 1m historical candles (mainnet) via React Query
+  const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+  const [historyStart] = useState(() => Date.now() - twentyFourHoursMs); // stable startTime
+  const { data: hypeHistory } = useCandleHistoryQuery({
+    coin: "@107", // HYPE/USDC mainnet pair id (update if needed)
+    interval: '1m',
+    startTime: historyStart,
+    endTime: null,
+    testnet: false,
+    enabled: true,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (!hypeHistory?.length) return;
+    const last = hypeHistory[hypeHistory.length - 1];
+    console.log('[HYPE/USDC history 1m]', new Date(last.T).toISOString(), last.c);
+  }, [hypeHistory]);
 
   // Fetch markets
   const fetchMarkets = useCallback(async () => {
