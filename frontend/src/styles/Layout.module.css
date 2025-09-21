@@ -14,7 +14,7 @@
 
 .headerContent {
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 0.5rem auto;
   padding: 0 2rem;
   display: flex;
   align-items: center;
@@ -57,7 +57,7 @@
   text-decoration: none;
   font-weight: 500;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 2px;
   transition: all 0.2s ease;
   position: relative;
 }
@@ -65,22 +65,13 @@
 .navLink:hover {
   color: white;
   background: rgba(255, 255, 255, 0.05);
+  font-weight: 500;
 }
 
 .navLink.active {
-  color: white;
-}
-
-.navLink.active::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
   background: #51D5EB;
-  border-radius: 1px;
+  color: #080e12;
+  filter: brightness(1.2);
 }
 
 .headerActions {

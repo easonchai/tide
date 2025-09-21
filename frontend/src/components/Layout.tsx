@@ -23,7 +23,6 @@ export default function Layout({
     walletAddress,
     walletBalance,
     isConnecting,
-    isFetchingBalance,
     connectError,
     showDisconnectTooltip,
     setShowDisconnectTooltip,
@@ -81,9 +80,7 @@ export default function Layout({
             <div className={styles.headerActions}>
               {walletAddress && (
                 <div className={styles.walletBalance}>
-                  {isFetchingBalance
-                    ? "Loading..."
-                    : walletBalance
+                  {walletBalance
                       ? `$${(parseFloat(walletBalance) * 2500).toFixed(0)}` // Approximate ETH to USD
                       : "$0"}
                 </div>
