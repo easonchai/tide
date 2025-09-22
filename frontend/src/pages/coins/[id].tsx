@@ -101,6 +101,8 @@ export default function CoinDetail() {
   // Parse market data from query params
 
   const [amountInput, setAmountInput] = useState("100");
+  const [dataMinPrice, setDataMinPrice] = useState<number>();
+  const [dataMaxPrice, setDataMaxPrice] = useState<number>();
   const [isBetting, setIsBetting] = useState(false);
   const { address: walletAddress } = useAccount();
 
@@ -108,6 +110,9 @@ export default function CoinDetail() {
 
   // Hedge modal state
   const [showHedgeModal, setShowHedgeModal] = useState(false);
+
+  const userBalance = 1000;
+  const multiplier = 2.5;
 
   const { data: marketData } = useQuery({
     queryKey: ["marketData", id],
@@ -225,31 +230,65 @@ export default function CoinDetail() {
       .sort((a, b) => a.time - b.time); // Sort by time to ensure proper order
   }, [hypeHistory]);
 
-  const {
-    dataMinPrice,
-    dataMaxPrice,
-    dataAvgPrice,
-    domain,
-    initialPriceRange,
-    yAxisFormatter,
-  } = useMemo(() => {
-    if (chart.length > 0) {
-      const prices = chart.map((point) => point.price);
-      const min = Math.min(...prices);
-      const max = Math.max(...prices);
-      const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+  const { dataAvgPrice, domain, initialPriceRange, yAxisFormatter } =
+    useMemo(() => {
+      if (chart.length > 0) {
+        const prices = chart.map((point) => point.price);
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        const avg =
+          prices.reduce((sum, price) => sum + price, 0) / prices.length;
 
-      const range = Math.max(max - min, 1);
-      const padding = range * 0.1;
-      const domainMin = Math.max(0, min - padding);
-      const domainMax = max + padding;
+        const range = Math.max(max - min, 1);
+        const padding = range * 0.1;
+        const domainMin = Math.max(0, min - padding);
+        const domainMax = max + padding;
 
-      const rangePadding = range * 0.1;
-      const rangeMin = Math.max(domainMin, avg - rangePadding);
-      const rangeMax = Math.min(domainMax, avg + rangePadding);
+        const rangePadding = range * 0.1;
+        const rangeMin = Math.max(domainMin, avg - rangePadding);
+        const rangeMax = Math.min(domainMax, avg + rangePadding);
 
-      // Determine appropriate scaling based on price range
-      const maxPrice = Math.max(max, domainMax);
+        // Determine appropriate scaling based on price range
+        const maxPrice = Math.max(max, domainMax);
+        let scale = 1;
+        let suffix = "";
+
+        if (maxPrice >= 1000000000) {
+          scale = 1000000000;
+          suffix = "B";
+        } else if (maxPrice >= 1000000) {
+          scale = 1000000;
+          suffix = "M";
+        } else if (maxPrice >= 1000) {
+          scale = 1000;
+          suffix = "k";
+        }
+
+        const formatter = (value: number) =>
+          `$${(value / scale).toFixed(1)}${suffix}`;
+
+        return {
+          dataMinPrice: min,
+          dataMaxPrice: max,
+          dataAvgPrice: avg,
+          domain: [domainMin, domainMax] as [number, number],
+          initialPriceRange: [rangeMin, rangeMax] as [number, number],
+          yAxisFormatter: formatter,
+        };
+      }
+
+      const currentPrice = coin?.currentPrice ?? 0;
+      const basePrice = currentPrice > 0 ? currentPrice : 10000;
+      const padding = Math.max(basePrice * 0.15, 1000);
+      const domainMin = Math.max(0, basePrice - padding);
+      const domainMax = basePrice + padding;
+
+      const rangePadding = Math.max(basePrice * 0.05, 500);
+      const rangeMin = Math.max(domainMin, basePrice - rangePadding);
+      const rangeMax = Math.min(domainMax, basePrice + rangePadding);
+
+      // Determine appropriate scaling based on current price
+      const maxPrice = Math.max(basePrice, domainMax);
       let scale = 1;
       let suffix = "";
 
@@ -267,54 +306,18 @@ export default function CoinDetail() {
       const formatter = (value: number) =>
         `$${(value / scale).toFixed(1)}${suffix}`;
 
+      setDataMinPrice(Math.max(domainMin, basePrice - padding / 2));
+
+      setDataMaxPrice(Math.min(domainMax, basePrice + padding / 2));
       return {
-        dataMinPrice: min,
-        dataMaxPrice: max,
-        dataAvgPrice: avg,
+        dataMinPrice: Math.max(domainMin, basePrice - padding / 2),
+        dataMaxPrice: Math.min(domainMax, basePrice + padding / 2),
+        dataAvgPrice: basePrice,
         domain: [domainMin, domainMax] as [number, number],
         initialPriceRange: [rangeMin, rangeMax] as [number, number],
         yAxisFormatter: formatter,
       };
-    }
-
-    const currentPrice = coin?.currentPrice ?? 0;
-    const basePrice = currentPrice > 0 ? currentPrice : 10000;
-    const padding = Math.max(basePrice * 0.15, 1000);
-    const domainMin = Math.max(0, basePrice - padding);
-    const domainMax = basePrice + padding;
-
-    const rangePadding = Math.max(basePrice * 0.05, 500);
-    const rangeMin = Math.max(domainMin, basePrice - rangePadding);
-    const rangeMax = Math.min(domainMax, basePrice + rangePadding);
-
-    // Determine appropriate scaling based on current price
-    const maxPrice = Math.max(basePrice, domainMax);
-    let scale = 1;
-    let suffix = "";
-
-    if (maxPrice >= 1000000000) {
-      scale = 1000000000;
-      suffix = "B";
-    } else if (maxPrice >= 1000000) {
-      scale = 1000000;
-      suffix = "M";
-    } else if (maxPrice >= 1000) {
-      scale = 1000;
-      suffix = "k";
-    }
-
-    const formatter = (value: number) =>
-      `$${(value / scale).toFixed(1)}${suffix}`;
-
-    return {
-      dataMinPrice: Math.max(domainMin, basePrice - padding / 2),
-      dataMaxPrice: Math.min(domainMax, basePrice + padding / 2),
-      dataAvgPrice: basePrice,
-      domain: [domainMin, domainMax] as [number, number],
-      initialPriceRange: [rangeMin, rangeMax] as [number, number],
-      yAxisFormatter: formatter,
-    };
-  }, [chart, coin?.currentPrice]);
+    }, [chart, coin?.currentPrice]);
 
   const [priceRange, setPriceRange] = useState<[number, number]>(() => [
     initialPriceRange[0],
@@ -831,76 +834,108 @@ export default function CoinDetail() {
         </div>
 
         {/* Right Sidebar */}
-        <div className={styles.sidebar}>
+        <div className="w-[428px] flex flex-col gap-4 text-white pt-24">
           {/* Min Price */}
-          <div className={styles.priceCard}>
-            <div className={styles.cardLabel}>Min Price</div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(dataMinPrice)}
+          <div className="w-full flex gap-2 h-20">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-2.5">
+              <span className="leading-none font-bold text-base">
+                Min Price
+              </span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <input
+                  type="text"
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
+                  value={dataMinPrice}
+                  onChange={(e) => setDataMinPrice(Number(e.target.value))}
+                />
+                <div className="flex flex-col ml-2">
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▲
+                  </button>
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▼
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-2.5">
+              <span className="leading-none text-base font-bold">
+                Max Price
+              </span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <input
+                  type="text"
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
+                  value={dataMaxPrice}
+                  onChange={(e) => setDataMaxPrice(Number(e.target.value))}
+                />
+                <div className="flex flex-col ml-2">
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▲
+                  </button>
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▼
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Max Price */}
-          <div className={styles.priceCard}>
-            <div className={styles.cardLabel}>Max Price</div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(dataMaxPrice)}
+          <div className="w-full flex gap-2 h-20 font-bold items-center">
+            <div className="flex-[7] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
+              <span className="text-base leading-none">Win Probability</span>
+              <span className="text-xl leading-none">
+                {percentageFormatter.format(winProbability)}
+              </span>
+            </div>
+            <div className="flex-[3] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
+              <span className="text-base leading-none">Avg Price</span>
+              <span className="text-xl leading-none">
+                {/* TODO: set this to the calculated avg price */}
+                {currencyFormatter.format(dataAvgPrice)}
+              </span>
             </div>
           </div>
 
-          {/* Win Probability */}
-          <div className={styles.probabilityCard}>
-            <div className={styles.cardLabel}>Win Probability</div>
-            <div className={styles.cardValue}>
-              {percentageFormatter.format(winProbability)}
+          <div className="w-full flex gap-2 h-28 font-bold">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
+              <span className="leading-none font-bold text-base">Amount</span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <input
+                  type="text"
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
+                  value={amountInput}
+                  onChange={(e) => setAmountInput(e.target.value)}
+                />
+              </div>
+              <div className="w-full flex justify-between text-base font-semibold">
+                <span className="leading-none">Balance:</span>
+                <span className="leading-none">{userBalance}</span>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
+              <span className="leading-none font-bold text-base">
+                Receive if you win
+              </span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]">
+                  {calculatedQuantityFromCost || BigInt(0)}
+                </span>
+              </div>
+              <div className="w-full flex justify-between text-base font-semibold">
+                <span className="leading-none">Balance:</span>
+                <span className="leading-none">x{multiplier}</span>
+              </div>
             </div>
           </div>
 
-          {/* Avg Price */}
-          <div className={styles.priceCard}>
-            <div className={styles.cardLabel}>Avg Price</div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(dataAvgPrice)}
-            </div>
-          </div>
-
-          {/* Amount */}
-          <div className={styles.amountCard}>
-            <div className={styles.cardLabel}>Amount</div>
-            <div className={styles.amountInput}>
-              <input
-                type="text"
-                inputMode="decimal"
-                pattern="^[0-9]*[.,]?[0-9]*$"
-                value={amountInput}
-                onChange={handleAmountChange}
-                onBlur={handleAmountBlur}
-                className={styles.amountInputField}
-                placeholder="Enter amount"
-              />
-            </div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(amount || 0)}
-            </div>
-            <div className={styles.cardSubtext}>Balance: $0</div>
-          </div>
-
-          {/* Receive if you win */}
-          <div className={styles.receiveCard}>
-            <div className={styles.cardLabel}>Receive if you win</div>
-            <div className={styles.cardValue}>
-              {amount > 0 ? currencyFormatter.format(receiveIfWin) : "$0"}
-            </div>
-            <div className={styles.cardSubtext}>
-              {winProbability > 0 && amount > 0
-                ? (receiveIfWin / amount).toFixed(2) + "x"
-                : "x0.00"}
-            </div>
-          </div>
-
-          {/* Place Bet Button */}
           <button
-            className={styles.placeBetButton}
+            className="py-4 font-bold text-sm text-black rounded-md bg-[#51D5EB] mt-2"
             onClick={handlePlaceBet}
             disabled={!walletAddress || amount <= 0}
           >
