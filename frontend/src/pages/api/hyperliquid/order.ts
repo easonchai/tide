@@ -102,10 +102,22 @@ export default async function handler(
 
     // Check if order was successful
     if (result && result.status === 'ok') {
+      // Extract order ID safely
+      let orderId = 'unknown';
+      const statuses = result.response?.data?.statuses;
+      if (statuses && statuses.length > 0) {
+        const status = statuses[0];
+        if ('resting' in status) {
+          orderId = status.resting.oid.toString();
+        } else if ('filled' in status) {
+          orderId = status.filled.oid.toString();
+        }
+      }
+
       return res.status(200).json({
         success: true,
         data: result,
-        orderId: result.response?.data?.statuses?.[0]?.oid || 'unknown'
+        orderId
       });
     } else {
       return res.status(400).json({
