@@ -8,6 +8,7 @@ import {
   Hex,
   defineChain,
 } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 @Injectable()
 export class ClientService {
@@ -37,12 +38,12 @@ export class ClientService {
     if (!privateKey) {
       throw new Error('PRIVATE_KEY is required for admin wallet client');
     }
+    const account = privateKeyToAccount(privateKey);
     const client = createWalletClient({
       chain: this.hyperliquidTestnet,
       transport: http(),
-      account: privateKey,
+      account: account,
     });
     return client as any;
   }
 }
-  
