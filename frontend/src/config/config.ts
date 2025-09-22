@@ -3,10 +3,10 @@ import { createConfig, http } from 'wagmi'
 import { hyperliquidEvmTestnet, sepolia } from 'wagmi/chains'
 
 export const config = createConfig({
-  chains: [hyperliquidEvmTestnet, sepolia],
+  chains: [hyperliquidEvmTestnet],
   transports: {
     [hyperliquidEvmTestnet.id]: http(),
-    [sepolia.id]: http(),
+    // [sepolia.id]: http(),
   },
 })
 

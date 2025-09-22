@@ -24,11 +24,16 @@ import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 import HedgeModal from "@/components/HedgeModal";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import toast from "react-hot-toast";
-import { config, marketContract } from "@/config/config";
+import { collateralContract, config, marketContract } from "@/config/config";
 import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
 import { MarketResponseDTO } from "@/types/market";
-import { parseUnits } from "viem";
-import { waitForTransactionReceipt } from "wagmi/actions";
+import { parseUnits, maxUint256, decodeEventLog } from "viem";
+import {
+  readContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "wagmi/actions";
+import { erc20ABI } from "@/abi/ERC20";
 
 // const shortenAddress = (address: string) =>
 //   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -377,22 +382,22 @@ export default function CoinDetail() {
     functionName: "calculateQuantityFromCost",
     args: [
       BigInt(marketData?.onChainId ?? 0),
-      parseUnits(String(priceRange[0]), 2),
-      parseUnits(String(priceRange[1]), 2),
+      parseUnits(String(Math.round(priceRange[0] / 100) * 100), 2),
+      parseUnits(String(Math.round(priceRange[1] / 100) * 100), 2),
       parseUnits(amountInput || "0", 6),
     ],
     query: {
       enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
     },
-  }) as {data: bigint | undefined, isLoading: boolean, error: unknown}
+  }) as { data: bigint | undefined; isLoading: boolean; error: unknown };
 
-  console.log("isLoading", readIsLoading);
-  console.log("error", error);
-  console.log("address", marketContract);
-  console.log("onChainId", marketData?.onChainId);
-  console.log("Price Range 0", priceRange[0]);
-  console.log("Price Range 1", priceRange[1]);
-  console.log("amountInput", amountInput);
+  // console.log("isLoading", readIsLoading);
+  // console.log("error", error);
+  // console.log("address", marketContract);
+  // console.log("onChainId", marketData?.onChainId);
+  // console.log("Price Range 0", priceRange[0]);
+  // console.log("Price Range 1", priceRange[1]);
+  console.log("amountInput", { amountInput, calculateQuantityFromCost });
 
   // Ensure Range never mounts with out-of-bounds values
   const rangeStep = useMemo(
@@ -535,10 +540,45 @@ export default function CoinDetail() {
     // TODO: Add min max validation
     try {
       const marketId = BigInt(marketData.onChainId);
-      const lowerTick = parseUnits(String(priceRange[0]), 2);
-      const upperTick = parseUnits(String(priceRange[1]), 2);
+      const lowerTick = parseUnits(
+        String(Math.round(priceRange[0] / 100) * 100),
+        2
+      );
+      const upperTick = parseUnits(
+        String(Math.round(priceRange[1] / 100) * 100),
+        2
+      );
       const amountParsed = calculateQuantityFromCost; // already bigint
       const maxCost = parseUnits(amountInput, 6);
+
+      // Check current allowance
+      const currentAllowance = (await readContract(config, {
+        address: collateralContract,
+        abi: erc20ABI,
+        functionName: "allowance",
+        args: [walletAddress, marketContract],
+      })) as bigint;
+
+      console.log("allowance: ", currentAllowance);
+
+      if (currentAllowance < maxCost) {
+        // Approve max spend if allowance is insufficient
+        const approveHash = await writeContractAsync({
+          address: collateralContract,
+          abi: erc20ABI,
+          functionName: "approve",
+          args: [marketContract, maxUint256],
+        });
+
+        const approveReceipt = await waitForTransactionReceipt(config, {
+          hash: approveHash,
+        });
+
+        if (approveReceipt.status === "reverted") {
+          toast.error("Approval transaction reverted");
+          return;
+        }
+      }
 
       const tx = await writeContractAsync({
         address: marketContract,
@@ -558,13 +598,42 @@ export default function CoinDetail() {
         return;
       }
 
+      // Extract position ID from PositionOpened event
+      let positionId: bigint | undefined;
+      if (receipt.logs) {
+        for (const log of receipt.logs) {
+          try {
+            // Decode the PositionOpened event
+            const decoded = decodeEventLog({
+              abi: cLMSRMarketCoreABI,
+              data: log.data,
+              topics: log.topics,
+            });
+
+            if (decoded.eventName === "PositionOpened" && decoded.args) {
+              positionId = (decoded.args as any).positionId as bigint;
+              break;
+            }
+          } catch (e) {
+            // Skip logs that don't match our event
+            continue;
+          }
+        }
+      }
+
+      if (!positionId) {
+        toast.error("Failed to extract position ID from transaction");
+        return;
+      }
+
       try {
         await apiService.market.createPosition({
           marketSlug: String(id),
-          userAddress: walletAddress,
-          amount: amountParsed as bigint,
+          userAddress: walletAddress.toLowerCase(),
+          amount: parseUnits(amountInput, 6),
           lowerBound: BigInt(lowerTick),
           upperBound: BigInt(upperTick),
+          onChainId: positionId.toString(),
         });
       } catch (err) {
         console.error("Failed to persist position:", err);
@@ -572,7 +641,7 @@ export default function CoinDetail() {
 
       toast.success("Successfully placed bet");
     } catch (e) {
-      console.error("Error placing bet");
+      console.error("Error placing bet", e);
       return;
     } finally {
       setIsBetting(false);
@@ -623,10 +692,10 @@ export default function CoinDetail() {
               )}
             </div>
             <div className={styles.eventDetails}>
-              <h1 className={styles.eventTitle}>
+              <h1 className="text-2xl font-semibold text-white">
                 {marketData?.question || "Loading..."}
               </h1>
-              <p className={styles.resolutionDate}>
+              <p className="text-sm text-white">
                 {marketData?.endDate
                   ? `Resolves at ${new Date(
                       marketData.endDate
@@ -836,9 +905,9 @@ export default function CoinDetail() {
         {/* Right Sidebar */}
         <div className="w-[428px] flex flex-col gap-4 text-white pt-24">
           {/* Min Price */}
-          <div className="w-full flex gap-2 h-20">
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-2.5">
-              <span className="leading-none font-bold text-base">
+          <div className="w-full flex gap-2">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base text-[#DEDEDE]">
                 Min Price
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
@@ -859,8 +928,8 @@ export default function CoinDetail() {
                 </div>
               </div>
             </div>
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-2.5">
-              <span className="leading-none text-base font-bold">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base text-[#DEDEDE]">
                 Max Price
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
@@ -883,15 +952,19 @@ export default function CoinDetail() {
             </div>
           </div>
 
-          <div className="w-full flex gap-2 h-20 font-bold items-center">
-            <div className="flex-[7] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="text-base leading-none">Win Probability</span>
+          <div className="w-full flex gap-2 font-bold items-center">
+            <div className="flex-[7] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="text-base leading-none font-normal text-[#DEDEDE]">
+                Win Probability
+              </span>
               <span className="text-xl leading-none">
                 {percentageFormatter.format(winProbability)}
               </span>
             </div>
-            <div className="flex-[3] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="text-base leading-none">Avg Price</span>
+            <div className="flex-[3] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="text-base leading-none font-normal text-[#DEDEDE]">
+                Avg Price
+              </span>
               <span className="text-xl leading-none">
                 {/* TODO: set this to the calculated avg price */}
                 {currencyFormatter.format(dataAvgPrice)}
@@ -899,9 +972,11 @@ export default function CoinDetail() {
             </div>
           </div>
 
-          <div className="w-full flex gap-2 h-28 font-bold">
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="leading-none font-bold text-base">Amount</span>
+          <div className="w-full flex gap-2 font-bold">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base font-normal text-[#DEDEDE]">
+                Amount
+              </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
                 <p>$</p>
                 <input
@@ -911,14 +986,14 @@ export default function CoinDetail() {
                   onChange={(e) => setAmountInput(e.target.value)}
                 />
               </div>
-              <div className="w-full flex justify-between text-base font-semibold">
+              <div className="w-full flex justify-between text-base font-normal  text-[#DEDEDE]">
                 <span className="leading-none">Balance:</span>
                 <span className="leading-none">{userBalance}</span>
               </div>
             </div>
 
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="leading-none font-bold text-base">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base font-normal text-[#DEDEDE]">
                 Receive if you win
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
@@ -927,8 +1002,7 @@ export default function CoinDetail() {
                   {calculateQuantityFromCost || BigInt(0)}
                 </span>
               </div>
-              <div className="w-full flex justify-between text-base font-semibold">
-                <span className="leading-none">Balance:</span>
+              <div className="w-full flex justify-between text-base font-normal text-[#DEDEDE]">
                 <span className="leading-none">x{multiplier}</span>
               </div>
             </div>
