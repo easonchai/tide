@@ -76,7 +76,10 @@ export default function Layout({
                 >
                   Markets
                 </Link>
-                <Link href="#" className={styles.navLink}>
+                <Link
+                  href="/portfolio"
+                  className={`${styles.navLink} ${isActivePage("/portfolio") ? styles.active : ""}`}
+                >
                   Portfolio
                 </Link>
                 <Link
