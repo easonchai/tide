@@ -244,8 +244,8 @@ export default function CoinDetail() {
             const roundedValue = Math.round(numValue * 100) / 100; // Round to 2 decimals
             setPriceRange((prev) => {
               // Ensure max doesn't go below min
-              const newMax = Math.max(roundedValue, prev[0] + 0.01);
-              return [prev[0], newMax];
+              // const newMax = Math.max(roundedValue, prev[0] + 0.01);
+              return [prev[0], roundedValue];
             });
           }
         }
