@@ -377,8 +377,8 @@ export default function CoinDetail() {
     functionName: "calculateQuantityFromCost",
     args: [
       BigInt(marketData?.onChainId ?? 0),
-      parseUnits(String(priceRange[0]), 2),
-      parseUnits(String(priceRange[1]), 2),
+      parseUnits(String(Math.round(priceRange[0] / 100) * 100), 2),
+      parseUnits(String(Math.round(priceRange[1] / 100) * 100), 2),
       parseUnits(amountInput || "0", 6),
     ],
     query: {
@@ -535,8 +535,14 @@ export default function CoinDetail() {
     // TODO: Add min max validation
     try {
       const marketId = BigInt(marketData.onChainId);
-      const lowerTick = parseUnits(String(priceRange[0]), 2);
-      const upperTick = parseUnits(String(priceRange[1]), 2);
+      const lowerTick = parseUnits(
+        String(Math.round(priceRange[0] / 100) * 100),
+        2
+      );
+      const upperTick = parseUnits(
+        String(Math.round(priceRange[0] / 100) * 100),
+        2
+      );
       const amountParsed = calculateQuantityFromCost; // already bigint
       const maxCost = parseUnits(amountInput, 6);
 
