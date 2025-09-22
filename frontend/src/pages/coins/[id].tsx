@@ -29,13 +29,14 @@ import toast from "react-hot-toast";
 import { collateralContract, config, marketContract } from "@/config/config";
 import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
 import { MarketResponseDTO } from "@/types/market";
-import { parseUnits, maxUint256, decodeEventLog } from "viem";
+import { parseUnits, maxUint256, decodeEventLog, formatUnits } from "viem";
 import {
   readContract,
   waitForTransactionReceipt,
   writeContract,
 } from "wagmi/actions";
 import { erc20ABI } from "@/abi/ERC20";
+import { useWallet } from "@/contexts/WalletContext";
 
 // const shortenAddress = (address: string) =>
 //   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -118,8 +119,9 @@ export default function CoinDetail() {
   // Hedge modal state
   const [showHedgeModal, setShowHedgeModal] = useState(false);
 
-  const userBalance = 1000;
-  const multiplier = 2.5;
+  const {walletBalance: userBalance} = useWallet();
+
+  // const userBalance = 1000;
 
   const { data: marketData } = useQuery({
     queryKey: ["marketData", id],
@@ -728,11 +730,17 @@ export default function CoinDetail() {
     .map((bin) => bin.index);
 
   // Use LMSR calculation for accurate predictions
-  const lmsrResult = betOnPriceRange(q, selectedBins, amount);
+  // const lmsrResult = betOnPriceRange(q, selectedBins, amount);
+  //
+  // const winProbability = lmsrResult.winProbability;
+  // const receiveIfWin = lmsrResult.receiveIfWin;
+  const winProbability = amountInput && calculateQuantityFromCost ? Number(amountInput) / Number(formatUnits( calculateQuantityFromCost!, 6) ) : 0
 
-  const winProbability = lmsrResult.winProbability;
-  const receiveIfWin = lmsrResult.receiveIfWin;
+  const calculatedDataAverage = winProbability
 
+  const multiplier = amountInput && calculateQuantityFromCost ? Number(formatUnits(calculateQuantityFromCost, 6)) / Number(amountInput ) : 0
+
+  const receiveIfWin = calculateQuantityFromCost || BigInt(0);
   const handlePlaceBet = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!walletAddress) {
@@ -1147,8 +1155,7 @@ export default function CoinDetail() {
                 Avg Price
               </span>
               <span className="text-xl leading-none">
-                {/* TODO: set this to the calculated avg price */}
-                {currencyFormatter.format(dataAvgPrice)}
+                {currencyFormatter.format(calculatedDataAverage)}
               </span>
             </div>
           </div>
@@ -1169,7 +1176,7 @@ export default function CoinDetail() {
               </div>
               <div className="w-full flex justify-between text-base font-normal  text-[#DEDEDE]">
                 <span className="leading-none">Balance:</span>
-                <span className="leading-none">{userBalance}</span>
+                <span className="leading-none">${Number(userBalance).toFixed(2)}</span>
               </div>
             </div>
 
@@ -1180,11 +1187,11 @@ export default function CoinDetail() {
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
                 <p>$</p>
                 <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[140px]">
-                  {calculateQuantityFromCost || BigInt(0)}
+                  {formatUnits( calculateQuantityFromCost || BigInt(0), 6 )}
                 </span>
               </div>
               <div className="w-full flex justify-between text-base font-normal text-[#DEDEDE]">
-                <span className="leading-none">x{multiplier}</span>
+                <span className="leading-none">x{multiplier.toFixed(2)}</span>
               </div>
             </div>
           </div>
