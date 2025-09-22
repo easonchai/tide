@@ -170,8 +170,8 @@ export default function PortfolioPositionCard({
                 {market?.question ?? "Unknown market"}
               </p>
               <p className="text-[#DEDEDE] text-sm font-normal">
-                Ends {formatDateTime(
-                  market?.status === "OPEN" ? market?.endDate ?? null : null
+                {market?.status === "OPEN" ? "Ends" : "Ended"} {formatDateTime(
+                  market?.endDate ?? null
                 )}
               </p>
             </div>
