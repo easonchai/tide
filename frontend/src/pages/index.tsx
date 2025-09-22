@@ -17,6 +17,7 @@ import PriceLineChart from "@/components/PriceLineChart";
 import Image from "next/image";
 import { fetchCryptoPrices } from "@/utils/externalApiService";
 import { useAccount } from "wagmi";
+import Link from "next/link";
 
 // Destructure apiService
 const { market } = apiService;
@@ -291,61 +292,68 @@ export default function Home() {
               {/* Question Card View */}
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3 pt-3 w-fit">
                 {markets.map((marketItem) => (
-                  <div
+                  <Link
+                    href={`/coins/${marketItem.slug}`}
                     key={marketItem.slug}
-                    className="w-[322px] h-[248px] bg-[#51D5EB1A] pt-5 pb-4 px-4 flex flex-col rounded-lg gap-3"
                   >
-                    {/* Header with icon, name, and chevron */}
-                    <div className="flex gap-2.5 items-center">
-                      <Image
-                        src={marketItem.profileImage || "/public/tide-logo.svg"}
-                        alt="Profile"
-                        width={24}
-                        height={24}
-                        className="object-contain rounded-full"
-                      />
-                      <p className="font-semibold text-white">
-                        {marketItem.question}
-                      </p>
-                    </div>
-
-                    {/* Price and Volume Section */}
-                    <div className="w-full flex justify-between items-end pt-1 px-1">
-                      <div className="relative flex flex-row">
-                        <span className="text-[#51D5EB] font-semibold text-base">
-                          ${getCurrentPrice(marketItem)}
-                        </span>
-                        {/* <div className="absolute top-0 -right-2 w-3 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/>
-                          <div className="absolute top-0 -right-2 w-1.5 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/> */}
-                        <span className="relative ml-1 flex size-2">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#51D5EB] opacity-75"></span>
-                          <span className="relative inline-flex size-2 rounded-full bg-[#359eb1]"></span>
-                        </span>
+                    <div
+                      key={marketItem.slug}
+                      className="w-[322px] h-[248px] bg-[#51D5EB1A] pt-5 pb-4 px-4 flex flex-col rounded-lg gap-3"
+                    >
+                      {/* Header with icon, name, and chevron */}
+                      <div className="flex gap-2.5 items-center">
+                        <Image
+                          src={
+                            marketItem.profileImage || "/public/tide-logo.svg"
+                          }
+                          alt="Profile"
+                          width={24}
+                          height={24}
+                          className="object-contain rounded-full"
+                        />
+                        <p className="font-semibold text-white">
+                          {marketItem.question}
+                        </p>
                       </div>
 
-                      <p className="text-[#D9D9D9] text-xs font-normal">
-                        ${formatVolume(marketItem.volume)} Vol
-                      </p>
-                    </div>
+                      {/* Price and Volume Section */}
+                      <div className="w-full flex justify-between items-end pt-1 px-1">
+                        <div className="relative flex flex-row">
+                          <span className="text-[#51D5EB] font-semibold text-base">
+                            ${getCurrentPrice(marketItem)}
+                          </span>
+                          {/* <div className="absolute top-0 -right-2 w-3 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/>
+                          <div className="absolute top-0 -right-2 w-1.5 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/> */}
+                          <span className="relative ml-1 flex size-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#51D5EB] opacity-75"></span>
+                            <span className="relative inline-flex size-2 rounded-full bg-[#359eb1]"></span>
+                          </span>
+                        </div>
 
-                    {/* Chart Section */}
-                    <div className="w-full h-[99px]">
-                      <PriceLineChart coin={marketItem.token} />
-                    </div>
+                        <p className="text-[#D9D9D9] text-xs font-normal">
+                          ${formatVolume(marketItem.volume)} Vol
+                        </p>
+                      </div>
 
-                    {/* Predict and Quick Bet Buttons */}
-                    <button
-                      onClick={() => {
-                        router.push({
-                          pathname: `/coins/${marketItem.slug}`,
-                          query: { marketData: JSON.stringify(marketItem) },
-                        });
-                      }}
-                      className="py-2 w-full flex items-center justify-center font-bold text-black bg-[#51D5EB] rounded-lg"
-                    >
-                      Predict
-                    </button>
-                  </div>
+                      {/* Chart Section */}
+                      <div className="w-full h-[99px]">
+                        <PriceLineChart coin={marketItem.token} />
+                      </div>
+
+                      {/* Predict and Quick Bet Buttons */}
+                      <button
+                        onClick={() => {
+                          router.push({
+                            pathname: `/coins/${marketItem.slug}`,
+                            query: { marketData: JSON.stringify(marketItem) },
+                          });
+                        }}
+                        className="py-2 w-full flex items-center justify-center font-bold text-black bg-[#51D5EB] rounded-lg"
+                      >
+                        Predict
+                      </button>
+                    </div>
+                  </Link>
                 ))}
               </div>
             </>
