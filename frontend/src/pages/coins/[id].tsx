@@ -308,7 +308,7 @@ export default function CoinDetail() {
           prices.reduce((sum, price) => sum + price, 0) / prices.length;
 
         const range = Math.max(max - min, 1);
-        const padding = range * 0.1;
+        const padding = range * 0.5; // Changed from 0.1 to 0.3 for 30% buffer
         const domainMin = Math.max(0, min - padding);
         const domainMax = max + padding;
 
@@ -347,7 +347,7 @@ export default function CoinDetail() {
 
       const currentPrice = coin?.currentPrice ?? 0;
       const basePrice = currentPrice > 0 ? currentPrice : 10000;
-      const padding = Math.max(basePrice * 0.15, 1000);
+      const padding = Math.max(basePrice * 0.5, 1000); // Changed from 0.15 to 0.3 for 30% buffer
       const domainMin = Math.max(0, basePrice - padding);
       const domainMax = basePrice + padding;
 
