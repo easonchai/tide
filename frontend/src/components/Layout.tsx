@@ -2,7 +2,6 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { ReactNode, useState } from "react";
 import { useWallet } from "@/contexts/WalletContext";
-import TopUpModal from "@/components/TopUpModal";
 import styles from "@/styles/Layout.module.css";
 import { Toaster } from "react-hot-toast";
 import Image from "next/image";
@@ -23,7 +22,6 @@ export default function Layout({
   description = "Realtime crypto markets overview",
 }: LayoutProps) {
   const router = useRouter();
-  const [showTopUpModal, setShowTopUpModal] = useState(false);
   
   const {
     walletAddress,
@@ -158,21 +156,6 @@ export default function Layout({
                       className={styles.disconnectAction}
                       onClick={() => {
                         setShowDisconnectTooltip(false);
-                        setShowTopUpModal(true);
-                      }}
-                      style={{
-                        background: '#51D5EB',
-                        color: '#0E1B24',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      Top Up Wallet
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.disconnectAction}
-                      onClick={() => {
-                        setShowDisconnectTooltip(false);
                         void disconnectWallet();
                       }}
                     >
@@ -214,14 +197,6 @@ export default function Layout({
         {children}
       </div>
 
-      {/* Top Up Modal */}
-      {walletAddress && (
-        <TopUpModal
-          isOpen={showTopUpModal}
-          onClose={() => setShowTopUpModal(false)}
-          walletAddress={walletAddress}
-        />
-      )}
     </>
   );
 }
