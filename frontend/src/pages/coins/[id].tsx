@@ -364,35 +364,33 @@ export default function CoinDetail() {
     });
   }, [domain, initialPriceRange]);
 
-  const { data: calculatedCost } = useReadContract({
-    address: marketContract,
-    abi: cLMSRMarketCoreABI,
-    functionName: "calculateOpenCost",
-    args: [
-      marketData?.onChainId,
-      priceRange[0],
-      priceRange[1],
-      parseUnits(amountInput, 6),
-    ],
-    query: {
-      enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
-    },
-  }) as { data: bigint | undefined };
-
-  const { data: calculatedQuantityFromCost } = useReadContract({
+  const {
+    data: calculateQuantityFromCost,
+    isLoading: readIsLoading,
+    error,
+  } = useReadContract({
     address: marketContract,
     abi: cLMSRMarketCoreABI,
     functionName: "calculateQuantityFromCost",
     args: [
-      marketData?.onChainId,
-      priceRange[0],
-      priceRange[1],
-      parseUnits(amountInput, 6),
+      BigInt(marketData?.onChainId ?? 0),
+      parseUnits(String(priceRange[0]), 2),
+      parseUnits(String(priceRange[1]), 2),
+      parseUnits(amountInput || "0", 6),
     ],
     query: {
       enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
     },
-  }) as { data: bigint | undefined };
+  })
+
+  console.log("isLoading", readIsLoading);
+  console.log("error", error);
+  console.log("address", marketContract);
+  console.log("onChainId", marketData?.onChainId);
+  console.log("Price Range 0", priceRange[0]);
+  console.log("Price Range 1", priceRange[1]);
+  console.log("amountInput", amountInput);
+
   // Ensure Range never mounts with out-of-bounds values
   const rangeStep = useMemo(
     () => Math.max(1, (domain[1] - domain[0]) / 1000),
@@ -513,7 +511,9 @@ export default function CoinDetail() {
       return;
     }
 
-    if (calculatedQuantityFromCost === undefined) {
+    console.log("calculatedQuantityFromCost", calculateQuantityFromCost);
+
+    if (calculateQuantityFromCost === undefined) {
       toast.error("Cost loading");
       return;
     }
@@ -531,10 +531,10 @@ export default function CoinDetail() {
 
     // TODO: Add min max validation
     try {
-      const marketId = marketData.onChainId;
-      const lowerTick = priceRange[0];
-      const upperTick = priceRange[1];
-      const amountParsed = calculatedQuantityFromCost;
+      const marketId = BigInt(marketData.onChainId);
+      const lowerTick = parseUnits(String(priceRange[0]), 2);
+      const upperTick = parseUnits(String(priceRange[1]), 2);
+      const amountParsed = calculateQuantityFromCost; // already bigint
       const maxCost = parseUnits(amountInput, 6);
 
       const tx = await writeContractAsync({
