@@ -597,7 +597,7 @@ export default function CoinDetail() {
       try {
         await apiService.market.createPosition({
           marketSlug: String(id),
-          userAddress: walletAddress,
+          userAddress: walletAddress.toLowerCase(),
           amount: amountParsed as bigint,
           lowerBound: BigInt(lowerTick),
           upperBound: BigInt(upperTick),
