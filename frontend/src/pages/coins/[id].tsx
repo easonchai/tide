@@ -629,10 +629,10 @@ export default function CoinDetail() {
               )}
             </div>
             <div className={styles.eventDetails}>
-              <h1 className={styles.eventTitle}>
+              <h1 className="text-2xl font-semibold text-white">
                 {marketData?.question || "Loading..."}
               </h1>
-              <p className={styles.resolutionDate}>
+              <p className="text-sm text-white">
                 {marketData?.endDate
                   ? `Resolves at ${new Date(
                       marketData.endDate
@@ -842,9 +842,9 @@ export default function CoinDetail() {
         {/* Right Sidebar */}
         <div className="w-[428px] flex flex-col gap-4 text-white pt-24">
           {/* Min Price */}
-          <div className="w-full flex gap-2 h-20">
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-2.5">
-              <span className="leading-none font-bold text-base">
+          <div className="w-full flex gap-2">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base text-[#DEDEDE]">
                 Min Price
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
@@ -865,8 +865,8 @@ export default function CoinDetail() {
                 </div>
               </div>
             </div>
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-2.5">
-              <span className="leading-none text-base font-bold">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base text-[#DEDEDE]">
                 Max Price
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
@@ -889,15 +889,19 @@ export default function CoinDetail() {
             </div>
           </div>
 
-          <div className="w-full flex gap-2 h-20 font-bold items-center">
-            <div className="flex-[7] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="text-base leading-none">Win Probability</span>
+          <div className="w-full flex gap-2 font-bold items-center">
+            <div className="flex-[7] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="text-base leading-none font-normal text-[#DEDEDE]">
+                Win Probability
+              </span>
               <span className="text-xl leading-none">
                 {percentageFormatter.format(winProbability)}
               </span>
             </div>
-            <div className="flex-[3] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="text-base leading-none">Avg Price</span>
+            <div className="flex-[3] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="text-base leading-none font-normal text-[#DEDEDE]">
+                Avg Price
+              </span>
               <span className="text-xl leading-none">
                 {/* TODO: set this to the calculated avg price */}
                 {currencyFormatter.format(dataAvgPrice)}
@@ -905,9 +909,11 @@ export default function CoinDetail() {
             </div>
           </div>
 
-          <div className="w-full flex gap-2 h-28 font-bold">
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="leading-none font-bold text-base">Amount</span>
+          <div className="w-full flex gap-2 font-bold">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base font-normal text-[#DEDEDE]">
+                Amount
+              </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
                 <p>$</p>
                 <input
@@ -917,14 +923,14 @@ export default function CoinDetail() {
                   onChange={(e) => setAmountInput(e.target.value)}
                 />
               </div>
-              <div className="w-full flex justify-between text-base font-semibold">
+              <div className="w-full flex justify-between text-base font-normal  text-[#DEDEDE]">
                 <span className="leading-none">Balance:</span>
                 <span className="leading-none">{userBalance}</span>
               </div>
             </div>
 
-            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-2.5">
-              <span className="leading-none font-bold text-base">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base font-normal text-[#DEDEDE]">
                 Receive if you win
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
@@ -933,8 +939,7 @@ export default function CoinDetail() {
                   {calculateQuantityFromCost || BigInt(0)}
                 </span>
               </div>
-              <div className="w-full flex justify-between text-base font-semibold">
-                <span className="leading-none">Balance:</span>
+              <div className="w-full flex justify-between text-base font-normal text-[#DEDEDE]">
                 <span className="leading-none">x{multiplier}</span>
               </div>
             </div>
