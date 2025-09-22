@@ -119,7 +119,7 @@ export default function CoinDetail() {
   // Hedge modal state
   const [showHedgeModal, setShowHedgeModal] = useState(false);
 
-  const {walletBalance: userBalance} = useWallet();
+  const { walletBalance: userBalance } = useWallet();
 
   // const userBalance = 1000;
 
@@ -734,11 +734,17 @@ export default function CoinDetail() {
   //
   // const winProbability = lmsrResult.winProbability;
   // const receiveIfWin = lmsrResult.receiveIfWin;
-  const winProbability = amountInput && calculateQuantityFromCost ? Number(amountInput) / Number(formatUnits( calculateQuantityFromCost!, 6) ) : 0
+  const winProbability =
+    amountInput && calculateQuantityFromCost
+      ? Number(amountInput) / Number(formatUnits(calculateQuantityFromCost!, 6))
+      : 0;
 
-  const calculatedDataAverage = winProbability
+  const calculatedDataAverage = winProbability;
 
-  const multiplier = amountInput && calculateQuantityFromCost ? Number(formatUnits(calculateQuantityFromCost, 6)) / Number(amountInput ) : 0
+  const multiplier =
+    amountInput && calculateQuantityFromCost
+      ? Number(formatUnits(calculateQuantityFromCost, 6)) / Number(amountInput)
+      : 0;
 
   const receiveIfWin = calculateQuantityFromCost || BigInt(0);
   const handlePlaceBet = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1176,7 +1182,9 @@ export default function CoinDetail() {
               </div>
               <div className="w-full flex justify-between text-base font-normal  text-[#DEDEDE]">
                 <span className="leading-none">Balance:</span>
-                <span className="leading-none">${Number(userBalance).toFixed(2)}</span>
+                <span className="leading-none">
+                  ${Number(userBalance).toFixed(2)}
+                </span>
               </div>
             </div>
 
@@ -1187,7 +1195,7 @@ export default function CoinDetail() {
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
                 <p>$</p>
                 <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[140px]">
-                  {formatUnits( calculateQuantityFromCost || BigInt(0), 6 )}
+                  {formatUnits(calculateQuantityFromCost || BigInt(0), 6)}
                 </span>
               </div>
               <div className="w-full flex justify-between text-base font-normal text-[#DEDEDE]">
