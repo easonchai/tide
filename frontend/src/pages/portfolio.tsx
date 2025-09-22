@@ -334,17 +334,19 @@ function PortfolioPage() {
 
                 {/* Performance Graph */}
                 <div className={styles.performanceCard}>
-                  <h3 className={styles.topCardTitle}>Portfolio Performance</h3>
-                  {pnlChartData.length > 0 ? (
-                    <PnLChart 
-                      data={pnlChartData} 
-                      className="h-full w-full min-h-[120px]"
-                    />
-                  ) : (
-                    <div className={styles.graphPlaceholder}>
-                      <span className={styles.graphLabel}>Loading chart data...</span>
-                    </div>
-                  )}
+                  <h3 className={styles.topCardTitle}>PnL</h3>
+                  <div className="flex-1 -ml-14 px-4">
+                    {pnlChartData.length > 0 ? (
+                      <PnLChart 
+                        data={pnlChartData} 
+                        className="h-full w-full min-h-[120px]"
+                      />
+                    ) : (
+                      <div className={styles.graphPlaceholder}>
+                        <span className={styles.graphLabel}>Loading chart data...</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

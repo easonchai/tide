@@ -40,8 +40,8 @@ export default function PnLChart({ data, className }: PnLChartProps) {
 
   return (
     <div className={className}>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
             <XAxis 
               dataKey="time" 
               axisLine={{ stroke: '#ffffff', strokeWidth: 1 }}
