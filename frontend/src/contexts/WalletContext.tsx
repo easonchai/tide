@@ -1,7 +1,19 @@
-import { createContext, useContext, useCallback, useEffect, useRef, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+} from "react";
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
 import type { AxiosError } from "axios";
 import { apiService } from "@/utils/apiService";
+import { collateralContract } from "@/config/config";
+import { erc20ABI } from "@/abi/ERC20";
+import { useReadContract } from "wagmi";
+import { formatUnits } from "viem";
 
 // Extend Window interface for MetaMask
 declare global {
@@ -9,7 +21,10 @@ declare global {
     ethereum?: {
       request: (args: { method: string; params?: any[] }) => Promise<any>;
       on: (event: string, handler: (...args: any[]) => void) => void;
-      removeListener: (event: string, handler: (...args: any[]) => void) => void;
+      removeListener: (
+        event: string,
+        handler: (...args: any[]) => void,
+      ) => void;
       isMetaMask?: boolean;
     };
   }
@@ -22,7 +37,9 @@ interface WalletContextType {
   isFetchingBalance: boolean;
   connectError: string | null;
   showDisconnectTooltip: boolean;
-  setShowDisconnectTooltip: (show: boolean | ((prev: boolean) => boolean)) => void;
+  setShowDisconnectTooltip: (
+    show: boolean | ((prev: boolean) => boolean),
+  ) => void;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => Promise<void>;
   connectWrapperRef: React.RefObject<HTMLDivElement | null>;
@@ -42,7 +59,7 @@ const isIgnorableWalletConnectError = (error: unknown) => {
   const message =
     typeof error === "string"
       ? error
-      : (error as Error | undefined)?.message ?? "";
+      : ((error as Error | undefined)?.message ?? "");
 
   if (!message) {
     return false;
@@ -59,7 +76,7 @@ const isIgnorableWalletConnectError = (error: unknown) => {
 const formatEthBalance = (weiHex: string) => {
   try {
     const wei = BigInt(weiHex);
-    const etherWhole = wei / BigInt( 1e18 );
+    const etherWhole = wei / BigInt(1e18);
     const etherFraction = wei % BigInt(1e18);
 
     if (etherFraction === BigInt(0)) {
@@ -102,12 +119,26 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  // const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
 
   const providerRef = useRef<any | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  const { data: rawWalletBalance = BigInt(0) } = useReadContract({
+    address: collateralContract,
+    abi: erc20ABI,
+    functionName: "balanceOf",
+    args: [walletAddress],
+    query: {
+      enabled: Boolean(walletAddress),
+    },
+  }) as {data: bigint};
+
+  console.log("rawWalletBalance", rawWalletBalance)
+
+  const walletBalance = formatUnits(rawWalletBalance, 6);
 
   const registerUser = useCallback(async (address: string) => {
     try {
@@ -126,43 +157,43 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
   }, []);
 
-  const fetchWalletBalance = useCallback(async (address: string) => {
-    const provider = providerRef.current;
-
-    if (!provider) {
-      return;
-    }
-
-    setWalletBalance(null);
-    setIsFetchingBalance(true);
-
-    try {
-      let balanceHex: string;
-      
-      if (window.ethereum && provider === window.ethereum) {
-        // MetaMask/browser wallet
-        balanceHex = await window.ethereum.request({
-          method: "eth_getBalance",
-          params: [address, "latest"],
-        });
-      } else {
-        // WalletConnect
-        balanceHex = (await provider.request({
-          method: "eth_getBalance",
-          params: [address, "latest"],
-        })) as string;
-      }
-
-      setWalletBalance(formatEthBalance(balanceHex));
-    } catch (error) {
-      if (!isIgnorableWalletConnectError(error)) {
-        console.error("Failed to fetch wallet balance", error);
-      }
-      setWalletBalance(null);
-    } finally {
-      setIsFetchingBalance(false);
-    }
-  }, []);
+  // const fetchWalletBalance = useCallback(async (address: string) => {
+  //   const provider = providerRef.current;
+  //
+  //   if (!provider) {
+  //     return;
+  //   }
+  //
+  //   // setWalletBalance(null);
+  //   setIsFetchingBalance(true);
+  //
+  //   try {
+  //     let balanceHex: string;
+  //
+  //     if (window.ethereum && provider === window.ethereum) {
+  //       // MetaMask/browser wallet
+  //       balanceHex = await window.ethereum.request({
+  //         method: "eth_getBalance",
+  //         params: [address, "latest"],
+  //       });
+  //     } else {
+  //       // WalletConnect
+  //       balanceHex = (await provider.request({
+  //         method: "eth_getBalance",
+  //         params: [address, "latest"],
+  //       })) as string;
+  //     }
+  //
+  //     // setWalletBalance(formatEthBalance(balanceHex));
+  //   } catch (error) {
+  //     if (!isIgnorableWalletConnectError(error)) {
+  //       console.error("Failed to fetch wallet balance", error);
+  //     }
+  //     setWalletBalance(null);
+  //   } finally {
+  //     setIsFetchingBalance(false);
+  //   }
+  // }, []);
 
   const handleAccountsChanged = useCallback(
     (accounts: string[]) => {
@@ -171,19 +202,15 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
       if (nextAccount) {
         void registerUser(nextAccount);
-        void fetchWalletBalance(nextAccount);
-      } else {
-        setWalletBalance(null);
+        // void fetchWalletBalance(nextAccount);
       }
-
       setShowDisconnectTooltip(false);
     },
-    [fetchWalletBalance, registerUser]
+    [registerUser],
   );
 
   const handleDisconnect = useCallback(() => {
     setWalletAddress(null);
-    setWalletBalance(null);
     setShowDisconnectTooltip(false);
     providerRef.current = null;
   }, []);
@@ -205,7 +232,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       // First, try to connect with MetaMask/browser wallet
       if (window.ethereum) {
         console.log("Connecting with browser wallet (MetaMask)...");
-        
+
         const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         });
@@ -214,13 +241,12 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
           // Set up event listeners for browser wallet
           window.ethereum.on("accountsChanged", handleAccountsChanged);
           window.ethereum.on("disconnect", handleDisconnect);
-          
+
           // Store browser wallet as provider
           providerRef.current = window.ethereum;
-          
+
           setWalletAddress(accounts[0]);
           void registerUser(accounts[0]);
-          void fetchWalletBalance(accounts[0]);
           setShowDisconnectTooltip(false);
           return;
         }
@@ -230,7 +256,9 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
       if (!projectId) {
-        setConnectError("No wallet found. Please install MetaMask or use WalletConnect.");
+        setConnectError(
+          "No wallet found. Please install MetaMask or use WalletConnect.",
+        );
         return;
       }
 
@@ -283,12 +311,11 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       if (accounts?.length) {
         setWalletAddress(accounts[0]);
         void registerUser(accounts[0]);
-        void fetchWalletBalance(accounts[0]);
         setShowDisconnectTooltip(false);
       }
     } catch (error) {
       console.error("Wallet connection failed", error);
-      
+
       if (providerRef.current && providerRef.current.disconnect) {
         await providerRef.current.disconnect().catch((disconnectError: any) => {
           console.warn("Failed to clean up connection", disconnectError);
@@ -302,7 +329,6 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
       setIsConnecting(false);
     }
   }, [
-    fetchWalletBalance,
     handleAccountsChanged,
     handleDisconnect,
     isConnecting,
@@ -315,14 +341,16 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
     if (!provider) {
       setWalletAddress(null);
-      setWalletBalance(null);
       return;
     }
 
     try {
       if (window.ethereum && provider === window.ethereum) {
         // MetaMask/browser wallet - just remove listeners
-        window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged,
+        );
         window.ethereum.removeListener("disconnect", handleDisconnect);
       } else {
         // WalletConnect
@@ -348,7 +376,6 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     } finally {
       providerRef.current = null;
       setWalletAddress(null);
-      setWalletBalance(null);
       setConnectError(null);
       setShowDisconnectTooltip(false);
       clearWalletConnectStorage();
@@ -388,15 +415,14 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
           const accounts = await window.ethereum.request({
             method: "eth_accounts",
           });
-          
+
           if (accounts?.length > 0) {
             providerRef.current = window.ethereum;
             window.ethereum.on("accountsChanged", handleAccountsChanged);
             window.ethereum.on("disconnect", handleDisconnect);
-            
+
             setWalletAddress(accounts[0]);
             void registerUser(accounts[0]);
-            void fetchWalletBalance(accounts[0]);
           }
         } catch (error) {
           console.log("No existing MetaMask connection found");
@@ -405,7 +431,11 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     };
 
     checkExistingConnection();
-  }, [handleAccountsChanged, handleDisconnect, registerUser, fetchWalletBalance]);
+  }, [
+    handleAccountsChanged,
+    handleDisconnect,
+    registerUser,
+  ]);
 
   const value: WalletContextType = {
     walletAddress,
@@ -421,8 +451,6 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   };
 
   return (
-    <WalletContext.Provider value={value}>
-      {children}
-    </WalletContext.Provider>
+    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
   );
 };
