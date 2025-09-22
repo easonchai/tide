@@ -49,10 +49,10 @@ const isIgnorableWalletConnectError = (error: unknown) => {
 const formatEthBalance = (weiHex: string) => {
   try {
     const wei = BigInt(weiHex);
-    const etherWhole = wei / 10n ** 18n;
-    const etherFraction = wei % 10n ** 18n;
+    const etherWhole = wei / BigInt( 1e18 );
+    const etherFraction = wei % BigInt( 1e18 );
 
-    if (etherFraction === 0n) {
+    if (etherFraction === BigInt(0)) {
       return etherWhole.toString();
     }
 

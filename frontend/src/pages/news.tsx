@@ -132,7 +132,7 @@ export default function News() {
   const [hasMore, setHasMore] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
   const itemsPerPage = 20;
-  const observer = useRef<IntersectionObserver>();
+  const observer = useRef<IntersectionObserver>(undefined);
 
   // Initial data load
   useEffect(() => {
