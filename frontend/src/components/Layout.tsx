@@ -27,7 +27,7 @@ export default function Layout({
   
   const {
     walletAddress,
-    hyperliquidBalance,
+    walletBalance,
     isConnecting,
     connectError,
     showDisconnectTooltip,

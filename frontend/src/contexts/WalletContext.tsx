@@ -34,10 +34,8 @@ declare global {
 interface WalletContextType {
   walletAddress: string | null;
   walletBalance: string | null;
-  hyperliquidBalance: number | null;
   isConnecting: boolean;
   isFetchingBalance: boolean;
-  isFetchingHyperliquidBalance: boolean;
   connectError: string | null;
   showDisconnectTooltip: boolean;
   setShowDisconnectTooltip: (
@@ -122,9 +120,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  // const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
-  const [isFetchingHyperliquidBalance, setIsFetchingHyperliquidBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
 
   const providerRef = useRef<any | null>(null);
@@ -206,7 +202,6 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
       if (nextAccount) {
         void registerUser(nextAccount);
-        // void fetchWalletBalance(nextAccount);
       }
       setShowDisconnectTooltip(false);
     },
@@ -446,14 +441,12 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     walletBalance,
     isConnecting,
     isFetchingBalance,
-    isFetchingHyperliquidBalance,
     connectError,
     showDisconnectTooltip,
     setShowDisconnectTooltip,
     connectWallet,
     disconnectWallet,
-    connectWrapperRef,
-    hyperliquidBalance: null
+    connectWrapperRef
   };
 
   return (
