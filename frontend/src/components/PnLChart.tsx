@@ -9,22 +9,22 @@ interface PnLChartProps {
 export default function PnLChart({ data, className }: PnLChartProps) {
   // Mock data if no data provided
   const chartData = data || [
-    { time: '2025-08-24', pnl: 498.41 },
-    { time: '2025-08-25', pnl: 520.15 },
-    { time: '2025-08-26', pnl: 440.32 },
-    { time: '2025-08-28', pnl: 465.78 },
-    { time: '2025-08-30', pnl: 510.22 },
-    { time: '2025-09-01', pnl: 525.67 },
-    { time: '2025-09-03', pnl: 480.45 },
-    { time: '2025-09-05', pnl: 520.89 },
-    { time: '2025-09-07', pnl: 540.12 },
-    { time: '2025-09-09', pnl: 535.78 },
-    { time: '2025-09-11', pnl: 510.45 },
-    { time: '2025-09-13', pnl: 525.33 },
-    { time: '2025-09-15', pnl: 480.67 },
-    { time: '2025-09-17', pnl: 520.89 },
-    { time: '2025-09-19', pnl: 540.15 },
-    { time: '2025-09-22', pnl: 450.23 }
+    { time: '2025-08-24', pnl: 0 },
+    { time: '2025-08-25', pnl: 45.32 },
+    { time: '2025-08-26', pnl: -23.15 },
+    { time: '2025-08-28', pnl: 12.78 },
+    { time: '2025-08-30', pnl: -8.44 },
+    { time: '2025-09-01', pnl: 67.22 },
+    { time: '2025-09-03', pnl: 34.89 },
+    { time: '2025-09-05', pnl: -15.67 },
+    { time: '2025-09-07', pnl: 89.12 },
+    { time: '2025-09-09', pnl: 76.45 },
+    { time: '2025-09-11', pnl: -12.33 },
+    { time: '2025-09-13', pnl: 95.67 },
+    { time: '2025-09-15', pnl: 82.34 },
+    { time: '2025-09-17', pnl: -5.89 },
+    { time: '2025-09-19', pnl: 108.15 },
+    { time: '2025-09-22', pnl: 125.43 }
   ];
   const formatCurrency = (value: number) => {
     return `$${value.toLocaleString(undefined, {

@@ -9,7 +9,9 @@ import { apiService } from "@/utils/apiService";
 import { MarketStatus } from "@/types/market";
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
-import HyperliquidService, { UserPortfolioData } from "@/utils/hyperliquidService";
+import HyperliquidService, {
+  UserPortfolioData,
+} from "@/utils/hyperliquidService";
 
 interface PortfolioMarket {
   id: string;
@@ -54,11 +56,18 @@ const formatCurrency = (value: number): string => {
 function PortfolioPage() {
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
-  const [hyperliquidData, setHyperliquidData] = useState<UserPortfolioData | null>(null);
-  const [pnlChartData, setPnlChartData] = useState<Array<{ time: string; pnl: number }>>([]);
+  const [hyperliquidData, setHyperliquidData] =
+    useState<UserPortfolioData | null>(null);
+  const [pnlChartData, setPnlChartData] = useState<
+    Array<{ time: string; pnl: number }>
+  >([]);
   const [isLoadingHyperliquid, setIsLoadingHyperliquid] = useState(false);
 
-  const { data: positionsData, isLoading, error } = useQuery<PortfolioPosition[]>({
+  const {
+    data: positionsData,
+    isLoading,
+    error,
+  } = useQuery<PortfolioPosition[]>({
     queryKey: ["positions", address],
     queryFn: async () => {
       const response = await apiService.market.getPositionsByUser(address!);
@@ -79,13 +88,16 @@ function PortfolioPage() {
       setIsLoadingHyperliquid(true);
       try {
         // Get portfolio data
-        const portfolioData = await HyperliquidService.getUserPortfolio(address);
+        const portfolioData = await HyperliquidService.getUserPortfolio(
+          address
+        );
         setHyperliquidData(portfolioData);
 
         // Generate chart data (mock for now, or use real portfolio history)
         if (portfolioData) {
           const accountValue = parseFloat(portfolioData.accountValue) || 1000;
-          const chartData = HyperliquidService.generateMockPnLData(accountValue);
+          const chartData =
+            HyperliquidService.generateMockPnLData(accountValue);
           setPnlChartData(chartData);
         }
       } catch (error) {
@@ -185,25 +197,29 @@ function PortfolioPage() {
       const accountValue = parseFloat(hyperliquidData.accountValue) || 0;
       const totalNtlPos = parseFloat(hyperliquidData.totalNtlPos) || 0;
       const totalMarginUsed = parseFloat(hyperliquidData.totalMarginUsed) || 0;
-      
+
       // Calculate some mock metrics based on real data
       const totalPnL = accountValue - 1000; // Assume starting balance was 1000
       const pnl30d = totalPnL * 0.3; // 30% of total PnL happened in last 30 days
       const volume30d = Math.abs(totalNtlPos) * 2; // Mock volume based on position size
-      
+
       return {
         totalPnL,
         totalVolume: Math.abs(totalNtlPos) * 5, // Mock total volume
         pnl30d,
         volume30d,
-        marketsTraded: hyperliquidData.balances.length + (hyperliquidData.spotBalances?.length || 0),
+        marketsTraded:
+          hyperliquidData.balances.length +
+          (hyperliquidData.spotBalances?.length || 0),
         wins: Math.floor(Math.random() * 5) + 1,
         losses: Math.floor(Math.random() * 3),
         winLossRatio: 0.6 + Math.random() * 0.3, // 60-90%
         accountValue,
         totalNtlPos,
         totalMarginUsed,
-        spotBalance: hyperliquidData.spotBalances?.find((b: any) => b.coin === 'USDC')?.total || '0',
+        spotBalance:
+          hyperliquidData.spotBalances?.find((b: any) => b.coin === "USDC")
+            ?.total || "0",
       };
     }
 
@@ -230,13 +246,11 @@ function PortfolioPage() {
       accountValue: 0,
       totalNtlPos: 0,
       totalMarginUsed: 0,
-      spotBalance: '0',
+      spotBalance: "0",
     };
   }, [hyperliquidData]);
 
   // Removed unused pnlSeries
-
-
 
   return (
     <Layout>
@@ -248,15 +262,12 @@ function PortfolioPage() {
       <div className={styles.container}>
         <main className={styles.main}>
           {/* Section Title - Match index.tsx styling */}
-          <h2 className={styles.sectionTitle}>
-            Portfolio
-          </h2>
+          <h2 className={styles.sectionTitle}>Portfolio</h2>
 
           {!address ? (
             <div className={styles.emptyState}>
               <p>
-                lmao
-                지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
+                lmao 지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
                 시도해주세요.
               </p>
             </div>
@@ -275,9 +286,14 @@ function PortfolioPage() {
                 {/* PNL Card with Modal Link */}
                 <div className={styles.pnlCard}>
                   <span className={styles.topCardTitle}>30 Day PnL</span>
-                  <span className={`${styles.cardValue} ${summary.pnl30d >= 0 ? styles.valuePositive : styles.valueNegative
+                  {/* <span className={`${styles.cardValue} ${summary.pnl30d >= 0 ? styles.valuePositive : styles.valueNegative
                     }`}>
                     {summary.pnl30d >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.pnl30d))}
+                  </span> */}
+                  <span
+                    className={`${styles.cardValue} ${styles.valuePositive}`}
+                  >
+                    $125.43
                   </span>
                   <button
                     className={styles.viewLink}
@@ -290,8 +306,11 @@ function PortfolioPage() {
                 {/* Volume Card with Modal Link */}
                 <div className={styles.volumeCard}>
                   <span className={styles.topCardTitle}>30 Day Volume</span>
-                  <span className={styles.cardValue}>
+                  {/* <span className={styles.cardValue}>
                     ${formatCurrency(summary.volume30d)}
+                  </span> */}
+                  <span className={styles.cardValue}>
+                    $3,247.85
                   </span>
                   <button
                     className={styles.viewLink}
@@ -307,26 +326,44 @@ function PortfolioPage() {
                   <div className={styles.statsContent}>
                     <div className={styles.statRow}>
                       <span className={styles.statLabel}>Account Value</span>
-                      <span className={`${styles.statValue} ${summary.accountValue >= 1000 ? styles.valuePositive : styles.valueNegative}`}>
+                      {/* <span
+                        className={`${styles.statValue} ${
+                          summary.accountValue >= 1000
+                            ? styles.valuePositive
+                            : styles.valueNegative
+                        }`}
+                      >
                         ${formatCurrency(summary.accountValue)}
+                      </span> */}
+                      <span className={`${styles.statValue} ${styles.valuePositive}`}>
+                        $847.32
                       </span>
                     </div>
                     <div className={styles.statRow}>
                       <span className={styles.statLabel}>USDC Balance</span>
-                      <span className={styles.statValue}>
+                      {/* <span className={styles.statValue}>
                         ${formatCurrency(parseFloat(summary.spotBalance))}
+                      </span> */}
+                      <span className={styles.statValue}>
+                        $245.67
                       </span>
                     </div>
                     <div className={styles.statRow}>
                       <span className={styles.statLabel}>Position Size</span>
-                      <span className={styles.statValue}>
+                      {/* <span className={styles.statValue}>
                         ${formatCurrency(Math.abs(summary.totalNtlPos))}
+                      </span> */}
+                      <span className={styles.statValue}>
+                        $450.00
                       </span>
                     </div>
                     <div className={styles.statRow}>
                       <span className={styles.statLabel}>Margin Used</span>
-                      <span className={styles.statValue}>
+                      {/* <span className={styles.statValue}>
                         ${formatCurrency(summary.totalMarginUsed)}
+                      </span> */}
+                      <span className={styles.statValue}>
+                        $151.65
                       </span>
                     </div>
                   </div>
@@ -336,16 +373,7 @@ function PortfolioPage() {
                 <div className={styles.performanceCard}>
                   <h3 className={styles.topCardTitle}>PnL</h3>
                   <div className="flex-1 -ml-14 px-4">
-                    {pnlChartData.length > 0 ? (
-                      <PnLChart 
-                        data={pnlChartData} 
-                        className="h-full w-full min-h-[120px]"
-                      />
-                    ) : (
-                      <div className={styles.graphPlaceholder}>
-                        <span className={styles.graphLabel}>Loading chart data...</span>
-                      </div>
-                    )}
+                    <PnLChart className="h-full w-full min-h-[120px]" />
                   </div>
                 </div>
               </div>
@@ -355,15 +383,17 @@ function PortfolioPage() {
                 <div className={styles.tabContainer}>
                   <div className={styles.tabHeader}>
                     <button
-                      className={`${styles.tabButton} ${activeTab === "open" ? styles.tabActive : ""
-                        }`}
+                      className={`${styles.tabButton} ${
+                        activeTab === "open" ? styles.tabActive : ""
+                      }`}
                       onClick={() => setActiveTab("open")}
                     >
                       Open
                     </button>
                     <button
-                      className={`${styles.tabButton} ${activeTab === "closed" ? styles.tabActive : ""
-                        }`}
+                      className={`${styles.tabButton} ${
+                        activeTab === "closed" ? styles.tabActive : ""
+                      }`}
                       onClick={() => setActiveTab("closed")}
                     >
                       Closed
@@ -392,7 +422,7 @@ function PortfolioPage() {
                           }}
                           hedged={true}
                         />
-                        
+
                         <PortfolioPositionCard
                           id="mock-ethereum"
                           marketId="mock-ethereum-market"
@@ -431,11 +461,12 @@ function PortfolioPage() {
                     ))}
 
                     {/* Show empty state only if no positions AND no mocked positions for open tab */}
-                    {filteredPositions.length === 0 && activeTab === "closed" && (
-                      <div className={styles.emptyMarkets}>
-                        <p>No {activeTab} positions found.</p>
-                      </div>
-                    )}
+                    {filteredPositions.length === 0 &&
+                      activeTab === "closed" && (
+                        <div className={styles.emptyMarkets}>
+                          <p>No {activeTab} positions found.</p>
+                        </div>
+                      )}
                   </div>
                 </div>
               </section>
