@@ -32,7 +32,9 @@ interface PortfolioPositionCardProps {
 
 const WEI_IN_ETH = 1e18;
 
-const toNumber = (value: string | number | bigint | null | undefined): number => {
+const toNumber = (
+  value: string | number | bigint | null | undefined
+): number => {
   if (value === null || value === undefined) return 0;
   if (typeof value === "bigint") return Number(value);
   if (typeof value === "string") {
@@ -42,7 +44,9 @@ const toNumber = (value: string | number | bigint | null | undefined): number =>
   return Number.isFinite(value) ? value : 0;
 };
 
-const weiToEth = (value: string | number | bigint | null | undefined): number => {
+const weiToEth = (
+  value: string | number | bigint | null | undefined
+): number => {
   return toNumber(value) / WEI_IN_ETH;
 };
 
@@ -105,7 +109,7 @@ export default function PortfolioPositionCard({
 
   const handleSellClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    
+
     if (!address) {
       toast.error("Please connect your wallet");
       return;
@@ -126,7 +130,7 @@ export default function PortfolioPositionCard({
 
   const handleClaimClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    
+
     if (!address) {
       toast.error("Please connect your wallet");
       return;
@@ -151,7 +155,7 @@ export default function PortfolioPositionCard({
 
   return (
     <>
-      <div 
+      <div
         className="bg-[#51D5EB1A] border border-[rgba(81,213,235,0.2)] rounded-xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 ease-in-out h-full min-h-[200px]"
         onClick={handleCardClick}
       >
@@ -170,9 +174,8 @@ export default function PortfolioPositionCard({
                 {market?.question ?? "Unknown market"}
               </p>
               <p className="text-[#DEDEDE] text-sm font-normal">
-                {market?.status === "OPEN" ? "Ends" : "Ended"} {formatDateTime(
-                  market?.endDate ?? null
-                )}
+                {market?.status === "OPEN" ? "Ends" : "Ended"}{" "}
+                {formatDateTime(market?.endDate ?? null)}
               </p>
             </div>
           </div>
@@ -204,10 +207,12 @@ export default function PortfolioPositionCard({
             <span className="text-[#DEDEDE] text-sm font-medium">
               {market?.status === "OPEN" ? "Current Value" : "Final Value"}
             </span>
-            <span className={cn(
-              "text-2xl font-bold",
-              isProfit ? "text-[#22c55e]" : "text-[#ef4444]"
-            )}>
+            <span
+              className={cn(
+                "text-2xl font-bold",
+                isProfit ? "text-[#22c55e]" : "text-[#ef4444]"
+              )}
+            >
               ${formatCurrency(currentValue)}
             </span>
           </div>
@@ -234,12 +239,12 @@ export default function PortfolioPositionCard({
                 Claim
               </button>
             ) : (
-              <button
-                className="bg-[#6b7280] text-white border-none rounded-lg py-3 text-sm font-bold cursor-not-allowed w-full"
-                disabled
-              >
-                Claimed
-              </button>
+                <button
+                  className="bg-[#51D5EB] hover:bg-[#15D5EB] text-black border-none rounded-lg py-3 text-sm font-bold cursor-pointer transition-all duration-200 ease-in-out w-full opacity-50"
+                  disabled
+                >
+                  Claimed
+                </button>
             )}
           </>
         )}
