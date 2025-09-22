@@ -456,6 +456,17 @@ export default function CoinDetail() {
     });
   }, [domain, initialPriceRange]);
 
+  // Dynamic tick snapping: hype-50 uses smaller $1 steps, others use $100
+  const clampStep = useMemo(() => (marketData?.slug === "hype-50" ? 1 : 100), [marketData?.slug]);
+  const toStepTick = useCallback(
+    (value: number, mode: "floor" | "ceil" | "round" = "round") => {
+      const fn = mode === "floor" ? Math.floor : mode === "ceil" ? Math.ceil : Math.round;
+      const snapped = fn(value / clampStep) * clampStep;
+      return parseUnits(snapped.toFixed(2), 2);
+    },
+    [clampStep]
+  );
+
   const {
     data: calculateQuantityFromCost,
     isLoading: readIsLoading,
@@ -466,8 +477,8 @@ export default function CoinDetail() {
     functionName: "calculateQuantityFromCost",
     args: [
       BigInt(marketData?.onChainId ?? 0),
-      parseUnits(String(Math.round(priceRange[0] / 100) * 100), 2),
-      parseUnits(String(Math.round(priceRange[1] / 100) * 100), 2),
+      toStepTick(priceRange[0], "floor"),
+      toStepTick(priceRange[1], "ceil"),
       parseUnits(amountInput || "0", 6),
     ],
     query: {
@@ -777,14 +788,8 @@ export default function CoinDetail() {
     // TODO: Add min max validation
     try {
       const marketId = BigInt(marketData.onChainId);
-      const lowerTick = parseUnits(
-        String(Math.round(priceRange[0] / 100) * 100),
-        2
-      );
-      const upperTick = parseUnits(
-        String(Math.round(priceRange[1] / 100) * 100),
-        2
-      );
+      const lowerTick = toStepTick(priceRange[0], "floor");
+      const upperTick = toStepTick(priceRange[1], "ceil");
       const amountParsed = calculateQuantityFromCost; // already bigint
       const maxCost = parseUnits(amountInput, 6);
 
