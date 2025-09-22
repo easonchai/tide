@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -7,12 +7,14 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-} from 'recharts';
-import styles from '../styles/Chart.module.css';
-import { useCandleHistoryQuery } from '@/hooks/useCandleHistoryQuery';
+  TooltipProps,
+} from "recharts";
+import styles from "../styles/Chart.module.css";
+import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 
 export type LineChartPoint = {
   index: number;
+  name?: string;
   value: number;
   timestamp?: number;
 };
@@ -21,6 +23,26 @@ export interface PriceLineChartProps {
   data?: LineChartPoint[];
   coin?: string;
 }
+
+// Custom tooltip component
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as LineChartPoint;
+    return (
+      <div className="bg-[#0f2a31] border border-[#12323b] text-[#e6f4f1] px-3 py-2 rounded shadow-lg">
+        <p className="font-medium">Time: {data.name || `Index: ${label}`}</p>
+        <p className="text-sm text-[#51D5EB]">
+          Price: $
+          {data.value.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 const defaultData: LineChartPoint[] = [
   { index: 0, value: 18 },
@@ -44,16 +66,19 @@ const defaultData: LineChartPoint[] = [
   { index: 18, value: 132 },
 ];
 
-export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartProps): React.ReactElement {
+export default function PriceLineChart({
+  data,
+  coin = "@107",
+}: PriceLineChartProps): React.ReactElement {
   // Use static historyStart to prevent constant reloading
   const historyStart = React.useMemo(() => {
-    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    const twentyFourHoursMs = 30 * 60 * 1000;
     return Date.now() - twentyFourHoursMs;
-  }, [coin]); // Only recalculate when coin changes
-  
+  }, []); // Only recalculate when coin changes
+
   const { data: candleHistory } = useCandleHistoryQuery({
     token: coin,
-    interval: '1m',
+    interval: "1m",
     startTime: historyStart,
     endTime: null,
     testnet: false,
@@ -67,52 +92,57 @@ export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartPr
   // Transform candle data to chart format
   const chartData = React.useMemo(() => {
     if (data) return data;
-    
+
     if (candleHistory?.length) {
       return candleHistory.map((candle, index) => ({
         index,
+        name: new Date(candle.T).toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
         value: parseFloat(candle.c), // Close price
         timestamp: candle.T,
       }));
     }
-    
+
     return defaultData;
   }, [data, candleHistory]);
 
   return (
-    <div className={styles.chartContainer}>
+    <div className="w-full h-full">
       <ResponsiveContainer width="100%" height="100%" debounce={1}>
-        <RechartsLineChart 
-          data={chartData} 
+        <RechartsLineChart
+          data={chartData}
           margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-          width={400}
-          height={400}
+          width={282}
+          height={99}
         >
           <CartesianGrid stroke="transparent" />
-          <XAxis 
-            dataKey="index" 
-            tick={false} 
-            axisLine={{ stroke: '#d3e3ea', strokeWidth: 4 }} 
+          <XAxis
+            dataKey="index"
+            tick={false}
+            axisLine={{ stroke: "#d3e3ea", strokeWidth: 1 }}
             tickLine={false}
             height={10}
           />
-          <YAxis 
-            domain={["dataMin - 10", "dataMax + 10"]} 
-            tick={false} 
-            axisLine={{ stroke: '#d3e3ea', strokeWidth: 4 }}
+          <YAxis
+            domain={["dataMin - 10", "dataMax + 10"]}
+            tick={false}
+            axisLine={{ stroke: "#d3e3ea", strokeWidth: 1 }}
             tickLine={false}
             width={10}
           />
           <Tooltip
-            contentStyle={{ backgroundColor: '#0f2a31', border: '1px solid #12323b', color: '#e6f4f1' }}
-            cursor={{ stroke: '#1e4a56', strokeWidth: 1 }}
+            content={<CustomTooltip />}
+            cursor={{ stroke: "#1e4a56", strokeWidth: 1 }}
           />
-          <Line 
-            type="linear" 
-            dataKey="value" 
-            stroke="#3de1f3" 
-            strokeWidth={4} 
-            dot={false} 
+          <Line
+            type="linear"
+            dataKey="value"
+            stroke="#3de1f3"
+            strokeWidth={1}
+            dot={false}
             activeDot={{ r: 6 }}
             isAnimationActive={false}
           />
@@ -121,5 +151,3 @@ export default function PriceLineChart({ data, coin = "@107" }: PriceLineChartPr
     </div>
   );
 }
-
-

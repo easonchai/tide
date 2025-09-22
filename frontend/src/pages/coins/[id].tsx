@@ -15,15 +15,28 @@ import { Range, Direction } from "react-range";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import React from "react";
 
+import Image from "next/image";
+
 import { betOnPriceRange } from "@/utils/lmsr";
 import { apiService } from "@/utils/apiService";
 import styles from "@/styles/CoinDetail.module.css";
-import { useWallet } from "@/contexts/WalletContext";
 import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 import HedgeModal from "@/components/HedgeModal";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import toast from "react-hot-toast";
+import { collateralContract, config, marketContract } from "@/config/config";
+import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
+import { MarketResponseDTO } from "@/types/market";
+import { parseUnits, maxUint256, decodeEventLog } from "viem";
+import {
+  readContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "wagmi/actions";
+import { erc20ABI } from "@/abi/ERC20";
 
-const shortenAddress = (address: string) =>
-  `${address.slice(0, 6)}...${address.slice(-4)}`;
+// const shortenAddress = (address: string) =>
+//   `${address.slice(0, 6)}...${address.slice(-4)}`;
 
 type ChartPoint = {
   time: string;
@@ -88,78 +101,33 @@ const extractPriceFromQuestion = (question: string): number => {
 
 export default function CoinDetail() {
   const router = useRouter();
-  const { id, marketData: marketDataString } = router.query;
+  const { id } = router.query;
 
   // Parse market data from query params
-  const marketData = marketDataString
-    ? JSON.parse(marketDataString as string)
-    : null;
 
   const [amountInput, setAmountInput] = useState("100");
-  const { walletAddress, connectWallet } = useWallet();
+  const [dataMinPrice, setDataMinPrice] = useState<number>();
+  const [dataMaxPrice, setDataMaxPrice] = useState<number>();
+  const [isBetting, setIsBetting] = useState(false);
+  const { address: walletAddress } = useAccount();
 
-  // Market positions states
-  const [marketPositions, setMarketPositions] = useState<any[]>([]);
-  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
-  const [positionsError, setPositionsError] = useState<string | null>(null);
+  const { writeContractAsync } = useWriteContract();
 
   // Hedge modal state
   const [showHedgeModal, setShowHedgeModal] = useState(false);
 
-  // Fetch market positions data
-  const fetchMarketPositions = useCallback(async (slug: string) => {
-    if (!slug) return;
+  const userBalance = 1000;
+  const multiplier = 2.5;
 
-    setIsLoadingPositions(true);
-    setPositionsError(null);
+  const { data: marketData } = useQuery({
+    queryKey: ["marketData", id],
+    queryFn: async () => {
+      const response = await apiService.market.getBySlug(id as string);
 
-    try {
-      const response = await apiService.market.getPositionsByMarket(slug);
-
-      setMarketPositions(response.data || []);
-    } catch (error) {
-      setPositionsError(
-        error instanceof Error ? error.message : "Failed to fetch positions"
-      );
-      setMarketPositions([]);
-    } finally {
-      setIsLoadingPositions(false);
-    }
-  }, []);
-
-  // Market 정보를 가져와서 slug를 얻은 후 positions를 가져오는 함수
-  const fetchMarketBySlug = useCallback(
-    async (marketId: string) => {
-      try {
-        // 모든 market을 가져와서 id로 찾기
-        const allMarkets = await apiService.market.getAll();
-        console.log("All markets:", allMarkets);
-
-        const foundMarket = allMarkets.data?.find(
-          (m: any) => m.id === marketId
-        );
-
-        if (foundMarket?.slug) {
-          console.log("Found market by id, using slug:", foundMarket.slug);
-          await fetchMarketPositions(foundMarket.slug);
-        } else {
-          console.error("No market found with id:", marketId);
-          setPositionsError("Market not found");
-        }
-      } catch (error) {
-        console.error("Failed to fetch market info:", error);
-        setPositionsError("Failed to fetch market information");
-      }
+      return response.data;
     },
-    [fetchMarketPositions]
-  );
-
-  // Fetch market positions when component mounts
-  useEffect(() => {
-    if (id && typeof id === "string") {
-      fetchMarketBySlug(id);
-    }
-  }, [id, fetchMarketBySlug]);
+    enabled: Boolean(id),
+  }) as { data: MarketResponseDTO | undefined };
 
   const twentyFourHoursMs = 24 * 60 * 60 * 1000;
   const [historyStart] = useState(() => Date.now() - twentyFourHoursMs);
@@ -170,7 +138,7 @@ export default function CoinDetail() {
     startTime: historyStart,
     endTime: null,
     testnet: false,
-    enabled: true,
+    enabled: Boolean(marketData && marketData.token),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -267,31 +235,65 @@ export default function CoinDetail() {
       .sort((a, b) => a.time - b.time); // Sort by time to ensure proper order
   }, [hypeHistory]);
 
-  const {
-    dataMinPrice,
-    dataMaxPrice,
-    dataAvgPrice,
-    domain,
-    initialPriceRange,
-    yAxisFormatter,
-  } = useMemo(() => {
-    if (chart.length > 0) {
-      const prices = chart.map((point) => point.price);
-      const min = Math.min(...prices);
-      const max = Math.max(...prices);
-      const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+  const { dataAvgPrice, domain, initialPriceRange, yAxisFormatter } =
+    useMemo(() => {
+      if (chart.length > 0) {
+        const prices = chart.map((point) => point.price);
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        const avg =
+          prices.reduce((sum, price) => sum + price, 0) / prices.length;
 
-      const range = Math.max(max - min, 1);
-      const padding = range * 0.1;
-      const domainMin = Math.max(0, min - padding);
-      const domainMax = max + padding;
+        const range = Math.max(max - min, 1);
+        const padding = range * 0.1;
+        const domainMin = Math.max(0, min - padding);
+        const domainMax = max + padding;
 
-      const rangePadding = range * 0.1;
-      const rangeMin = Math.max(domainMin, avg - rangePadding);
-      const rangeMax = Math.min(domainMax, avg + rangePadding);
+        const rangePadding = range * 0.1;
+        const rangeMin = Math.max(domainMin, avg - rangePadding);
+        const rangeMax = Math.min(domainMax, avg + rangePadding);
 
-      // Determine appropriate scaling based on price range
-      const maxPrice = Math.max(max, domainMax);
+        // Determine appropriate scaling based on price range
+        const maxPrice = Math.max(max, domainMax);
+        let scale = 1;
+        let suffix = "";
+
+        if (maxPrice >= 1000000000) {
+          scale = 1000000000;
+          suffix = "B";
+        } else if (maxPrice >= 1000000) {
+          scale = 1000000;
+          suffix = "M";
+        } else if (maxPrice >= 1000) {
+          scale = 1000;
+          suffix = "k";
+        }
+
+        const formatter = (value: number) =>
+          `$${(value / scale).toFixed(1)}${suffix}`;
+
+        return {
+          dataMinPrice: min,
+          dataMaxPrice: max,
+          dataAvgPrice: avg,
+          domain: [domainMin, domainMax] as [number, number],
+          initialPriceRange: [rangeMin, rangeMax] as [number, number],
+          yAxisFormatter: formatter,
+        };
+      }
+
+      const currentPrice = coin?.currentPrice ?? 0;
+      const basePrice = currentPrice > 0 ? currentPrice : 10000;
+      const padding = Math.max(basePrice * 0.15, 1000);
+      const domainMin = Math.max(0, basePrice - padding);
+      const domainMax = basePrice + padding;
+
+      const rangePadding = Math.max(basePrice * 0.05, 500);
+      const rangeMin = Math.max(domainMin, basePrice - rangePadding);
+      const rangeMax = Math.min(domainMax, basePrice + rangePadding);
+
+      // Determine appropriate scaling based on current price
+      const maxPrice = Math.max(basePrice, domainMax);
       let scale = 1;
       let suffix = "";
 
@@ -309,54 +311,18 @@ export default function CoinDetail() {
       const formatter = (value: number) =>
         `$${(value / scale).toFixed(1)}${suffix}`;
 
+      setDataMinPrice(Math.max(domainMin, basePrice - padding / 2));
+
+      setDataMaxPrice(Math.min(domainMax, basePrice + padding / 2));
       return {
-        dataMinPrice: min,
-        dataMaxPrice: max,
-        dataAvgPrice: avg,
+        dataMinPrice: Math.max(domainMin, basePrice - padding / 2),
+        dataMaxPrice: Math.min(domainMax, basePrice + padding / 2),
+        dataAvgPrice: basePrice,
         domain: [domainMin, domainMax] as [number, number],
         initialPriceRange: [rangeMin, rangeMax] as [number, number],
         yAxisFormatter: formatter,
       };
-    }
-
-    const currentPrice = coin?.currentPrice ?? 0;
-    const basePrice = currentPrice > 0 ? currentPrice : 10000;
-    const padding = Math.max(basePrice * 0.15, 1000);
-    const domainMin = Math.max(0, basePrice - padding);
-    const domainMax = basePrice + padding;
-
-    const rangePadding = Math.max(basePrice * 0.05, 500);
-    const rangeMin = Math.max(domainMin, basePrice - rangePadding);
-    const rangeMax = Math.min(domainMax, basePrice + rangePadding);
-
-    // Determine appropriate scaling based on current price
-    const maxPrice = Math.max(basePrice, domainMax);
-    let scale = 1;
-    let suffix = "";
-
-    if (maxPrice >= 1000000000) {
-      scale = 1000000000;
-      suffix = "B";
-    } else if (maxPrice >= 1000000) {
-      scale = 1000000;
-      suffix = "M";
-    } else if (maxPrice >= 1000) {
-      scale = 1000;
-      suffix = "k";
-    }
-
-    const formatter = (value: number) =>
-      `$${(value / scale).toFixed(1)}${suffix}`;
-
-    return {
-      dataMinPrice: Math.max(domainMin, basePrice - padding / 2),
-      dataMaxPrice: Math.min(domainMax, basePrice + padding / 2),
-      dataAvgPrice: basePrice,
-      domain: [domainMin, domainMax] as [number, number],
-      initialPriceRange: [rangeMin, rangeMax] as [number, number],
-      yAxisFormatter: formatter,
-    };
-  }, [chart, coin?.currentPrice]);
+    }, [chart, coin?.currentPrice]);
 
   const [priceRange, setPriceRange] = useState<[number, number]>(() => [
     initialPriceRange[0],
@@ -405,6 +371,55 @@ export default function CoinDetail() {
       return initial;
     });
   }, [domain, initialPriceRange]);
+
+  const {
+    data: calculateQuantityFromCost,
+    isLoading: readIsLoading,
+    error,
+  } = useReadContract({
+    address: marketContract,
+    abi: cLMSRMarketCoreABI,
+    functionName: "calculateQuantityFromCost",
+    args: [
+      BigInt(marketData?.onChainId ?? 0),
+      parseUnits(String(Math.round(priceRange[0] / 100) * 100), 2),
+      parseUnits(String(Math.round(priceRange[1] / 100) * 100), 2),
+      parseUnits(amountInput || "0", 6),
+    ],
+    query: {
+      enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
+    },
+  }) as { data: bigint | undefined; isLoading: boolean; error: unknown };
+
+  // console.log("isLoading", readIsLoading);
+  // console.log("error", error);
+  // console.log("address", marketContract);
+  // console.log("onChainId", marketData?.onChainId);
+  // console.log("Price Range 0", priceRange[0]);
+  // console.log("Price Range 1", priceRange[1]);
+  console.log("amountInput", { amountInput, calculateQuantityFromCost });
+
+  // Ensure Range never mounts with out-of-bounds values
+  const rangeStep = useMemo(
+    () => Math.max(1, (domain[1] - domain[0]) / 1000),
+    [domain]
+  );
+
+  const clampedPriceRange = useMemo(() => {
+    const clamp = (value: number) =>
+      Math.min(Math.max(value, domain[0]), domain[1]);
+
+    let min = clamp(priceRange[0]);
+    let max = clamp(priceRange[1]);
+
+    // Ensure strictly increasing and at least one step apart
+    if (min >= max || max - min < rangeStep) {
+      min = domain[0];
+      max = Math.min(domain[1], domain[0] + rangeStep);
+    }
+
+    return [min, max] as [number, number];
+  }, [priceRange, domain, rangeStep]);
 
   // Generate probability distribution from real data
   const probability = useMemo(() => {
@@ -483,7 +498,10 @@ export default function CoinDetail() {
 
   // Calculate which bins are in the selected range (정확한 범위 계산)
   const selectedBins = bins
-    .filter((bin) => bin.price >= priceRange[0] && bin.price < priceRange[1])
+    .filter(
+      (bin) =>
+        bin.price >= clampedPriceRange[0] && bin.price < clampedPriceRange[1]
+    )
     .map((bin) => bin.index);
 
   // Use LMSR calculation for accurate predictions
@@ -491,6 +509,147 @@ export default function CoinDetail() {
 
   const winProbability = lmsrResult.winProbability;
   const receiveIfWin = lmsrResult.receiveIfWin;
+
+  const handlePlaceBet = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!walletAddress) {
+      // If wallet is not connected, redirect to connect wallet
+      // The header will handle the wallet connection
+      toast.error("Please connect your wallet");
+      return;
+    }
+
+    console.log("calculatedQuantityFromCost", calculateQuantityFromCost);
+
+    if (calculateQuantityFromCost === undefined) {
+      toast.error("Cost loading");
+      return;
+    }
+
+    if (!marketData) {
+      toast.error("Error fetching market data");
+      return;
+    }
+
+    if (amount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    setIsBetting(true);
+
+    // TODO: Add min max validation
+    try {
+      const marketId = BigInt(marketData.onChainId);
+      const lowerTick = parseUnits(
+        String(Math.round(priceRange[0] / 100) * 100),
+        2
+      );
+      const upperTick = parseUnits(
+        String(Math.round(priceRange[1] / 100) * 100),
+        2
+      );
+      const amountParsed = calculateQuantityFromCost; // already bigint
+      const maxCost = parseUnits(amountInput, 6);
+
+      // Check current allowance
+      const currentAllowance = (await readContract(config, {
+        address: collateralContract,
+        abi: erc20ABI,
+        functionName: "allowance",
+        args: [walletAddress, marketContract],
+      })) as bigint;
+
+      console.log("allowance: ", currentAllowance);
+
+      if (currentAllowance < maxCost) {
+        // Approve max spend if allowance is insufficient
+        const approveHash = await writeContractAsync({
+          address: collateralContract,
+          abi: erc20ABI,
+          functionName: "approve",
+          args: [marketContract, maxUint256],
+        });
+
+        const approveReceipt = await waitForTransactionReceipt(config, {
+          hash: approveHash,
+        });
+
+        if (approveReceipt.status === "reverted") {
+          toast.error("Approval transaction reverted");
+          return;
+        }
+      }
+
+      const tx = await writeContractAsync({
+        address: marketContract,
+        abi: cLMSRMarketCoreABI,
+        functionName: "openPosition",
+        args: [marketId, lowerTick, upperTick, amountParsed, maxCost],
+      });
+
+      if (!tx) return;
+
+      const receipt = await waitForTransactionReceipt(config, {
+        hash: tx,
+      });
+
+      if (receipt.status === "reverted") {
+        toast.error("Bet transaction reverted");
+        return;
+      }
+
+      // Extract position ID from PositionOpened event
+      let positionId: bigint | undefined;
+      if (receipt.logs) {
+        for (const log of receipt.logs) {
+          try {
+            // Decode the PositionOpened event
+            const decoded = decodeEventLog({
+              abi: cLMSRMarketCoreABI,
+              data: log.data,
+              topics: log.topics,
+            });
+
+            if (decoded.eventName === "PositionOpened" && decoded.args) {
+              positionId = (decoded.args as any).positionId as bigint;
+              break;
+            }
+          } catch (e) {
+            // Skip logs that don't match our event
+            continue;
+          }
+        }
+      }
+
+      if (!positionId) {
+        toast.error("Failed to extract position ID from transaction");
+        return;
+      }
+
+      try {
+        await apiService.market.createPosition({
+          marketSlug: String(id),
+          userAddress: walletAddress.toLowerCase(),
+          amount: parseUnits(amountInput, 6),
+          lowerBound: BigInt(lowerTick),
+          upperBound: BigInt(upperTick),
+          onChainId: positionId.toString(),
+        });
+      } catch (err) {
+        console.error("Failed to persist position:", err);
+      }
+
+      toast.success("Successfully placed bet");
+    } catch (e) {
+      console.error("Error placing bet", e);
+      return;
+    } finally {
+      setIsBetting(false);
+    }
+
+    // Show hedge modal after successful bet
+    setShowHedgeModal(true);
+  };
 
   // If we have market data from props, we can render immediately
   // Otherwise, wait for the API data to load
@@ -521,9 +680,11 @@ export default function CoinDetail() {
           <div className={styles.eventHeader}>
             <div className={styles.eventIcon}>
               {marketData?.profileImage ? (
-                <img
+                <Image
                   src={marketData.profileImage}
                   alt="Market Icon"
+                  width={48}
+                  height={48}
                   className={styles.marketIcon}
                 />
               ) : (
@@ -531,10 +692,10 @@ export default function CoinDetail() {
               )}
             </div>
             <div className={styles.eventDetails}>
-              <h1 className={styles.eventTitle}>
+              <h1 className="text-2xl font-semibold text-white">
                 {marketData?.question || "Loading..."}
               </h1>
-              <p className={styles.resolutionDate}>
+              <p className="text-sm text-white">
                 {marketData?.endDate
                   ? `Resolves at ${new Date(
                       marketData.endDate
@@ -607,13 +768,13 @@ export default function CoinDetail() {
                     connectNulls={false}
                   />
                   <ReferenceLine
-                    y={priceRange[1]}
+                    y={clampedPriceRange[1]}
                     stroke="#dc2626"
                     strokeWidth={2}
                     strokeDasharray="5 5"
                   />
                   <ReferenceLine
-                    y={priceRange[0]}
+                    y={clampedPriceRange[0]}
                     stroke="#16a34a"
                     strokeWidth={2}
                     strokeDasharray="5 5"
@@ -624,8 +785,8 @@ export default function CoinDetail() {
               {/* Range Slider Overlay  todo: make align line and slider*/}
               <div className={styles.rangeSliderOverlay}>
                 <Range
-                  values={priceRange}
-                  step={Math.max(1, (domain[1] - domain[0]) / 1000)}
+                  values={clampedPriceRange}
+                  step={rangeStep}
                   min={domain[0]}
                   max={domain[1]}
                   onChange={(values) => {
@@ -707,7 +868,7 @@ export default function CoinDetail() {
                       position: "absolute",
                       right: "0px",
                       top: `${
-                        ((domain[1] - priceRange[1]) /
+                        ((domain[1] - clampedPriceRange[1]) /
                           (domain[1] - domain[0])) *
                         100
                       }%`,
@@ -715,7 +876,7 @@ export default function CoinDetail() {
                     }}
                   >
                     <span className={styles.rangePrice}>
-                      {currencyFormatter.format(priceRange[1])}
+                      {currencyFormatter.format(clampedPriceRange[1])}
                     </span>
                   </div>
                   <div
@@ -724,7 +885,7 @@ export default function CoinDetail() {
                       position: "absolute",
                       right: "0px",
                       top: `${
-                        ((domain[1] - priceRange[0]) /
+                        ((domain[1] - clampedPriceRange[0]) /
                           (domain[1] - domain[0])) *
                         100
                       }%`,
@@ -732,7 +893,7 @@ export default function CoinDetail() {
                     }}
                   >
                     <span className={styles.rangePrice}>
-                      {currencyFormatter.format(priceRange[0])}
+                      {currencyFormatter.format(clampedPriceRange[0])}
                     </span>
                   </div>
                 </div>
@@ -742,107 +903,114 @@ export default function CoinDetail() {
         </div>
 
         {/* Right Sidebar */}
-        <div className={styles.sidebar}>
+        <div className="w-[428px] flex flex-col gap-4 text-white pt-24">
           {/* Min Price */}
-          <div className={styles.priceCard}>
-            <div className={styles.cardLabel}>Min Price</div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(dataMinPrice)}
+          <div className="w-full flex gap-2">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base text-[#DEDEDE]">
+                Min Price
+              </span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <input
+                  type="text"
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
+                  value={dataMinPrice}
+                  onChange={(e) => setDataMinPrice(Number(e.target.value))}
+                />
+                <div className="flex flex-col ml-2">
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▲
+                  </button>
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▼
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md p-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base text-[#DEDEDE]">
+                Max Price
+              </span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <input
+                  type="text"
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
+                  value={dataMaxPrice}
+                  onChange={(e) => setDataMaxPrice(Number(e.target.value))}
+                />
+                <div className="flex flex-col ml-2">
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▲
+                  </button>
+                  <button className="text-white hover:text-white/80 text-xs leading-none">
+                    ▼
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Max Price */}
-          <div className={styles.priceCard}>
-            <div className={styles.cardLabel}>Max Price</div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(dataMaxPrice)}
+          <div className="w-full flex gap-2 font-bold items-center">
+            <div className="flex-[7] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="text-base leading-none font-normal text-[#DEDEDE]">
+                Win Probability
+              </span>
+              <span className="text-xl leading-none">
+                {percentageFormatter.format(winProbability)}
+              </span>
+            </div>
+            <div className="flex-[3] bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="text-base leading-none font-normal text-[#DEDEDE]">
+                Avg Price
+              </span>
+              <span className="text-xl leading-none">
+                {/* TODO: set this to the calculated avg price */}
+                {currencyFormatter.format(dataAvgPrice)}
+              </span>
             </div>
           </div>
 
-          {/* Win Probability */}
-          <div className={styles.probabilityCard}>
-            <div className={styles.cardLabel}>Win Probability</div>
-            <div className={styles.cardValue}>
-              {percentageFormatter.format(winProbability)}
+          <div className="w-full flex gap-2 font-bold">
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base font-normal text-[#DEDEDE]">
+                Amount
+              </span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <input
+                  type="text"
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
+                  value={amountInput}
+                  onChange={(e) => setAmountInput(e.target.value)}
+                />
+              </div>
+              <div className="w-full flex justify-between text-base font-normal  text-[#DEDEDE]">
+                <span className="leading-none">Balance:</span>
+                <span className="leading-none">{userBalance}</span>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-[#51D5EB1A] rounded-md py-3 px-4 flex flex-col gap-3.5">
+              <span className="leading-none text-base font-normal text-[#DEDEDE]">
+                Receive if you win
+              </span>
+              <div className="w-full flex gap-0.5 items-center text-xl font-bold">
+                <p>$</p>
+                <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]">
+                  {calculateQuantityFromCost || BigInt(0)}
+                </span>
+              </div>
+              <div className="w-full flex justify-between text-base font-normal text-[#DEDEDE]">
+                <span className="leading-none">x{multiplier}</span>
+              </div>
             </div>
           </div>
 
-          {/* Avg Price */}
-          <div className={styles.priceCard}>
-            <div className={styles.cardLabel}>Avg Price</div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(dataAvgPrice)}
-            </div>
-          </div>
-
-          {/* Amount */}
-          <div className={styles.amountCard}>
-            <div className={styles.cardLabel}>Amount</div>
-            <div className={styles.amountInput}>
-              <input
-                type="text"
-                inputMode="decimal"
-                pattern="^[0-9]*[.,]?[0-9]*$"
-                value={amountInput}
-                onChange={handleAmountChange}
-                onBlur={handleAmountBlur}
-                className={styles.amountInputField}
-                placeholder="Enter amount"
-              />
-            </div>
-            <div className={styles.cardValue}>
-              {currencyFormatter.format(amount || 0)}
-            </div>
-            <div className={styles.cardSubtext}>Balance: $0</div>
-          </div>
-
-          {/* Receive if you win */}
-          <div className={styles.receiveCard}>
-            <div className={styles.cardLabel}>Receive if you win</div>
-            <div className={styles.cardValue}>
-              {amount > 0 ? currencyFormatter.format(receiveIfWin) : "$0"}
-            </div>
-            <div className={styles.cardSubtext}>
-              {winProbability > 0 && amount > 0
-                ? (receiveIfWin / amount).toFixed(2) + "x"
-                : "x0.00"}
-            </div>
-          </div>
-
-          {/* Place Bet Button */}
           <button
-            className={styles.placeBetButton}
-            onClick={() => {
-              if (!walletAddress) {
-                // If wallet is not connected, redirect to connect wallet
-                // The header will handle the wallet connection
-                alert(
-                  "Please connect your wallet using the Connect Wallet button in the header"
-                );
-                return;
-              }
-
-              if (amount <= 0) {
-                alert("Please enter a valid amount");
-                return;
-              }
-
-              // 실제 베팅 로직 구현
-              console.log("Placing bet:", {
-                amount,
-                priceRange,
-                winProbability,
-                walletAddress,
-              });
-
-              // TODO: Implement actual betting logic here
-              alert(
-                `Bet placed: $${amount} on price range $${priceRange[0]} - $${priceRange[1]}`
-              );
-
-              // Show hedge modal after successful bet
-              setShowHedgeModal(true);
-            }}
+            className="py-4 font-bold text-sm text-black rounded-md bg-[#51D5EB] mt-2"
+            onClick={handlePlaceBet}
             disabled={!walletAddress || amount <= 0}
           >
             {walletAddress ? "Place Bet" : "Connect Wallet First"}
@@ -855,11 +1023,11 @@ export default function CoinDetail() {
         <HedgeModal
           isOpen={showHedgeModal}
           onClose={() => setShowHedgeModal(false)}
-          token={marketData.token || ''}
+          token={marketData.token || ""}
           currentPrice={coin?.currentPrice || 0}
           betAmount={amount}
-          priceRange={priceRange}
-          question={marketData.question || ''}
+          priceRange={clampedPriceRange}
+          question={marketData.question || ""}
         />
       )}
     </Layout>

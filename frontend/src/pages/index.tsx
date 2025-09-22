@@ -7,10 +7,17 @@ import styles from "@/styles/Home.module.css";
 import { apiService } from "@/utils/apiService";
 import { useHyperliquidCandles } from "@/hooks/useHyperliquidCandles";
 import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
-import { InfoClient, HttpTransport } from "@nktkas/hyperliquid";
+import {
+  InfoClient,
+  HttpTransport,
+  WebSocketTransport,
+} from "@nktkas/hyperliquid";
 import { MarketResponseDTO, CreateMarketDTO } from "@/types/market";
 import PriceLineChart from "@/components/PriceLineChart";
+import Image from "next/image";
 import { fetchCryptoPrices } from "@/utils/externalApiService";
+import { useAccount } from "wagmi";
+import Link from "next/link";
 
 // Destructure apiService
 const { market } = apiService;
@@ -42,10 +49,10 @@ const isIgnorableWalletConnectError = (error: unknown) => {
 const formatEthBalance = (weiHex: string) => {
   try {
     const wei = BigInt(weiHex);
-    const etherWhole = wei / 10n ** 18n;
-    const etherFraction = wei % 10n ** 18n;
+    const etherWhole = wei / BigInt(1e18);
+    const etherFraction = wei % BigInt(1e18);
 
-    if (etherFraction === 0n) {
+    if (etherFraction === BigInt(0)) {
       return etherWhole.toString();
     }
 
@@ -93,6 +100,9 @@ const fetchEthPrice = async (): Promise<number | null> => {
 export default function Home() {
   const router = useRouter();
   const { walletAddress } = useWallet();
+
+  const { address } = useAccount();
+
   const PRICE_MIN = 77000;
   const PRICE_MAX = 116000;
   const PRICE_STEP = 1000;
@@ -119,13 +129,6 @@ export default function Home() {
     return ["#e5e7eb", "#000000", "#e5e7eb"];
   }, []);
 
-  // Hyperliquid live candle for HYPE/USDC (mainnet)
-  const { latest: hypeCandle } = useHyperliquidCandles({
-    baseOrPair: "HYPE",
-    interval: "1m",
-    testnet: false,
-  });
-
   // Fetch markets
   const fetchMarkets = useCallback(async () => {
     try {
@@ -146,23 +149,44 @@ export default function Home() {
   }, [fetchMarkets]);
 
   // Fetch crypto prices once on mount
-  useEffect(() => {
-    const loadCryptoPrices = async () => {
-      try {
-        const prices = await fetchCryptoPrices();
-        setCryptoPrices(prices);
-      } catch (error) {
-        console.error('Failed to fetch crypto prices:', error);
-      }
-    };
-    
-    loadCryptoPrices();
-  }, []);
+  // useEffect(() => {
+  //   const loadCryptoPrices = async () => {
+  //     try {
+  //       const prices = await fetchCryptoPrices();
+  //       setCryptoPrices(prices);
+  //     } catch (error) {
+  //       console.error('Failed to fetch crypto prices:', error);
+  //     }
+  //   };
+  //
+  //   loadCryptoPrices();
+  // }, []);
 
   // Extract price from question text
   const extractPriceFromQuestion = (question: string): number => {
     const match = question.match(/\$([\d,]+)/);
     return match ? parseInt(match[1].replace(/,/g, "")) : 0;
+  };
+
+  // Extract coin symbol from question and map to Hyperliquid pair ID
+  const getCoinPairFromQuestion = (question: string): string => {
+    const questionLower = question.toLowerCase();
+
+    if (questionLower.includes("bitcoin") || questionLower.includes("btc")) {
+      return "@1"; // BTC/USDC pair
+    }
+    if (questionLower.includes("ethereum") || questionLower.includes("eth")) {
+      return "@0"; // ETH/USDC pair
+    }
+    if (questionLower.includes("hype")) {
+      return "@107"; // HYPE/USDC pair
+    }
+    if (questionLower.includes("solana") || questionLower.includes("sol")) {
+      return "@2"; // SOL/USDC pair
+    }
+
+    // Default to HYPE if no match found
+    return "@107";
   };
 
   // Format volume from wei to k Vol format
@@ -174,31 +198,57 @@ export default function Home() {
     return `${(ethVolume / 1000).toFixed(1)}k`;
   };
 
+  // Hyperliquid live candle for HYPE/USDC (mainnet)
+  const { latest: hypeCandle } = useHyperliquidCandles({
+    baseOrPair: "HYPE",
+    interval: "1m",
+  });
+
+  const { latest: btcCandle } = useHyperliquidCandles({
+    baseOrPair: "UBTC",
+    interval: "1m",
+  });
+
+  const { latest: ethCandle } = useHyperliquidCandles({
+    baseOrPair: "UETH",
+    interval: "1m",
+  });
+
+  // console.log("latest: ", {hypeCandle, btcCandle, ethCandle})
+
   // Get current price from market data or real-time prices
   const getCurrentPrice = (market: Market): string => {
     if (market.resolutionOutcome && market.resolutionOutcome !== "null" && market.resolutionOutcome !== null) {
       return parseFloat(market.resolutionOutcome).toLocaleString();
     }
-    
+
     // Use real-time prices for active markets
-    if (cryptoPrices) {
-      const questionLower = market.question.toLowerCase();
-      
-      if (questionLower.includes('bitcoin') || questionLower.includes('btc')) {
-        return cryptoPrices.bitcoin?.price ? Math.round(cryptoPrices.bitcoin.price).toLocaleString() : "0";
-      }
-      if (questionLower.includes('ethereum') || questionLower.includes('eth')) {
-        return cryptoPrices.ethereum?.price ? Math.round(cryptoPrices.ethereum.price).toLocaleString() : "0";
-      }
-      if (questionLower.includes('hype')) {
-        const hypePrice = cryptoPrices.hyperliquid?.price;
-        if (hypePrice && !isNaN(hypePrice) && isFinite(hypePrice)) {
-          return hypePrice.toFixed(3);
-        }
-        return "0";
-      }
+    const questionLower = market.question.toLowerCase();
+    if (questionLower.includes("bitcoin") || questionLower.includes("btc")) {
+      return btcCandle
+        ? parseFloat(btcCandle.c).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : "0";
     }
-    
+    if (questionLower.includes("ethereum") || questionLower.includes("eth")) {
+      return ethCandle
+        ? parseFloat(ethCandle.c).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : "0";
+    }
+    if (questionLower.includes("hype")) {
+      return hypeCandle
+        ? parseFloat(hypeCandle.c).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : "0";
+    }
+
     // Final fallback to extracting from question
     return extractPriceFromQuestion(market.question).toLocaleString();
   };
@@ -255,71 +305,57 @@ export default function Home() {
               </h2>
 
               {/* Question Card View */}
-              <div className={styles.cardList}>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3 pt-3 w-fit">
                 {markets.map((marketItem) => (
-                  <div key={marketItem.slug} className={styles.card}>
-                    {/* Header with icon, name, and chevron */}
-                    <div className={styles.cardHeader}>
-                      <div className={styles.coinInfo}>
-                        <div className={styles.coinIcon}>
-                          {marketItem.profileImage ? (
-                            <img
-                              src={marketItem.profileImage}
-                              alt="Profile"
-                              className={styles.profileImage}
-                            />
-                          ) : (
-                            <span className={styles.iconText}>Q</span>
-                          )}
-                        </div>
-                        <div className={styles.coinDetails}>
-                          <p className={styles.coinName}>
-                            {marketItem.question}
-                          </p>
-                        </div>
+                  <Link
+                    href={`/coins/${marketItem.slug}`}
+                    key={marketItem.slug}
+                  >
+                    <div
+                      key={marketItem.slug}
+                      className="w-[322px] h-[248px] bg-[#51D5EB1A] pt-5 pb-4 px-4 flex flex-col rounded-lg gap-3"
+                    >
+                      {/* Header with icon, name, and chevron */}
+                      <div className="flex gap-2.5 items-center">
+                        <Image
+                          src={
+                            marketItem.profileImage || "/public/tide-logo.svg"
+                          }
+                          alt="Profile"
+                          width={24}
+                          height={24}
+                          className="object-contain rounded-full"
+                        />
+                        <p className="font-semibold text-white">
+                          {marketItem.question}
+                        </p>
                       </div>
-                      <div
-                        onClick={() => {
-                          console.log("🏠 Home - marketItem:", marketItem);
-                          console.log(
-                            "🏠 Home - marketItem.token:",
-                            marketItem.token
-                          );
-                          router.push({
-                            pathname: `/coins/${marketItem.slug}`,
-                            query: { marketData: JSON.stringify(marketItem) },
-                          });
-                        }}
-                        className={styles.chevron}
-                      >
-                        ›
-                      </div>
-                    </div>
 
-                    {/* Price and Volume Section */}
-                    <div className={styles.priceVolumeSection}>
-                      <div className={styles.priceInfo}>
-                        <div className={styles.priceContainer}>
-                          <span className={styles.price}>
+                      {/* Price and Volume Section */}
+                      <div className="w-full flex justify-between items-end pt-1 px-1">
+                        <div className="relative flex flex-row">
+                          <span className="text-[#51D5EB] font-semibold text-base">
                             ${getCurrentPrice(marketItem)}
                           </span>
+                          {/* <div className="absolute top-0 -right-2 w-3 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/>
+                          <div className="absolute top-0 -right-2 w-1.5 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/> */}
+                          <span className="relative ml-1 flex size-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#51D5EB] opacity-75"></span>
+                            <span className="relative inline-flex size-2 rounded-full bg-[#359eb1]"></span>
+                          </span>
                         </div>
-                      </div>
 
-                      <div className={styles.volumeInfo}>
-                        <p className={styles.volumeValue}>
+                        <p className="text-[#D9D9D9] text-xs font-normal">
                           ${formatVolume(marketItem.volume)} Vol
                         </p>
                       </div>
-                    </div>
 
-                    {/* Chart Section */}
-                    <div className={styles.chartSection}>
-                      <PriceLineChart coin={marketItem.token} />
-                    </div>
+                      {/* Chart Section */}
+                      <div className="w-full h-[99px]">
+                        <PriceLineChart coin={marketItem.token} />
+                      </div>
 
-                    {/* Predict and Quick Bet Buttons */}
-                    <div className={styles.actionButtons}>
+                      {/* Predict and Quick Bet Buttons */}
                       <button
                         onClick={() => {
                           router.push({
@@ -327,12 +363,12 @@ export default function Home() {
                             query: { marketData: JSON.stringify(marketItem) },
                           });
                         }}
-                        className={styles.predictButton}
+                        className="py-2 w-full flex items-center justify-center font-bold text-black bg-[#51D5EB] rounded-lg"
                       >
                         Predict
                       </button>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </>

@@ -4,6 +4,9 @@ import { ReactNode, useState } from "react";
 import { useWallet } from "@/contexts/WalletContext";
 import TopUpModal from "@/components/TopUpModal";
 import styles from "@/styles/Layout.module.css";
+import { Toaster } from "react-hot-toast";
+import Image from "next/image";
+import Link from "next/link";
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,7 +20,7 @@ const shortenAddress = (address: string) =>
 export default function Layout({
   children,
   title = "Tide Markets",
-  description = "Realtime crypto markets overview"
+  description = "Realtime crypto markets overview",
 }: LayoutProps) {
   const router = useRouter();
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -31,7 +34,7 @@ export default function Layout({
     setShowDisconnectTooltip,
     connectWallet,
     disconnectWallet,
-    connectWrapperRef
+    connectWrapperRef,
   } = useWallet();
 
   const isActivePage = (path: string) => router.pathname === path;
@@ -50,42 +53,53 @@ export default function Layout({
         <header className={styles.header}>
           <div className={styles.headerContent}>
             <div className={styles.flexCompacted}>
-              <div className={styles.brand}>
+              <Link className={styles.brand} href="/">
                 <div className={styles.logo}>
-                  <img src="/logo.svg" alt="Tide Logo" width="52" height="32" />
+                  <Image
+                    src="/logo.svg"
+                    alt="Tide Logo"
+                    width={52}
+                    height={32}
+                    className="object-contain"
+                  />
                 </div>
-                <img src="/tide-text.svg" alt="Tide" className={styles.brandText} />
-              </div>
+                <Image
+                  src="/tide-text.svg"
+                  alt="Tide"
+                  className={styles.brandText}
+                  width={72.13}
+                  height={24}
+                />
+              </Link>
 
               <nav className={styles.navigation}>
-                <a
+                <Link
                   href="/"
-                  className={`${styles.navLink} ${isActivePage('/') ? styles.active : ''}`}
+                  className={`${styles.navLink} ${isActivePage("/") ? styles.active : ""}`}
                 >
                   Markets
-                </a>
-                <a
-                  href="#"
-                  className={styles.navLink}
+                </Link>
+                <Link
+                  href="/portfolio"
+                  className={`${styles.navLink} ${isActivePage("/portfolio") ? styles.active : ""}`}
                 >
                   Portfolio
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/news"
-                  className={`${styles.navLink} ${isActivePage('/news') ? styles.active : ''}`}
+                  className={`${styles.navLink} ${isActivePage("/news") ? styles.active : ""}`}
                 >
                   News Feed
-                </a>
+                </Link>
               </nav>
             </div>
-
 
             <div className={styles.headerActions}>
               {walletAddress && (
                 <div className={styles.walletBalance}>
-                  {hyperliquidBalance !== null
-                      ? `$${hyperliquidBalance.toFixed(2)} USDC`
-                      : "$0.00 USDC"}
+                  {walletBalance
+                    ? `$${(parseFloat(walletBalance)).toFixed(0)}`
+                    : "$0"}
                 </div>
               )}
               <div className={styles.connectWrapper} ref={connectWrapperRef}>
@@ -102,8 +116,9 @@ export default function Layout({
                     }
                   }}
                   disabled={isConnecting}
-                  className={`${styles.connectButton} ${walletAddress ? styles.connectButtonConnected : ""
-                    }`}
+                  className={`${styles.connectButton} ${
+                    walletAddress ? styles.connectButtonConnected : ""
+                  }`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
@@ -169,7 +184,33 @@ export default function Layout({
             </div>
           </div>
         </header>
+        <Toaster
+          position="top-center"
+          reverseOrder={false}
+          gutter={8}
+          containerClassName=""
+          containerStyle={{}}
+          toasterId="default"
+          toastOptions={{
+            // Define default options
+            className: "",
+            duration: 5000,
+            removeDelay: 1000,
+            style: {
+              background: "#363636",
+              color: "#fff",
+            },
 
+            // Default options for specific types
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: "green",
+                secondary: "black",
+              },
+            },
+          }}
+        />
         {children}
       </div>
 
@@ -184,3 +225,4 @@ export default function Layout({
     </>
   );
 }
+
