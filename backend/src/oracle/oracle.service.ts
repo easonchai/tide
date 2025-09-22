@@ -63,7 +63,7 @@ export class OracleService {
         return;
       }
 
-      const scaledSettlement = BigInt(Math.round(priceData.close * 1e6 / 100) * 100);
+      const scaledSettlement = BigInt(Math.round(priceData.close * 100) * 10000);
 
       if (market.onChainId === null || market.onChainId === undefined) {
         throw new Error(`onChainId not set for market ${market.slug}`);
