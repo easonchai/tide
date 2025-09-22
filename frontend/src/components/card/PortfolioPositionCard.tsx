@@ -1,13 +1,15 @@
 import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
-import { marketContract } from "@/config/config";
+import { config, marketContract } from "@/config/config";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import React, { useState, useMemo } from "react";
 import toast from "react-hot-toast";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { useRouter } from "next/router";
 import { MarketStatus } from "@/types/market";
 import SellPositionModal from "@/components/SellPositionModal";
+import { waitForTransactionReceipt } from "wagmi/actions";
+import { apiService } from "@/utils/apiService";
 
 interface PortfolioPositionCardProps {
   id: string;
@@ -85,29 +87,29 @@ export default function PortfolioPositionCard({
   const { address } = useAccount();
   const router = useRouter();
 
+  const { writeContractAsync } = useWriteContract();
+  const [isSelling, setIsSelling] = useState(false);
   // Get current sell proceeds from smart contract
-  const { data: calculatedSellProceed = BigInt(0) } = useReadContract({
+  const { data: calculatedSellProceed = BigInt(0), error } = useReadContract({
     address: marketContract,
     abi: cLMSRMarketCoreABI,
-    functionName: "calculatedSellProceed",
+    functionName: "calculateCloseProceeds",
     args: onChainId ? [BigInt(onChainId)] : undefined,
     query: {
       enabled: Boolean(onChainId),
     },
-  }) as { data: bigint };
+  // }) as { data: bigint };
+  }) as { data: bigint, error:any };
+
+  console.log("data: ", {calculatedSellProceed, error})
 
   // Calculate values
   const investedAmount = useMemo(() => toNumber(amount) / 100000, [amount]);
-  const currentValue = useMemo(() => {
-    if (market?.status === "OPEN") {
-      return weiToEth(calculatedSellProceed);
-    }
-    return toNumber(payout) / 100000;
-  }, [market?.status, calculatedSellProceed, payout]);
+  const currentValue = toNumber(calculatedSellProceed) /100000; 
 
   const isProfit = currentValue >= investedAmount;
 
-  const handleSellClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSellClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
 
     if (!address) {
@@ -120,6 +122,37 @@ export default function PortfolioPositionCard({
       return;
     }
 
+    if (!calculatedSellProceed) {
+      toast.error("Sell proceed calculation failed")
+      return;
+    }
+
+    setIsSelling(true);
+    try {
+      const tx = await writeContractAsync({
+        address: marketContract,
+        abi: cLMSRMarketCoreABI,
+        functionName: "closePosition",
+        args: [onChainId, calculatedSellProceed],
+      });
+
+      if (!tx) return;
+
+      const receipt = await waitForTransactionReceipt(config, { hash: tx });
+
+      if (receipt.status === "reverted") {
+        toast.error("Sell position failed");
+        return
+      }
+
+      await apiService.market.closePosition(id, {payout: calculatedSellProceed})
+
+      toast.success("Successfully sold position");
+    } catch (e) {
+      console.error("Error selling position");
+    } finally {
+      setIsSelling(false);
+    }
     setShowSellModal(true);
   };
 
@@ -223,6 +256,7 @@ export default function PortfolioPositionCard({
           <button
             className="bg-[#51D5EB] hover:bg-[#15D5EB] text-black border-none rounded-lg py-3 text-sm font-bold cursor-pointer transition-all duration-200 ease-in-out w-full"
             onClick={handleSellClick}
+            disabled={isSelling}
           >
             Sell
           </button>
