@@ -1,5 +1,7 @@
 import Head from "next/head";
+import Image from "next/image";
 import dynamic from "next/dynamic";
+import Layout from "@/components/Layout";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import styles from "@/styles/Portfolio.module.css";
@@ -38,6 +40,7 @@ interface PortfolioPosition {
   updatedAt: string;
   deletedAt: string | null;
   market?: PortfolioMarket;
+  hedged?: boolean;
 }
 
 const WEI_IN_ETH = 1e18;
@@ -95,7 +98,7 @@ const computePnL = (position: PortfolioPosition) => {
 function PortfolioPage() {
   const router = useRouter();
 
-  const {address} = useAccount();
+  const { address } = useAccount();
 
 
   // const [isLoading, setIsLoading] = useState(false);
@@ -226,226 +229,353 @@ function PortfolioPage() {
 
 
   return (
-    <>
+    <Layout>
       <Head>
         <title>Portfolio | Tide Markets</title>
         <meta name="description" content="View your Tide Markets portfolio" />
       </Head>
 
-      <main className={styles.main}>
-        <section className={styles.heroSection}>
-          <div>
-            <h1 className={styles.title}>Portfolio</h1>
-          </div>
-        </section>
+      <div className={styles.container}>
+        <main className={styles.main}>
+          {/* Section Title - Match index.tsx styling */}
+          <h2 className={styles.sectionTitle}>
+            Portfolio
+          </h2>
 
-        {!address ? (
-          <div className={styles.emptyState}>
-            <p>
-              lmao
-              지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
-              시도해주세요.
-            </p>
-          </div>
-        ) : isLoading ? (
-          <div className={styles.emptyState}>
-            <p>Loading...</p>
-          </div>
-        ) : error ? (
-          <div className={styles.emptyState}>
-            <p>{error.message}</p>
-          </div>
-        ) : (
-          <>
-            <div className={styles.dashboardRow}>
-              <section className={styles.summaryGrid}>
-                <div className={styles.summaryCard}>
-                  <span className={styles.summaryLabel}>30 Day PnL</span>
-                  <span className={styles.summaryValue}>
-                    {summary.pnl30d >= 0 ? "+" : "-"}$
-                    {formatCurrency(Math.abs(summary.pnl30d))}
+          {!address ? (
+            <div className={styles.emptyState}>
+              <p>
+                lmao
+                지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
+                시도해주세요.
+              </p>
+            </div>
+          ) : isLoading ? (
+            <div className={styles.emptyState}>
+              <p>Loading...</p>
+            </div>
+          ) : error ? (
+            <div className={styles.emptyState}>
+              <p>{error.message}</p>
+            </div>
+          ) : (
+            <>
+              {/* Portfolio Grid - First Half */}
+              <div className={styles.portfolioGrid}>
+                {/* PNL Card with Modal Link */}
+                <div className={styles.pnlCard}>
+                  <span className={styles.topCardTitle}>30 Day PnL</span>
+                  <span className={`${styles.cardValue} ${summary.pnl30d >= 0 ? styles.valuePositive : styles.valueNegative
+                    }`}>
+                    {summary.pnl30d >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.pnl30d))}
                   </span>
+                  <button
+                    className={styles.viewLink}
+                    onClick={() => console.log("PNL Modal")}
+                  >
+                    View PNL
+                  </button>
                 </div>
-                <div className={styles.summaryCard}>
-                  <span className={styles.summaryLabel}>30 Day Volume</span>
-                  <span className={styles.summaryValue}>
+
+                {/* Volume Card with Modal Link */}
+                <div className={styles.volumeCard}>
+                  <span className={styles.topCardTitle}>30 Day Volume</span>
+                  <span className={styles.cardValue}>
                     ${formatCurrency(summary.volume30d)}
                   </span>
+                  <button
+                    className={styles.viewLink}
+                    onClick={() => console.log("Volume Details Modal")}
+                  >
+                    View Volume
+                  </button>
                 </div>
-              </section>
 
-              <section className={styles.statsSection}>
-                <h2 className={styles.sectionTitle}>User Statistics</h2>
-                <div className={styles.statsContainer}>
-                  <div className={styles.primaryStats}>
-                    <div className={styles.primaryStat}>
-                      <span className={styles.primaryStatLabel}>PNL</span>
-                      <span
-                        className={`${styles.primaryStatValue} ${
-                          summary.totalPnL >= 0
-                            ? styles.valuePositive
-                            : styles.valueNegative
-                        }`}
-                      >
-                        ${formatCurrency(Math.abs(summary.totalPnL))}
+                {/* User Statistics Card */}
+                <div className={styles.userStatsCard}>
+                  <h3 className={styles.topCardTitle}>User Statistics</h3>
+                  <div className={styles.statsContent}>
+                    <div className={styles.statRow}>
+                      <span className={styles.statLabel}>PNL</span>
+                      <span className={`${styles.statValue} ${summary.totalPnL >= 0 ? styles.valuePositive : styles.valueNegative
+                        }`}>
+                        {summary.totalPnL >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.totalPnL))}
                       </span>
                     </div>
-                    <div className={styles.primaryStat}>
-                      <span className={styles.primaryStatLabel}>Volume</span>
-                      <span className={styles.primaryStatValue}>
+                    <div className={styles.statRow}>
+                      <span className={styles.statLabel}>Volume</span>
+                      <span className={styles.statValue}>
                         ${formatCurrency(summary.totalVolume)}
                       </span>
                     </div>
-                  </div>
-                  <div className={styles.secondaryStats}>
-                    <div className={styles.secondaryStat}>
-                      <span className={styles.secondaryStatLabel}>
-                        Markets Traded
-                      </span>
-                      <span className={styles.secondaryStatValue}>
+                    <div className={styles.statRow}>
+                      <span className={styles.statLabel}>Markets Traded</span>
+                      <span className={styles.statValue}>
                         {summary.marketsTraded}
                       </span>
                     </div>
-                    <div className={styles.secondaryStat}>
-                      <span className={styles.secondaryStatLabel}>
-                        Win/Loss Ratio
-                      </span>
-                      <span className={styles.secondaryStatValue}>
+                    <div className={styles.statRow}>
+                      <span className={styles.statLabel}>Win/Loss Ratio</span>
+                      <span className={styles.statValue}>
                         {summary.winLossRatio.toFixed(2)}
                       </span>
                     </div>
                   </div>
                 </div>
-              </section>
-            </div>
 
-            <section className={styles.positionsSection}>
-              <div className={styles.tabContainer}>
-                <div className={styles.tabHeader}>
-                  <button
-                    className={`${styles.tabButton} ${
-                      activeTab === "open" ? styles.tabActive : ""
-                    }`}
-                    onClick={() => setActiveTab("open")}
-                  >
-                    open
-                  </button>
-                  <button
-                    className={`${styles.tabButton} ${
-                      activeTab === "closed" ? styles.tabActive : ""
-                    }`}
-                    onClick={() => setActiveTab("closed")}
-                  >
-                    close
-                  </button>
+                {/* Performance Graph */}
+                <div className={styles.performanceCard}>
+                  <h3 className={styles.topCardTitle}>PNL</h3>
+                  <div className={styles.graphPlaceholder}>
+                    <svg width="100%" height="120" viewBox="0 0 300 120">
+                      <path
+                        d="M20,80 Q60,40 100,60 T180,50 Q220,30 280,40"
+                        stroke="#51D5EB"
+                        strokeWidth="2"
+                        fill="none"
+                      />
+                      <circle cx="280" cy="40" r="3" fill="#51D5EB" />
+                    </svg>
+                    <span className={styles.graphLabel}>Mock Performance Chart</span>
+                  </div>
                 </div>
+              </div>
 
-                <div className={styles.positionsGrid}>
-                  {filteredPositions.length > 0 &&
-                    filteredPositions.map((position) => (
+              {/* Open/Closed Markets - Second Half */}
+              <section className={styles.marketsSection}>
+                <div className={styles.tabContainer}>
+                  <div className={styles.tabHeader}>
+                    <button
+                      className={`${styles.tabButton} ${activeTab === "open" ? styles.tabActive : ""
+                        }`}
+                      onClick={() => setActiveTab("open")}
+                    >
+                      Open
+                    </button>
+                    <button
+                      className={`${styles.tabButton} ${activeTab === "closed" ? styles.tabActive : ""
+                        }`}
+                      onClick={() => setActiveTab("closed")}
+                    >
+                      Closed
+                    </button>
+                  </div>
+
+                  <div className={styles.marketCardsGrid}>
+                    {/* Mocked Open Positions */}
+                    {activeTab === "open" && (
+                      <>
+                        {/* Bitcoin Position - Winning */}
+                        <div className={styles.marketCard}>
+                          <div className={styles.cardHeader}>
+                            <div className={styles.cardHeaderLeft}>
+                              <img
+                                src="/logo.svg"
+                                alt="Bitcoin"
+                                width={24}
+                                height={24}
+                                className={styles.cardIcon}
+                              />
+                              <div>
+                                <p className={styles.cardTitle}>
+                                  Bitcoin Closing Price on Sep 21
+                                </p>
+                                <p className={styles.cardDate}>
+                                  Ends 22/09/2025 09:00 AM GMT+9
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Hedged Indicator - Bitcoin is hedged */}
+                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
+                            <Image
+                              src="/hedge-icon.svg"
+                              alt="Hedged"
+                              width={12}
+                              height={12}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
+                          </div>
+
+                          <div className={styles.cardStats}>
+                            <div className={styles.cardStatItem}>
+                              <span className={styles.cardStatLabel}>Invested</span>
+                              <span className={styles.cardStatValue}>
+                                $200.00
+                              </span>
+                            </div>
+                            <div className={styles.cardStatItem}>
+                              <span className={styles.cardStatLabel}>Current Value</span>
+                              <span className={`${styles.cardStatValue} ${styles.valuePositive}`}>
+                                $242.00
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            className={styles.cardSellButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("Sell Bitcoin position");
+                            }}
+                          >
+                            Sell
+                          </button>
+                        </div>
+
+                        {/* Ethereum Position - Losing */}
+                        <div className={styles.marketCard}>
+                          <div className={styles.cardHeader}>
+                            <div className={styles.cardHeaderLeft}>
+                              <img
+                                src="/logo.svg"
+                                alt="Ethereum"
+                                width={24}
+                                height={24}
+                                className={styles.cardIcon}
+                              />
+                              <div>
+                                <p className={styles.cardTitle}>
+                                  Ethereum Closing Price on Sep 21
+                                </p>
+                                <p className={styles.cardDate}>
+                                  Ends 22/09/2025 09:00 AM GMT+9
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          {/* No Hedged Indicator - Ethereum is not hedged */}
+
+                          <div className={styles.cardStats}>
+                            <div className={styles.cardStatItem}>
+                              <span className={styles.cardStatLabel}>Invested</span>
+                              <span className={styles.cardStatValue}>
+                                $150.00
+                              </span>
+                            </div>
+                            <div className={styles.cardStatItem}>
+                              <span className={styles.cardStatLabel}>Current Value</span>
+                              <span className={`${styles.cardStatValue} ${styles.valueNegative}`}>
+                                $125.00
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            className={styles.cardSellButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("Sell Ethereum position");
+                            }}
+                          >
+                            Sell
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Real positions */}
+                    {filteredPositions.map((position) => (
                       <div
                         key={position.id}
-                        className={styles.positionCard}
+                        className={styles.marketCard}
                         onClick={() => {
                           if (position.market?.slug) {
                             router.push(`/coins/${position.market.slug}`);
                           }
                         }}
                       >
-                        <div className={styles.positionHeader}>
-                          <div className={styles.positionIcon}>
-                            {position.market?.profileImage ? (
-                              <img
-                                src={position.market.profileImage}
-                                alt="Profile"
-                                className={styles.positionImage}
-                              />
-                            ) : (
-                              <span className={styles.positionIconText}>M</span>
-                            )}
-                          </div>
-                          <div className={styles.positionMeta}>
-                            <span className={styles.positionQuestion}>
+                        {/* Header with icon, name, and hedged indicator */}
+                        <div className={styles.cardHeader}>
+                          <div className={styles.cardHeaderLeft}>
+                            <img
+                              src={position.market?.profileImage || "/logo.svg"}
+                              alt="Profile"
+                              width={24}
+                              height={24}
+                              className={styles.cardIcon}
+                            />
+                            <p className={styles.cardTitle}>
                               {position.market?.question ?? "Unknown market"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Date */}
+                        <p className={styles.cardDate}>
+                          Ends {formatDate(
+                            position.market?.status === "OPEN"
+                              ? position.market?.endDate ?? null
+                              : position.updatedAt
+                          )}
+                        </p>
+
+                        {/* Hedged Indicator - Based on position.hedged flag */}
+                        {position.hedged && (
+                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
+                            <Image
+                              src="/hedge-icon.svg"
+                              alt="Hedged"
+                              width={12}
+                              height={12}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
+                          </div>
+                        )}
+                        {/* Investment Stats */}
+                        <div className={styles.cardStats}>
+                          <div className={styles.cardStatItem}>
+                            <span className={styles.cardStatLabel}>Invested</span>
+                            <span className={styles.cardStatValue}>
+                              ${formatCurrency(weiToEth(position.amount))}
                             </span>
-                            <span className={styles.positionEndDate}>
-                              Ends at{" "}
-                              {formatDate(
+                          </div>
+                          <div className={styles.cardStatItem}>
+                            <span className={styles.cardStatLabel}>
+                              {position.market?.status === "OPEN" ? "Current Value" : "Final Value"}
+                            </span>
+                            <span className={`${styles.cardStatValue} ${computePnL(position) >= 0 ? styles.valuePositive : styles.valueNegative
+                              }`}>
+                              ${formatCurrency(
                                 position.market?.status === "OPEN"
-                                  ? position.market?.endDate ?? null
-                                  : position.updatedAt
+                                  ? weiToEth(position.amount) + computePnL(position)
+                                  : weiToEth(position.payout)
                               )}
                             </span>
                           </div>
                         </div>
 
-                        <div className={styles.positionStats}>
-                          <div className={styles.investmentRow}>
-                            <div className={styles.investmentItem}>
-                              <span className={styles.statLabel}>Invested</span>
-                              <span className={styles.statValue}>
-                                ${formatCurrency(weiToEth(position.amount))}
-                              </span>
-                            </div>
-                            {position.market?.status === "OPEN" ? (
-                              <div className={styles.investmentItem}>
-                                <span className={styles.statLabel}>
-                                  Current Value
-                                </span>
-                                <span
-                                  className={`${styles.statValue} ${
-                                    computePnL(position) >= 0
-                                      ? styles.valuePositive
-                                      : styles.valueNegative
-                                  }`}
-                                >
-                                  $
-                                  {formatCurrency(
-                                    weiToEth(position.amount) +
-                                      computePnL(position)
-                                  )}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className={styles.investmentItem}>
-                                <span className={styles.statLabel}>PnL</span>
-                                <span
-                                  className={`${styles.statValue} ${
-                                    computePnL(position) >= 0
-                                      ? styles.valuePositive
-                                      : styles.valueNegative
-                                  }`}
-                                >
-                                  {computePnL(position) >= 0 ? "+" : ""}$
-                                  {formatCurrency(computePnL(position))}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
+                        {/* Sell Button for Open Markets */}
                         {position.market?.status === "OPEN" && (
-                          <div className={styles.positionActions}>
-                            <button
-                              className={styles.sellButton}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // TODO: Implement sell functionality
-                                console.log("Sell position:", position.id);
-                              }}
-                            >
-                              Sell
-                            </button>
-                          </div>
+                          <button
+                            className={styles.cardSellButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("Sell position:", position.id);
+                            }}
+                          >
+                            Sell
+                          </button>
                         )}
                       </div>
                     ))}
+
+                    {/* Show empty state only if no positions AND no mocked positions for open tab */}
+                    {filteredPositions.length === 0 && activeTab === "closed" && (
+                      <div className={styles.emptyMarkets}>
+                        <p>No {activeTab} positions found.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
-          </>
-        )}
-      </main>
-    </>
+              </section>
+            </>
+          )}
+        </main>
+      </div>
+    </Layout>
   );
 }
