@@ -31,7 +31,7 @@ const isIgnorableWalletConnectError = (error: unknown) => {
   const message =
     typeof error === "string"
       ? error
-      : ((error as Error | undefined)?.message ?? "");
+      : (error as Error | undefined)?.message ?? "";
 
   if (!message) {
     return false;
@@ -86,7 +86,7 @@ const clearWalletConnectStorage = () => {
 const fetchEthPrice = async (): Promise<number | null> => {
   try {
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
     );
     const data = await response.json();
     return data.ethereum?.usd || null;
@@ -224,19 +224,13 @@ export default function Home() {
     // Use real-time prices for active markets
     const questionLower = market.question.toLowerCase();
     if (questionLower.includes("bitcoin") || questionLower.includes("btc")) {
-      return btcCandle
-        ? parseFloat(btcCandle.c).toFixed(2)
-        : "0";
+      return btcCandle ? parseFloat(btcCandle.c).toFixed(2) : "0";
     }
     if (questionLower.includes("ethereum") || questionLower.includes("eth")) {
-      return ethCandle
-        ? parseFloat(ethCandle.c).toFixed(2)
-        : "0";
+      return ethCandle ? parseFloat(ethCandle.c).toFixed(2) : "0";
     }
     if (questionLower.includes("hype")) {
-      return hypeCandle
-        ? parseFloat(hypeCandle.c).toFixed(2)
-        : "0";
+      return hypeCandle ? parseFloat(hypeCandle.c).toFixed(2) : "0";
     }
 
     // Final fallback to extracting from question
@@ -270,11 +264,11 @@ export default function Home() {
 
   // Calculate potential payout (simplified calculation)
   const selectedRange = marketDistribution.filter(
-    (item) => item.price >= priceRange[0] && item.price <= priceRange[1],
+    (item) => item.price >= priceRange[0] && item.price <= priceRange[1]
   );
   const totalProbability = selectedRange.reduce(
     (sum, item) => sum + item.probability,
-    0,
+    0
   );
   const winProbability =
     totalProbability /
@@ -297,33 +291,41 @@ export default function Home() {
               {/* Question Card View */}
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3 pt-3 w-fit">
                 {markets.map((marketItem) => (
-                  <div key={marketItem.slug} className="w-[322px] h-[248px] bg-[#51D5EB1A] pt-5 pb-4 px-4 flex flex-col rounded-lg gap-3">
+                  <div
+                    key={marketItem.slug}
+                    className="w-[322px] h-[248px] bg-[#51D5EB1A] pt-5 pb-4 px-4 flex flex-col rounded-lg gap-3"
+                  >
                     {/* Header with icon, name, and chevron */}
                     <div className="flex gap-2.5 items-center">
-                        <Image
-                          src={marketItem.profileImage || "/public/tide-logo.svg"}
-                          alt="Profile"
-                          width={24}
-                          height={24}
-                          className="object-contain rounded-full"
-                        />
-                          <p className="font-semibold text-white">
-                            {marketItem.question}
-                          </p>
+                      <Image
+                        src={marketItem.profileImage || "/public/tide-logo.svg"}
+                        alt="Profile"
+                        width={24}
+                        height={24}
+                        className="object-contain rounded-full"
+                      />
+                      <p className="font-semibold text-white">
+                        {marketItem.question}
+                      </p>
                     </div>
 
                     {/* Price and Volume Section */}
                     <div className="w-full flex justify-between items-end pt-1 px-1">
-                        <div className="relative">
-                          <span className="text-[#51D5EB] font-semibold text-base">
-                            ${getCurrentPrice(marketItem)}
-                          </span>
-                          <div className="absolute top-0 -right-2 w-1.5 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/>
-                        </div>
+                      <div className="relative flex flex-row">
+                        <span className="text-[#51D5EB] font-semibold text-base">
+                          ${getCurrentPrice(marketItem)}
+                        </span>
+                        {/* <div className="absolute top-0 -right-2 w-3 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/>
+                          <div className="absolute top-0 -right-2 w-1.5 aspect-square rounded-full bg-[#51D5EB] animate-pulse ease-in-out blur-[2px]"/> */}
+                        <span className="relative ml-1 flex size-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#51D5EB] opacity-75"></span>
+                          <span className="relative inline-flex size-2 rounded-full bg-[#359eb1]"></span>
+                        </span>
+                      </div>
 
-                        <p className="text-[#D9D9D9] text-xs font-normal">
-                          ${formatVolume(marketItem.volume)} Vol
-                        </p>
+                      <p className="text-[#D9D9D9] text-xs font-normal">
+                        ${formatVolume(marketItem.volume)} Vol
+                      </p>
                     </div>
 
                     {/* Chart Section */}
@@ -332,17 +334,17 @@ export default function Home() {
                     </div>
 
                     {/* Predict and Quick Bet Buttons */}
-                      <button
-                        onClick={() => {
-                          router.push({
-                            pathname: `/coins/${marketItem.slug}`,
-                            query: { marketData: JSON.stringify(marketItem) },
-                          });
-                        }}
-                        className="py-2 w-full flex items-center justify-center font-bold text-black bg-[#51D5EB] rounded-lg"
-                      >
-                        Predict
-                      </button>
+                    <button
+                      onClick={() => {
+                        router.push({
+                          pathname: `/coins/${marketItem.slug}`,
+                          query: { marketData: JSON.stringify(marketItem) },
+                        });
+                      }}
+                      className="py-2 w-full flex items-center justify-center font-bold text-black bg-[#51D5EB] rounded-lg"
+                    >
+                      Predict
+                    </button>
                   </div>
                 ))}
               </div>
@@ -387,7 +389,7 @@ export default function Home() {
                       $
                       {currentQuestion
                         ? extractPriceFromQuestion(
-                            currentQuestion.question,
+                            currentQuestion.question
                           ).toLocaleString()
                         : "0"}
                     </span>
