@@ -2,12 +2,14 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import Layout from "@/components/Layout";
 import PortfolioPositionCard from "@/components/card/PortfolioPositionCard";
-import { useMemo, useState } from "react";
+import PnLChart from "@/components/PnLChart";
+import { useMemo, useState, useEffect } from "react";
 import styles from "@/styles/Portfolio.module.css";
 import { apiService } from "@/utils/apiService";
 import { MarketStatus } from "@/types/market";
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
+import HyperliquidService, { UserPortfolioData } from "@/utils/hyperliquidService";
 
 interface PortfolioMarket {
   id: string;
@@ -51,11 +53,10 @@ const formatCurrency = (value: number): string => {
 
 function PortfolioPage() {
   const { address } = useAccount();
-
-
-  // const [isLoading, setIsLoading] = useState(false);
-  // const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
+  const [hyperliquidData, setHyperliquidData] = useState<UserPortfolioData | null>(null);
+  const [pnlChartData, setPnlChartData] = useState<Array<{ time: string; pnl: number }>>([]);
+  const [isLoadingHyperliquid, setIsLoadingHyperliquid] = useState(false);
 
   const { data: positionsData, isLoading, error } = useQuery<PortfolioPosition[]>({
     queryKey: ["positions", address],
@@ -69,6 +70,33 @@ function PortfolioPage() {
     () => positionsData ?? [],
     [positionsData]
   );
+
+  // Fetch Hyperliquid data
+  useEffect(() => {
+    if (!address) return;
+
+    const fetchHyperliquidData = async () => {
+      setIsLoadingHyperliquid(true);
+      try {
+        // Get portfolio data
+        const portfolioData = await HyperliquidService.getUserPortfolio(address);
+        setHyperliquidData(portfolioData);
+
+        // Generate chart data (mock for now, or use real portfolio history)
+        if (portfolioData) {
+          const accountValue = parseFloat(portfolioData.accountValue) || 1000;
+          const chartData = HyperliquidService.generateMockPnLData(accountValue);
+          setPnlChartData(chartData);
+        }
+      } catch (error) {
+        console.error("Error fetching Hyperliquid data:", error);
+      } finally {
+        setIsLoadingHyperliquid(false);
+      }
+    };
+
+    fetchHyperliquidData();
+  }, [address]);
 
   // useEffect(() => {
   //   if (!address) {
@@ -152,14 +180,40 @@ function PortfolioPage() {
   }, [activeTab, openPositions, closedPositions]);
 
   const summary = useMemo(() => {
-    // Randomize values for demo purposes on each mount/address change
-    const rng = () => Math.random();
+    if (hyperliquidData) {
+      // Use real Hyperliquid data when available
+      const accountValue = parseFloat(hyperliquidData.accountValue) || 0;
+      const totalNtlPos = parseFloat(hyperliquidData.totalNtlPos) || 0;
+      const totalMarginUsed = parseFloat(hyperliquidData.totalMarginUsed) || 0;
+      
+      // Calculate some mock metrics based on real data
+      const totalPnL = accountValue - 1000; // Assume starting balance was 1000
+      const pnl30d = totalPnL * 0.3; // 30% of total PnL happened in last 30 days
+      const volume30d = Math.abs(totalNtlPos) * 2; // Mock volume based on position size
+      
+      return {
+        totalPnL,
+        totalVolume: Math.abs(totalNtlPos) * 5, // Mock total volume
+        pnl30d,
+        volume30d,
+        marketsTraded: hyperliquidData.balances.length + (hyperliquidData.spotBalances?.length || 0),
+        wins: Math.floor(Math.random() * 5) + 1,
+        losses: Math.floor(Math.random() * 3),
+        winLossRatio: 0.6 + Math.random() * 0.3, // 60-90%
+        accountValue,
+        totalNtlPos,
+        totalMarginUsed,
+        spotBalance: hyperliquidData.spotBalances?.find((b: any) => b.coin === 'USDC')?.total || '0',
+      };
+    }
 
-    const totalPnL = (rng() - 0.5) * 2000; // -1000 to +1000
-    const totalVolume = 1000 + rng() * 9000; // 1k to 10k
-    const pnl30d = (rng() - 0.5) * 1000; // -500 to +500
-    const volume30d = 500 + rng() * 4500; // 500 to 5k
-    const marketsTraded = Math.floor(1 + rng() * 10); // 1-10
+    // Fallback to randomized data if no Hyperliquid data
+    const rng = () => Math.random();
+    const totalPnL = (rng() - 0.5) * 2000;
+    const totalVolume = 1000 + rng() * 9000;
+    const pnl30d = (rng() - 0.5) * 1000;
+    const volume30d = 500 + rng() * 4500;
+    const marketsTraded = Math.floor(1 + rng() * 10);
     const wins = Math.floor(rng() * marketsTraded);
     const losses = Math.max(marketsTraded - wins, 0);
     const winLossRatio = marketsTraded > 0 ? wins / marketsTraded : 0;
@@ -173,8 +227,12 @@ function PortfolioPage() {
       wins,
       losses,
       winLossRatio,
+      accountValue: 0,
+      totalNtlPos: 0,
+      totalMarginUsed: 0,
+      spotBalance: '0',
     };
-  }, []);
+  }, [hyperliquidData]);
 
   // Removed unused pnlSeries
 
@@ -202,9 +260,9 @@ function PortfolioPage() {
                 시도해주세요.
               </p>
             </div>
-          ) : isLoading ? (
+          ) : isLoading || isLoadingHyperliquid ? (
             <div className={styles.emptyState}>
-              <p>Loading...</p>
+              <p>Loading portfolio data...</p>
             </div>
           ) : error ? (
             <div className={styles.emptyState}>
@@ -248,28 +306,27 @@ function PortfolioPage() {
                   <h3 className={styles.topCardTitle}>User Statistics</h3>
                   <div className={styles.statsContent}>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>PNL</span>
-                      <span className={`${styles.statValue} ${summary.totalPnL >= 0 ? styles.valuePositive : styles.valueNegative
-                        }`}>
-                        {summary.totalPnL >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.totalPnL))}
+                      <span className={styles.statLabel}>Account Value</span>
+                      <span className={`${styles.statValue} ${summary.accountValue >= 1000 ? styles.valuePositive : styles.valueNegative}`}>
+                        ${formatCurrency(summary.accountValue)}
                       </span>
                     </div>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>Volume</span>
+                      <span className={styles.statLabel}>USDC Balance</span>
                       <span className={styles.statValue}>
-                        ${formatCurrency(summary.totalVolume)}
+                        ${formatCurrency(parseFloat(summary.spotBalance))}
                       </span>
                     </div>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>Markets Traded</span>
+                      <span className={styles.statLabel}>Position Size</span>
                       <span className={styles.statValue}>
-                        {summary.marketsTraded}
+                        ${formatCurrency(Math.abs(summary.totalNtlPos))}
                       </span>
                     </div>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>Win/Loss Ratio</span>
+                      <span className={styles.statLabel}>Margin Used</span>
                       <span className={styles.statValue}>
-                        {summary.winLossRatio.toFixed(2)}
+                        ${formatCurrency(summary.totalMarginUsed)}
                       </span>
                     </div>
                   </div>
@@ -277,19 +334,17 @@ function PortfolioPage() {
 
                 {/* Performance Graph */}
                 <div className={styles.performanceCard}>
-                  <h3 className={styles.topCardTitle}>PNL</h3>
-                  <div className={styles.graphPlaceholder}>
-                    <svg width="100%" height="120" viewBox="0 0 300 120">
-                      <path
-                        d="M20,80 Q60,40 100,60 T180,50 Q220,30 280,40"
-                        stroke="#51D5EB"
-                        strokeWidth="2"
-                        fill="none"
-                      />
-                      <circle cx="280" cy="40" r="3" fill="#51D5EB" />
-                    </svg>
-                    <span className={styles.graphLabel}>Mock Performance Chart</span>
-                  </div>
+                  <h3 className={styles.topCardTitle}>Portfolio Performance</h3>
+                  {pnlChartData.length > 0 ? (
+                    <PnLChart 
+                      data={pnlChartData} 
+                      className="h-full w-full min-h-[120px]"
+                    />
+                  ) : (
+                    <div className={styles.graphPlaceholder}>
+                      <span className={styles.graphLabel}>Loading chart data...</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

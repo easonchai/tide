@@ -670,7 +670,7 @@
 
 "@nktkas/hyperliquid@^0.24.3":
   version "0.24.3"
-  resolved "https://registry.npmjs.org/@nktkas/hyperliquid/-/hyperliquid-0.24.3.tgz"
+  resolved "https://registry.yarnpkg.com/@nktkas/hyperliquid/-/hyperliquid-0.24.3.tgz#ef485417b1dbba02f4f1295e89ce573cd99bbf8e"
   integrity sha512-SXEZAHWCjnNZmUQYYfvHT8JXvOOOs0mfDwU6VEF85D4w8Gw/S9f2RszpH1wMn9DAnK+p0qCkTEk7/sz0PI8aBQ==
   dependencies:
     "@msgpack/msgpack" "^3.1.2"
@@ -5401,7 +5401,7 @@ real-require@^0.1.0:
 
 recharts@^3.2.1:
   version "3.2.1"
-  resolved "https://registry.npmjs.org/recharts/-/recharts-3.2.1.tgz"
+  resolved "https://registry.yarnpkg.com/recharts/-/recharts-3.2.1.tgz#a4dbf9b089404bd8e2fb74a9aa8a7679e413e2f0"
   integrity sha512-0JKwHRiFZdmLq/6nmilxEZl3pqb4T+aKkOkOi/ZISRZwfBhVMgInxzlYU9D4KnCH3KINScLy68m/OvMXoYGZUw==
   dependencies:
     "@reduxjs/toolkit" "1.x.x || 2.x.x"
