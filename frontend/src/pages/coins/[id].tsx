@@ -377,14 +377,14 @@ export default function CoinDetail() {
     functionName: "calculateQuantityFromCost",
     args: [
       BigInt(marketData?.onChainId ?? 0),
-      parseUnits(String(priceRange[0]), 2),
-      parseUnits(String(priceRange[1]), 2),
+      parseUnits(String(Math.round(priceRange[0] / 100) * 100), 2),
+      parseUnits(String(Math.round(priceRange[1] / 100) * 100), 2),
       parseUnits(amountInput || "0", 6),
     ],
     query: {
       enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
     },
-  })
+  });
 
   console.log("isLoading", readIsLoading);
   console.log("error", error);
@@ -535,8 +535,14 @@ export default function CoinDetail() {
     // TODO: Add min max validation
     try {
       const marketId = BigInt(marketData.onChainId);
-      const lowerTick = parseUnits(String(priceRange[0]), 2);
-      const upperTick = parseUnits(String(priceRange[1]), 2);
+      const lowerTick = parseUnits(
+        String(Math.round(priceRange[0] / 100) * 100),
+        2
+      );
+      const upperTick = parseUnits(
+        String(Math.round(priceRange[0] / 100) * 100),
+        2
+      );
       const amountParsed = calculateQuantityFromCost; // already bigint
       const maxCost = parseUnits(amountInput, 6);
 
@@ -923,9 +929,12 @@ export default function CoinDetail() {
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
                 <p>$</p>
-                <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]">
-                  {calculatedQuantityFromCost || BigInt(0)}
-                </span>
+                  <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]">
+                    {calculateQuantityFromCost 
+                      ? (Number(calculateQuantityFromCost) / 1e7).toFixed(6)
+                      : "0.000000"
+                    }
+                  </span>
               </div>
               <div className="w-full flex justify-between text-base font-semibold">
                 <span className="leading-none">Balance:</span>
