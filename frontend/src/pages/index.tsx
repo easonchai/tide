@@ -49,8 +49,8 @@ const isIgnorableWalletConnectError = (error: unknown) => {
 const formatEthBalance = (weiHex: string) => {
   try {
     const wei = BigInt(weiHex);
-    const etherWhole = wei / BigInt( 1e18 );
-    const etherFraction = wei % BigInt( 1e18 );
+    const etherWhole = wei / BigInt(1e18);
+    const etherFraction = wei % BigInt(1e18);
 
     if (etherFraction === BigInt(0)) {
       return etherWhole.toString();
@@ -225,13 +225,28 @@ export default function Home() {
     // Use real-time prices for active markets
     const questionLower = market.question.toLowerCase();
     if (questionLower.includes("bitcoin") || questionLower.includes("btc")) {
-      return btcCandle ? parseFloat(btcCandle.c).toFixed(2) : "0";
+      return btcCandle
+        ? parseFloat(btcCandle.c).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : "0";
     }
     if (questionLower.includes("ethereum") || questionLower.includes("eth")) {
-      return ethCandle ? parseFloat(ethCandle.c).toFixed(2) : "0";
+      return ethCandle
+        ? parseFloat(ethCandle.c).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : "0";
     }
     if (questionLower.includes("hype")) {
-      return hypeCandle ? parseFloat(hypeCandle.c).toFixed(2) : "0";
+      return hypeCandle
+        ? parseFloat(hypeCandle.c).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : "0";
     }
 
     // Final fallback to extracting from question

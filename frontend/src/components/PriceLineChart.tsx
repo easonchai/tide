@@ -32,7 +32,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-[#0f2a31] border border-[#12323b] text-[#e6f4f1] px-3 py-2 rounded shadow-lg">
         <p className="font-medium">Time: {data.name || `Index: ${label}`}</p>
         <p className="text-sm text-[#51D5EB]">
-          Price: ${data.value.toFixed(2)}
+          Price: $
+          {data.value.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
         </p>
       </div>
     );
