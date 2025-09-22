@@ -95,7 +95,7 @@ export default function Layout({
               {walletAddress && (
                 <div className={styles.walletBalance}>
                   {walletBalance
-                    ? `$${(parseFloat(walletBalance) * 2500).toFixed(0)}` // Approximate ETH to USD
+                    ? `$${(parseFloat(walletBalance)).toFixed(0)}`
                     : "$0"}
                 </div>
               )}
