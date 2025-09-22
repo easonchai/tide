@@ -114,7 +114,7 @@ export default function SellPositionModal({
           {/* You'll Receive */}
           <div className="bg-[#51D5EB1A] border border-[#51D5EB33] rounded-lg p-4">
             <div className="flex justify-between items-center">
-              <span className="text-white text-lg font-semibold">You'll Receive</span>
+              <span className="text-white text-lg font-semibold">You&apos;ll Receive</span>
               <span className="text-[#51D5EB] text-2xl font-bold">
                 ${formatCurrency(position.currentValue)}
               </span>
