@@ -40,24 +40,24 @@ export default function SellPositionModal({
 }: SellPositionModalProps) {
   const [isSelling, setIsSelling] = useState(false);
 
-  const handleSell = async () => {
-    setIsSelling(true);
-    try {
-      // Call the API to close the position
-      await apiService.market.closePosition(position.id, {
-        payout: Math.round(position.currentValue * 1e18) // Convert to wei
-      });
-
-      toast.success("Position sold successfully!");
-      onSellSuccess?.();
-      onClose();
-    } catch (error) {
-      console.error("Error selling position:", error);
-      toast.error("Failed to sell position");
-    } finally {
-      setIsSelling(false);
-    }
-  };
+  // const handleSell = async () => {
+  //   setIsSelling(true);
+  //   try {
+  //     // Call the API to close the position
+  //     await apiService.market.closePosition(position.id, {
+  //       payout: Math.round(position.currentValue * 1e18) // Convert to wei
+  //     });
+  //
+  //     toast.success("Position sold successfully!");
+  //     onSellSuccess?.();
+  //     onClose();
+  //   } catch (error) {
+  //     console.error("Error selling position:", error);
+  //     toast.error("Failed to sell position");
+  //   } finally {
+  //     setIsSelling(false);
+  //   }
+  // };
 
   const profit = position.currentValue - position.investedAmount;
 
@@ -124,7 +124,7 @@ export default function SellPositionModal({
 
         <DialogFooter className="flex flex-row gap-3">
           <button
-            onClick={handleSell}
+            onClick={() => {}}
             disabled={isSelling}
             className="w-full bg-[#51D5EB] text-black py-3 px-4 rounded-lg font-bold hover:bg-[#3bc4d9] transition-colors disabled:opacity-50"
           >
