@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import Layout from "@/components/Layout";
 import { useRouter } from "next/router";
@@ -39,6 +40,7 @@ interface PortfolioPosition {
   updatedAt: string;
   deletedAt: string | null;
   market?: PortfolioMarket;
+  hedged?: boolean;
 }
 
 const WEI_IN_ETH = 1e18;
@@ -384,8 +386,18 @@ function PortfolioPage() {
                               </div>
                             </div>
                           </div>
-
-
+                          
+                          {/* Hedged Indicator - Bitcoin is hedged */}
+                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
+                            <Image
+                              src="/hedge-icon.svg"
+                              alt="Hedged"
+                              width={12}
+                              height={12}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
+                          </div>
 
                           <div className={styles.cardStats}>
                             <div className={styles.cardStatItem}>
@@ -434,8 +446,7 @@ function PortfolioPage() {
                               </div>
                             </div>
                           </div>
-
-
+                          {/* No Hedged Indicator - Ethereum is not hedged */}
 
                           <div className={styles.cardStats}>
                             <div className={styles.cardStatItem}>
@@ -490,11 +501,6 @@ function PortfolioPage() {
                               {position.market?.question ?? "Unknown market"}
                             </p>
                           </div>
-                          {/* Hedged/Not Hedged Icon - Mock condition */}
-                          <div className={`${styles.hedgeIndicator} ${Math.random() > 0.5 ? styles.hedged : styles.notHedged
-                            }`}>
-                            {Math.random() > 0.5 ? "🛡️" : "⚠️"}
-                          </div>
                         </div>
 
                         {/* Date */}
@@ -506,6 +512,19 @@ function PortfolioPage() {
                           )}
                         </p>
 
+                        {/* Hedged Indicator - Based on position.hedged flag */}
+                        {position.hedged && (
+                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
+                            <Image
+                              src="/hedge-icon.svg"
+                              alt="Hedged"
+                              width={12}
+                              height={12}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
+                          </div>
+                        )}
                         {/* Investment Stats */}
                         <div className={styles.cardStats}>
                           <div className={styles.cardStatItem}>
