@@ -607,7 +607,7 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-right: 2rem;
+  margin-right: 1rem;
 }
 
 .tabButton:hover {
