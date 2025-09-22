@@ -60,6 +60,13 @@ const formatDate = (value: string | null) => {
   return date.toLocaleDateString();
 };
 
+const formatDateTime = (value: string | null) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString();
+};
+
 export default function PortfolioPositionCard({
   id,
   onChainId,
@@ -163,7 +170,7 @@ export default function PortfolioPositionCard({
                 {market?.question ?? "Unknown market"}
               </p>
               <p className="text-[#DEDEDE] text-sm font-normal">
-                Ends {formatDate(
+                Ends {formatDateTime(
                   market?.status === "OPEN" ? market?.endDate ?? null : null
                 )}
               </p>
