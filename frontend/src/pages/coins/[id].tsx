@@ -541,7 +541,7 @@ export default function CoinDetail() {
         2
       );
       const upperTick = parseUnits(
-        String(Math.round(priceRange[0] / 100) * 100),
+        String(Math.round(priceRange[1] / 100) * 100),
         2
       );
       const amountParsed = calculateQuantityFromCost; // already bigint
