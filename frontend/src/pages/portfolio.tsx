@@ -401,49 +401,6 @@ function PortfolioPage() {
                   </div>
 
                   <div className={styles.marketCardsGrid}>
-                    {/* Mock positions for demonstration */}
-                    {activeTab === "open" && (
-                      <>
-                        <PortfolioPositionCard
-                          id="mock-bitcoin"
-                          marketId="mock-bitcoin-market"
-                          onChainId="1"
-                          amount={BigInt(200 * 1e18)}
-                          payout={BigInt(242 * 1e18)}
-                          createdAt="2024-01-01T00:00:00.000Z"
-                          updatedAt="2024-01-01T00:00:00.000Z"
-                          market={{
-                            id: "mock-bitcoin-market",
-                            question: "Bitcoin Closing Price on Sep 21",
-                            status: "OPEN" as MarketStatus,
-                            profileImage: "/logo.svg",
-                            slug: "bitcoin-sep-21",
-                            endDate: "2025-09-22T09:00:00Z",
-                          }}
-                          hedged={true}
-                        />
-
-                        <PortfolioPositionCard
-                          id="mock-ethereum"
-                          marketId="mock-ethereum-market"
-                          onChainId="2"
-                          amount={BigInt(150 * 1e18)}
-                          payout={BigInt(125 * 1e18)}
-                          createdAt="2024-01-01T00:00:00.000Z"
-                          updatedAt="2024-01-01T00:00:00.000Z"
-                          market={{
-                            id: "mock-ethereum-market",
-                            question: "Ethereum Closing Price on Sep 21",
-                            status: "OPEN" as MarketStatus,
-                            profileImage: "/logo.svg",
-                            slug: "ethereum-sep-21",
-                            endDate: "2025-09-22T09:00:00Z",
-                          }}
-                          hedged={false}
-                        />
-                      </>
-                    )}
-
                     {/* Real positions from API */}
                     {filteredPositions.map((position) => (
                       <PortfolioPositionCard
@@ -456,17 +413,16 @@ function PortfolioPage() {
                         createdAt={position.createdAt}
                         updatedAt={position.updatedAt}
                         market={position.market}
-                        hedged={position.hedged}
+                        hedged={false}
                       />
                     ))}
 
-                    {/* Show empty state only if no positions AND no mocked positions for open tab */}
-                    {filteredPositions.length === 0 &&
-                      activeTab === "closed" && (
-                        <div className={styles.emptyMarkets}>
-                          <p>No {activeTab} positions found.</p>
-                        </div>
-                      )}
+                    {/* Show empty state if no positions */}
+                    {filteredPositions.length === 0 && (
+                      <div className={styles.emptyMarkets}>
+                        <p>No {activeTab} positions found.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
