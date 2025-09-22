@@ -35,7 +35,7 @@ export function useHyperliquidCandles(params: {
     async function start() {
       try {
         const transport = new WebSocketTransport({
-          url: testnet ? 'wss://api.hyperliquid-testnet.xyz/ws' : 'wss://api.hyperliquid.xyz/ws',
+          url: 'wss://api.hyperliquid.xyz/ws',
           autoResubscribe: true,
           keepAlive: { interval: 30000 },
         });
