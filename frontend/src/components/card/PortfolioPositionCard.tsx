@@ -17,6 +17,7 @@ interface PortfolioPositionCardProps {
   payout: string | number | bigint;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
   market?: {
     id: string;
     question: string;
@@ -64,6 +65,7 @@ export default function PortfolioPositionCard({
   onChainId,
   amount,
   payout,
+  deletedAt,
   market,
   hedged = false,
   onClick,
@@ -113,6 +115,23 @@ export default function PortfolioPositionCard({
   const handleSellSuccess = () => {
     // Refresh the position data or redirect
     window.location.reload();
+  };
+
+  const handleClaimClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    
+    if (!address) {
+      toast.error("Please connect your wallet");
+      return;
+    }
+
+    if (!onChainId) {
+      toast.error("Position ID not found");
+      return;
+    }
+
+    // TODO: Implement claim functionality
+    toast.success("Claim functionality will be implemented");
   };
 
   const handleCardClick = () => {
@@ -195,6 +214,27 @@ export default function PortfolioPositionCard({
           >
             Sell
           </button>
+        )}
+
+        {/* Claim Button for Closed Markets */}
+        {market?.status === "CLOSED" && (
+          <>
+            {deletedAt === null ? (
+              <button
+                className="bg-[#51D5EB] hover:bg-[#15D5EB] text-black border-none rounded-lg py-3 text-sm font-bold cursor-pointer transition-all duration-200 ease-in-out w-full"
+                onClick={handleClaimClick}
+              >
+                Claim
+              </button>
+            ) : (
+              <button
+                className="bg-[#6b7280] text-white border-none rounded-lg py-3 text-sm font-bold cursor-not-allowed w-full"
+                disabled
+              >
+                Claimed
+              </button>
+            )}
+          </>
         )}
       </div>
 

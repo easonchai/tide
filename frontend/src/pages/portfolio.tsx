@@ -70,7 +70,7 @@ function PortfolioPage() {
   } = useQuery<PortfolioPosition[]>({
     queryKey: ["positions", address],
     queryFn: async () => {
-      const response = await apiService.market.getPositionsByUser(address!);
+      const response = await apiService.market.getPositionsByUser(address?.toLowerCase() || "");
       return response.data;
     },
     enabled: Boolean(address),
@@ -412,6 +412,7 @@ function PortfolioPage() {
                         payout={position.payout}
                         createdAt={position.createdAt}
                         updatedAt={position.updatedAt}
+                        deletedAt={position.deletedAt}
                         market={position.market}
                         hedged={false}
                       />
