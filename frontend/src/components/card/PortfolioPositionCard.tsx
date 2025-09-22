@@ -97,12 +97,12 @@ export default function PortfolioPositionCard({
   }) as { data: bigint };
 
   // Calculate values
-  const investedAmount = useMemo(() => weiToEth(amount), [amount]);
+  const investedAmount = useMemo(() => toNumber(amount) / 100000, [amount]);
   const currentValue = useMemo(() => {
     if (market?.status === "OPEN") {
       return weiToEth(calculatedSellProceed);
     }
-    return weiToEth(payout);
+    return toNumber(payout) / 100000;
   }, [market?.status, calculatedSellProceed, payout]);
 
   const isProfit = currentValue >= investedAmount;

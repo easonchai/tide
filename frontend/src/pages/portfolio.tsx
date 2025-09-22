@@ -46,13 +46,6 @@ interface PortfolioPosition {
   hedged?: boolean;
 }
 
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
 function PortfolioPage() {
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
