@@ -218,7 +218,7 @@ export default function Home() {
 
   // Get current price from market data or real-time prices
   const getCurrentPrice = (market: Market): string => {
-    if (market.resolutionOutcome) {
+    if (market.resolutionOutcome && market.resolutionOutcome !== "null" && market.resolutionOutcome !== null) {
       return parseFloat(market.resolutionOutcome).toLocaleString();
     }
 

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { InfoClient, HttpTransport } from '@nktkas/hyperliquid';
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -16,64 +17,88 @@ const setCachedData = (key: string, data: any) => {
   cache.set(key, { data, timestamp: Date.now() });
 };
 
-// CoinGecko API for crypto prices (free tier, good rate limits)
+// Hyperliquid API for crypto prices (using same method as PriceLineChart)
 export const fetchCryptoPrices = async () => {
   const cacheKey = 'crypto-prices';
   const cached = getCachedData(cacheKey);
   if (cached) return cached;
 
   try {
-    const response = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
-      params: {
-        ids: 'bitcoin,ethereum,solana,hyperliquid',
-        vs_currencies: 'usd',
-        include_24hr_change: true,
-        include_market_cap: true
-      }
+    const transport = new HttpTransport({ isTestnet: false }); // Use mainnet for prices
+    const infoClient = new InfoClient({ transport });
+    
+    // Use the correct coin identifiers from backend markets
+    const coinIds = {
+      btc: '@142',   // Bitcoin from backend market
+      eth: '@151',   // Ethereum from backend market  
+      sol: '@2',     // SOL/USDC pair (fallback)
+      hype: '@107'   // HYPE/USDC pair from backend market
+    };
+
+    // Get latest candle for each asset to get current price
+    const endTime = Date.now();
+    const startTime = endTime - (5 * 60 * 1000); // Last 5 minutes for better data
+
+    console.log('Fetching prices for coins:', coinIds);
+
+    const [btcCandles, ethCandles, solCandles, hypeCandles] = await Promise.all([
+      infoClient.candleSnapshot({ coin: coinIds.btc, interval: '1m', startTime, endTime }).catch((e) => { console.error('BTC fetch error:', e); return []; }),
+      infoClient.candleSnapshot({ coin: coinIds.eth, interval: '1m', startTime, endTime }).catch((e) => { console.error('ETH fetch error:', e); return []; }),
+      infoClient.candleSnapshot({ coin: coinIds.sol, interval: '1m', startTime, endTime }).catch((e) => { console.error('SOL fetch error:', e); return []; }),
+      infoClient.candleSnapshot({ coin: coinIds.hype, interval: '1m', startTime, endTime }).catch((e) => { console.error('HYPE fetch error:', e); return []; })
+    ]);
+
+    console.log('Candle data received:', {
+      btc: btcCandles.length,
+      eth: ethCandles.length,
+      sol: solCandles.length,
+      hype: hypeCandles.length
     });
 
     const pricesData = {
       bitcoin: {
-        price: response.data.bitcoin?.usd || 0,
-        change24h: response.data.bitcoin?.usd_24h_change || 0,
-        marketCap: response.data.bitcoin?.usd_market_cap || 0
+        price: btcCandles.length > 0 ? parseFloat(btcCandles[btcCandles.length - 1].c) : 0,
+        change24h: 0, // Would need 24h data for this
+        marketCap: 0
       },
       ethereum: {
-        price: response.data.ethereum?.usd || 0,
-        change24h: response.data.ethereum?.usd_24h_change || 0,
-        marketCap: response.data.ethereum?.usd_market_cap || 0
+        price: ethCandles.length > 0 ? parseFloat(ethCandles[ethCandles.length - 1].c) : 0,
+        change24h: 0,
+        marketCap: 0
       },
       solana: {
-        price: response.data.solana?.usd || 0,
-        change24h: response.data.solana?.usd_24h_change || 0,
-        marketCap: response.data.solana?.usd_market_cap || 0
+        price: solCandles.length > 0 ? parseFloat(solCandles[solCandles.length - 1].c) : 0,
+        change24h: 0,
+        marketCap: 0
       },
       hyperliquid: {
-        price: response.data.hyperliquid?.usd || 0,
-        change24h: response.data.hyperliquid?.usd_24h_change || 0,
-        marketCap: response.data.hyperliquid?.usd_market_cap || 0
+        price: hypeCandles.length > 0 ? parseFloat(hypeCandles[hypeCandles.length - 1].c) : 0,
+        change24h: 0,
+        marketCap: 0
       }
     };
+
+    console.log('Fetched Hyperliquid prices:', pricesData);
 
     setCachedData(cacheKey, pricesData);
     return pricesData;
   } catch (error) {
-    console.error('Failed to fetch crypto prices:', error);
+    console.error('Failed to fetch Hyperliquid prices:', error);
     return getFallbackPrices();
   }
 };
 
-// Alternative: RedStone API for prices
+// Fallback: RedStone API for prices
 export const fetchRedStonePrices = async () => {
   const cacheKey = 'redstone-prices';
   const cached = getCachedData(cacheKey);
   if (cached) return cached;
 
   try {
-    const symbols = ['BTC', 'ETH', 'SOL', 'HYPE'];
+    // RedStone API format
     const response = await axios.get('https://api.redstone.finance/prices', {
       params: {
-        symbols: symbols.join(','),
+        symbols: 'BTC,ETH,SOL',
         provider: 'redstone-main'
       }
     });
@@ -81,7 +106,7 @@ export const fetchRedStonePrices = async () => {
     const pricesData = {
       bitcoin: {
         price: response.data.BTC?.value || 0,
-        change24h: 0, // RedStone doesn't provide 24h change
+        change24h: 0,
         marketCap: 0
       },
       ethereum: {
@@ -95,7 +120,7 @@ export const fetchRedStonePrices = async () => {
         marketCap: 0
       },
       hyperliquid: {
-        price: response.data.HYPE?.value || 0,
+        price: 0, // HYPE not available in RedStone, will use Hyperliquid fallback
         change24h: 0,
         marketCap: 0
       }

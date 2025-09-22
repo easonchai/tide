@@ -10,6 +10,7 @@ import {
 import type { EthereumProvider } from "@walletconnect/ethereum-provider";
 import type { AxiosError } from "axios";
 import { apiService } from "@/utils/apiService";
+import { HttpTransport, InfoClient } from '@nktkas/hyperliquid';
 import { collateralContract } from "@/config/config";
 import { erc20ABI } from "@/abi/ERC20";
 import { useReadContract } from "wagmi";
@@ -119,7 +120,6 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  // const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
 
@@ -202,7 +202,6 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
       if (nextAccount) {
         void registerUser(nextAccount);
-        // void fetchWalletBalance(nextAccount);
       }
       setShowDisconnectTooltip(false);
     },
@@ -447,7 +446,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     setShowDisconnectTooltip,
     connectWallet,
     disconnectWallet,
-    connectWrapperRef,
+    connectWrapperRef
   };
 
   return (

@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useWallet } from "@/contexts/WalletContext";
 import styles from "@/styles/Layout.module.css";
 import { Toaster } from "react-hot-toast";
@@ -22,6 +22,7 @@ export default function Layout({
   description = "Realtime crypto markets overview",
 }: LayoutProps) {
   const router = useRouter();
+  
   const {
     walletAddress,
     walletBalance,
@@ -195,6 +196,7 @@ export default function Layout({
         />
         {children}
       </div>
+
     </>
   );
 }
