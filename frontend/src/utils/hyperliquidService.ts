@@ -91,11 +91,11 @@ export class HyperliquidService {
         user: userAddress as `0x${string}`,
       });
 
-      if (!portfolioData || !portfolioData.day) {
+      if (!portfolioData || !portfolioData.find((e) => e[0] === "day")) {
         return [];
       }
 
-      return portfolioData.day.map((entry: any) => ({
+      return (portfolioData.find((e) => e[0] === "day") || []).map((entry: any) => ({
         time: entry.time,
         accountValue: entry.accountValue,
         totalNtlPos: entry.totalNtlPos,
@@ -114,7 +114,7 @@ export class HyperliquidService {
     try {
       const fills = await infoClient.userFills({
         user: userAddress as `0x${string}`,
-        startTime,
+        // startTime,
       });
 
       return fills;
