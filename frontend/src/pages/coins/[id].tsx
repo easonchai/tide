@@ -384,7 +384,7 @@ export default function CoinDetail() {
     query: {
       enabled: Boolean(marketData !== undefined && !isNaN(Number(amountInput))),
     },
-  })
+  }) as {data: bigint | undefined, isLoading: boolean, error: unknown}
 
   console.log("isLoading", readIsLoading);
   console.log("error", error);
@@ -924,7 +924,7 @@ export default function CoinDetail() {
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
                 <p>$</p>
                 <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]">
-                  {calculatedQuantityFromCost || BigInt(0)}
+                  {calculateQuantityFromCost || BigInt(0)}
                 </span>
               </div>
               <div className="w-full flex justify-between text-base font-semibold">
