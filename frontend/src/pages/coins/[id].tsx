@@ -1190,7 +1190,7 @@ export default function CoinDetail() {
           </div>
 
           <button
-            className="py-4 font-bold text-sm text-black rounded-md bg-[#51D5EB] mt-2"
+            className="py-4 font-bold text-sm text-black rounded-md bg-[#51D5EB] disabled:opacity-50 mt-2"
             onClick={handlePlaceBet}
             disabled={!walletAddress || amount <= 0}
           >
