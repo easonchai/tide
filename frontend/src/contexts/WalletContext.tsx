@@ -59,10 +59,10 @@ const isIgnorableWalletConnectError = (error: unknown) => {
 const formatEthBalance = (weiHex: string) => {
   try {
     const wei = BigInt(weiHex);
-    const etherWhole = wei / 10n ** 18n;
-    const etherFraction = wei % 10n ** 18n;
+    const etherWhole = wei / BigInt( 1e18 );
+    const etherFraction = wei % BigInt(1e18);
 
-    if (etherFraction === 0n) {
+    if (etherFraction === BigInt(0)) {
       return etherWhole.toString();
     }
 
@@ -106,7 +106,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   const [showDisconnectTooltip, setShowDisconnectTooltip] = useState(false);
 
-  const providerRef = useRef<EthereumProvider | any | null>(null);
+  const providerRef = useRef<any | null>(null);
   const connectWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const registerUser = useCallback(async (address: string) => {
