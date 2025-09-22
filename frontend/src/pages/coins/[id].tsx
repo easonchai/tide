@@ -24,11 +24,12 @@ import { useCandleHistoryQuery } from "@/hooks/useCandleHistoryQuery";
 import HedgeModal from "@/components/HedgeModal";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import toast from "react-hot-toast";
-import { config, marketContract } from "@/config/config";
+import { collateralContract, config, marketContract } from "@/config/config";
 import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
 import { MarketResponseDTO } from "@/types/market";
-import { parseUnits } from "viem";
-import { waitForTransactionReceipt } from "wagmi/actions";
+import { parseUnits, maxUint256 } from "viem";
+import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { erc20ABI } from "@/abi/ERC20";
 
 // const shortenAddress = (address: string) =>
 //   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -386,13 +387,13 @@ export default function CoinDetail() {
     },
   }) as { data: bigint | undefined; isLoading: boolean; error: unknown };
 
-  console.log("isLoading", readIsLoading);
-  console.log("error", error);
-  console.log("address", marketContract);
-  console.log("onChainId", marketData?.onChainId);
-  console.log("Price Range 0", priceRange[0]);
-  console.log("Price Range 1", priceRange[1]);
-  console.log("amountInput", amountInput);
+  // console.log("isLoading", readIsLoading);
+  // console.log("error", error);
+  // console.log("address", marketContract);
+  // console.log("onChainId", marketData?.onChainId);
+  // console.log("Price Range 0", priceRange[0]);
+  // console.log("Price Range 1", priceRange[1]);
+  console.log("amountInput", {amountInput, calculateQuantityFromCost});
 
   // Ensure Range never mounts with out-of-bounds values
   const rangeStep = useMemo(
@@ -546,6 +547,35 @@ export default function CoinDetail() {
       const amountParsed = calculateQuantityFromCost; // already bigint
       const maxCost = parseUnits(amountInput, 6);
 
+      // Check current allowance
+      const currentAllowance = await readContract(config, {
+        address: collateralContract,
+        abi: erc20ABI,
+        functionName: "allowance",
+        args: [walletAddress, marketContract],
+      }) as bigint;
+
+      console.log("allowance: ", currentAllowance);
+
+      if (currentAllowance < maxCost) {
+        // Approve max spend if allowance is insufficient
+        const approveHash = await writeContractAsync({
+          address: collateralContract,
+          abi: erc20ABI,
+          functionName: "approve",
+          args: [marketContract, maxUint256],
+        });
+
+        const approveReceipt = await waitForTransactionReceipt(config, {
+          hash: approveHash,
+        });
+
+        if (approveReceipt.status === "reverted") {
+          toast.error("Approval transaction reverted");
+          return;
+        }
+      }
+
       const tx = await writeContractAsync({
         address: marketContract,
         abi: cLMSRMarketCoreABI,
@@ -578,7 +608,7 @@ export default function CoinDetail() {
 
       toast.success("Successfully placed bet");
     } catch (e) {
-      console.error("Error placing bet");
+      console.error("Error placing bet", e);
       return;
     } finally {
       setIsBetting(false);
