@@ -150,13 +150,13 @@ export default function PortfolioPositionCard({
       >
         {/* Header */}
         <div className="flex justify-between items-start gap-2 mb-4">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <img
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <Image
               src={market?.profileImage || "/logo.svg"}
               alt="Profile"
-              width={24}
-              height={24}
-              className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
             />
             <div>
               <p className="text-white text-lg font-semibold mb-2 line-clamp-2 leading-tight break-words">
