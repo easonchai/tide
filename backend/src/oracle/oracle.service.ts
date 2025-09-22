@@ -78,7 +78,7 @@ export class OracleService {
       await this.prisma.market.update({
         where: { id: market.id },
         data: {
-          status: 'RESOLVED',
+          status: 'CLOSED',
           resolvedAt: new Date(),
           resolutionOutcome: priceData.close.toString(),
         },
