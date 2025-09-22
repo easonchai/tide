@@ -2,8 +2,11 @@ import { useRouter } from "next/router";
 import Layout from "@/components/Layout";
 import { useQuery } from "@tanstack/react-query";
 import {
-  LineChart,
+  ComposedChart,
   Line,
+  Bar,
+  ScatterChart,
+  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,7 +14,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { Range, Direction } from "react-range";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import React from "react";
 
@@ -27,13 +29,14 @@ import toast from "react-hot-toast";
 import { collateralContract, config, marketContract } from "@/config/config";
 import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
 import { MarketResponseDTO } from "@/types/market";
-import { parseUnits, maxUint256, decodeEventLog } from "viem";
+import { parseUnits, maxUint256, decodeEventLog, formatUnits } from "viem";
 import {
   readContract,
   waitForTransactionReceipt,
   writeContract,
 } from "wagmi/actions";
 import { erc20ABI } from "@/abi/ERC20";
+import { useWallet } from "@/contexts/WalletContext";
 
 // const shortenAddress = (address: string) =>
 //   `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -116,8 +119,9 @@ export default function CoinDetail() {
   // Hedge modal state
   const [showHedgeModal, setShowHedgeModal] = useState(false);
 
-  const userBalance = 1000;
-  const multiplier = 2.5;
+  const { walletBalance: userBalance } = useWallet();
+
+  // const userBalance = 1000;
 
   const { data: marketData } = useQuery({
     queryKey: ["marketData", id],
@@ -202,6 +206,72 @@ export default function CoinDetail() {
     });
   }, []);
 
+  // Handle min price input change with 2 decimal limit and validation
+  const handleMinPriceChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = e.target;
+
+      // Allow empty string, numbers, and one decimal point
+      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+        const numValue = parseFloat(value);
+        if (value === "" || !isNaN(numValue)) {
+          setDataMinPrice(value === "" ? undefined : numValue);
+
+          if (!isNaN(numValue)) {
+            const roundedValue = Math.round(numValue * 100) / 100; // Round to 2 decimals
+            setPriceRange((prev) => {
+              // Ensure min doesn't exceed max
+              const newMin = Math.min(roundedValue, prev[1] - 0.01);
+              return [newMin, prev[1]];
+            });
+          }
+        }
+      }
+    },
+    []
+  );
+
+  // Handle max price input change with 2 decimal limit and validation
+  const handleMaxPriceChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = e.target;
+
+      // Allow empty string, numbers, and one decimal point
+      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+        const numValue = parseFloat(value);
+        if (value === "" || !isNaN(numValue)) {
+          setDataMaxPrice(value === "" ? undefined : numValue);
+
+          if (!isNaN(numValue)) {
+            const roundedValue = Math.round(numValue * 100) / 100; // Round to 2 decimals
+            setPriceRange((prev) => {
+              // Ensure max doesn't go below min
+              // const newMax = Math.max(roundedValue, prev[0] + 0.01);
+              return [prev[0], roundedValue];
+            });
+          }
+        }
+      }
+    },
+    []
+  );
+
+  // Handle min price input blur to format to 2 decimals
+  const handleMinPriceBlur = useCallback(() => {
+    if (dataMinPrice !== undefined) {
+      const formatted = dataMinPrice.toFixed(2);
+      setDataMinPrice(parseFloat(formatted));
+    }
+  }, [dataMinPrice]);
+
+  // Handle max price input blur to format to 2 decimals
+  const handleMaxPriceBlur = useCallback(() => {
+    if (dataMaxPrice !== undefined) {
+      const formatted = dataMaxPrice.toFixed(2);
+      setDataMaxPrice(parseFloat(formatted));
+    }
+  }, [dataMaxPrice]);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["coin-detail", id],
     queryFn: () => fetchCoinDetail(id as string),
@@ -245,7 +315,7 @@ export default function CoinDetail() {
           prices.reduce((sum, price) => sum + price, 0) / prices.length;
 
         const range = Math.max(max - min, 1);
-        const padding = range * 0.1;
+        const padding = range * 0.5; // Changed from 0.1 to 0.3 for 30% buffer
         const domainMin = Math.max(0, min - padding);
         const domainMax = max + padding;
 
@@ -284,7 +354,7 @@ export default function CoinDetail() {
 
       const currentPrice = coin?.currentPrice ?? 0;
       const basePrice = currentPrice > 0 ? currentPrice : 10000;
-      const padding = Math.max(basePrice * 0.15, 1000);
+      const padding = Math.max(basePrice * 0.5, 1000); // Changed from 0.15 to 0.3 for 30% buffer
       const domainMin = Math.max(0, basePrice - padding);
       const domainMax = basePrice + padding;
 
@@ -329,6 +399,20 @@ export default function CoinDetail() {
     initialPriceRange[1],
   ]);
 
+  // Initialize input fields with initial price range
+  useEffect(() => {
+    if (dataMinPrice === undefined && dataMaxPrice === undefined) {
+      setDataMinPrice(initialPriceRange[0]);
+      setDataMaxPrice(initialPriceRange[1]);
+    }
+  }, [initialPriceRange, dataMinPrice, dataMaxPrice]);
+
+  // Sync input fields when range slider changes (one-way sync)
+  useEffect(() => {
+    setDataMinPrice(priceRange[0]);
+    setDataMaxPrice(priceRange[1]);
+  }, [priceRange]);
+
   useEffect(() => {
     setPriceRange((prevRange) => {
       const clamp = (value: number) =>
@@ -372,6 +456,17 @@ export default function CoinDetail() {
     });
   }, [domain, initialPriceRange]);
 
+  // Dynamic tick snapping: hype-50 uses smaller $1 steps, others use $100
+  const clampStep = useMemo(() => (marketData?.slug === "hype-50" ? 1 : 100), [marketData?.slug]);
+  const toStepTick = useCallback(
+    (value: number, mode: "floor" | "ceil" | "round" = "round") => {
+      const fn = mode === "floor" ? Math.floor : mode === "ceil" ? Math.ceil : Math.round;
+      const snapped = fn(value / clampStep) * clampStep;
+      return parseUnits(snapped.toFixed(2), 2);
+    },
+    [clampStep]
+  );
+
   const {
     data: calculateQuantityFromCost,
     isLoading: readIsLoading,
@@ -382,8 +477,8 @@ export default function CoinDetail() {
     functionName: "calculateQuantityFromCost",
     args: [
       BigInt(marketData?.onChainId ?? 0),
-      parseUnits(String(Math.round(priceRange[0] / 100) * 100), 2),
-      parseUnits(String(Math.round(priceRange[1] / 100) * 100), 2),
+      toStepTick(priceRange[0], "floor"),
+      toStepTick(priceRange[1], "ceil"),
       parseUnits(amountInput || "0", 6),
     ],
     query: {
@@ -399,12 +494,6 @@ export default function CoinDetail() {
   // console.log("Price Range 1", priceRange[1]);
   console.log("amountInput", { amountInput, calculateQuantityFromCost });
 
-  // Ensure Range never mounts with out-of-bounds values
-  const rangeStep = useMemo(
-    () => Math.max(1, (domain[1] - domain[0]) / 1000),
-    [domain]
-  );
-
   const clampedPriceRange = useMemo(() => {
     const clamp = (value: number) =>
       Math.min(Math.max(value, domain[0]), domain[1]);
@@ -412,14 +501,14 @@ export default function CoinDetail() {
     let min = clamp(priceRange[0]);
     let max = clamp(priceRange[1]);
 
-    // Ensure strictly increasing and at least one step apart
-    if (min >= max || max - min < rangeStep) {
+    // Ensure strictly increasing
+    if (min >= max) {
       min = domain[0];
-      max = Math.min(domain[1], domain[0] + rangeStep);
+      max = Math.min(domain[1], domain[0] + (domain[1] - domain[0]) * 0.1);
     }
 
     return [min, max] as [number, number];
-  }, [priceRange, domain, rangeStep]);
+  }, [priceRange, domain]);
 
   // Generate probability distribution from real data
   const probability = useMemo(() => {
@@ -496,6 +585,153 @@ export default function CoinDetail() {
     return { bins, q };
   }, [hypeHistory, domain, probability]);
 
+  // Build a normalized right-side profile from bins for horizontal bars
+  const { sideProfile, profileMax } = useMemo(() => {
+    if (!bins.length) {
+      return {
+        sideProfile: [] as Array<{ price: number; bet: number }>,
+        profileMax: 1,
+      };
+    }
+
+    const step = bins.length > 1 ? bins[1].price - bins[0].price : 1;
+    const raw = bins.map((b) => ({
+      price: b.price + step / 2,
+      bet: b.probability,
+    }));
+    const max = Math.max(...raw.map((d) => d.bet), 0);
+    if (max <= 0) {
+      return { sideProfile: raw.map((d) => ({ ...d, bet: 0 })), profileMax: 1 };
+    }
+    // Normalize to [0,1] so we can reserve only a portion of chart width for bars
+    const normalized = raw.map((d) => ({ price: d.price, bet: d.bet / max }));
+    return { sideProfile: normalized, profileMax: 1 };
+  }, [bins]);
+
+  // Custom right-anchored bar shape that compresses bars into the right-most 25% of plot area
+  const RightProfileBar: React.FC<any> = (props) => {
+    const { x, y, width, height, fill } = props as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      fill: string;
+    };
+
+    // shrink bars to occupy only the right-most portion
+    const shrinkRatio = 0.25; // 25% of plot width reserved for the profile
+    const w = Math.max(1, width * shrinkRatio);
+    const newX = x + (width - w);
+    const h = Math.max(2, height * 0.9);
+    return (
+      <rect
+        x={newX}
+        y={y + (height - h) / 2}
+        width={w}
+        height={h}
+        fill={fill}
+        rx={2}
+        ry={2}
+      />
+    );
+  };
+
+  // Use shared chart margins for both the plot and overlay elements
+  const chartMargin = useMemo(
+    () => ({ top: 20, right: 120, left: 60, bottom: 40 }),
+    []
+  );
+
+  // Calculate the actual plot area dimensions for perfect alignment
+  const plotAreaHeight = 400 - chartMargin.top - chartMargin.bottom; // 340px
+
+  // Live price indicator state
+  const [isLive, setIsLive] = useState(true);
+  const [currentLivePrice, setCurrentLivePrice] = useState<number | null>(null);
+
+  // Update live price when chart data changes
+  useEffect(() => {
+    if (chart.length > 0) {
+      const latestPrice = chart[chart.length - 1].price;
+      setCurrentLivePrice(latestPrice);
+    }
+  }, [chart]);
+
+  // Blinking dot component
+  const BlinkingDot = ({ price }: { price: number }) => {
+    const [isVisible, setIsVisible] = useState(true);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setIsVisible((prev) => !prev);
+      }, 1000); // Blink every second
+
+      return () => clearInterval(interval);
+    }, []);
+
+    if (!isVisible) return null;
+
+    return (
+      <div
+        style={{
+          position: "absolute",
+          right: "115px",
+          top: `${((domain[1] - price) / (domain[1] - domain[0])) * 100}%`,
+          transform: "translateY(-50%)",
+          width: "12px",
+          height: "12px",
+          backgroundColor: "#51D5EB",
+          borderRadius: "50%",
+          boxShadow: "0 0 10px rgba(81, 213, 235, 0.8)",
+          zIndex: 10,
+        }}
+      />
+    );
+  };
+
+  // Right overlay sizing for custom bar shape (used by ScatterChart overlay)
+  const rightOverlayRef = React.useRef<HTMLDivElement | null>(null);
+  const [rightOverlaySize, setRightOverlaySize] = useState({
+    width: 0,
+    height: 0,
+  });
+  useEffect(() => {
+    if (!rightOverlayRef.current) return;
+    const el = rightOverlayRef.current;
+    const ro = new ResizeObserver(() => {
+      const rect = el.getBoundingClientRect();
+      setRightOverlaySize({ width: rect.width, height: rect.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const profileWidthRatio = 0.28; // portion of plot width for horizontal profile
+  const barPixelHeight = useMemo(() => {
+    if (!bins.length || rightOverlaySize.height === 0) return 4;
+    const step = rightOverlaySize.height / Math.max(bins.length, 1);
+    return Math.max(3, Math.min(10, step * 0.8));
+  }, [bins.length, rightOverlaySize.height]);
+
+  const RightAnchoredScatterBar: React.FC<any> = ({ cy, payload }) => {
+    const overlayWidth = rightOverlaySize.width;
+    const wMax = overlayWidth * profileWidthRatio;
+    const w = Math.max(1, Math.min(wMax, wMax * (payload?.x ?? 0)));
+    const x = overlayWidth - w; // anchor to right edge
+    return (
+      <rect
+        x={x}
+        y={cy - barPixelHeight / 2}
+        width={w}
+        height={barPixelHeight}
+        fill="#7aa2ff"
+        opacity={0.6}
+        rx={2}
+        ry={2}
+      />
+    );
+  };
+
   // Calculate which bins are in the selected range (정확한 범위 계산)
   const selectedBins = bins
     .filter(
@@ -505,11 +741,23 @@ export default function CoinDetail() {
     .map((bin) => bin.index);
 
   // Use LMSR calculation for accurate predictions
-  const lmsrResult = betOnPriceRange(q, selectedBins, amount);
+  // const lmsrResult = betOnPriceRange(q, selectedBins, amount);
+  //
+  // const winProbability = lmsrResult.winProbability;
+  // const receiveIfWin = lmsrResult.receiveIfWin;
+  const winProbability =
+    amountInput && calculateQuantityFromCost
+      ? Number(amountInput) / Number(formatUnits(calculateQuantityFromCost!, 6))
+      : 0;
 
-  const winProbability = lmsrResult.winProbability;
-  const receiveIfWin = lmsrResult.receiveIfWin;
+  const calculatedDataAverage = winProbability;
 
+  const multiplier =
+    amountInput && calculateQuantityFromCost
+      ? Number(formatUnits(calculateQuantityFromCost, 6)) / Number(amountInput)
+      : 0;
+
+  const receiveIfWin = calculateQuantityFromCost || BigInt(0);
   const handlePlaceBet = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!walletAddress) {
@@ -540,14 +788,8 @@ export default function CoinDetail() {
     // TODO: Add min max validation
     try {
       const marketId = BigInt(marketData.onChainId);
-      const lowerTick = parseUnits(
-        String(Math.round(priceRange[0] / 100) * 100),
-        2
-      );
-      const upperTick = parseUnits(
-        String(Math.round(priceRange[1] / 100) * 100),
-        2
-      );
+      const lowerTick = toStepTick(priceRange[0], "floor");
+      const upperTick = toStepTick(priceRange[1], "ceil");
       const amountParsed = calculateQuantityFromCost; // already bigint
       const maxCost = parseUnits(amountInput, 6);
 
@@ -713,12 +955,12 @@ export default function CoinDetail() {
           </div>
 
           {/* Main Chart Area */}
-          <div className={styles.mainChartArea}>
-            <div className={styles.chartContainer}>
+          <div className="flex bg-transparent h-full flex-col gap-4">
+            <div className="relative w-full h-full max-h-[330px]">
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart
+                <ComposedChart
                   data={chart}
-                  margin={{ top: 20, right: 60, left: 60, bottom: 40 }}
+                  margin={chartMargin}
                   style={{
                     background:
                       "linear-gradient(135deg, #51d5eb1a 0%, rgba(81, 213, 235, 0.1) 100%)",
@@ -728,7 +970,9 @@ export default function CoinDetail() {
                     strokeDasharray="3 3"
                     stroke="rgba(255, 255, 255, 0.1)"
                   />
+                  {/* Primary time axis for price line */}
                   <XAxis
+                    xAxisId="timeAxis"
                     dataKey="time"
                     stroke="rgba(255, 255, 255, 0.6)"
                     fontSize={12}
@@ -744,7 +988,20 @@ export default function CoinDetail() {
                       });
                     }}
                   />
+                  {/* Secondary hidden axis for right-side horizontal bar lengths */}
+                  <XAxis
+                    xAxisId="betAxis"
+                    type="number"
+                    domain={[0, profileMax]}
+                    orientation="top"
+                    tick={false}
+                    axisLine={false}
+                    tickLine={false}
+                    hide
+                    reversed
+                  />
                   <YAxis
+                    yAxisId="priceAxis"
                     stroke="rgba(255, 255, 255, 0.6)"
                     fontSize={12}
                     tickFormatter={yAxisFormatter}
@@ -758,146 +1015,85 @@ export default function CoinDetail() {
                       color: "#f9fafb",
                     }}
                   />
+                  {/* Price line */}
                   <Line
-                    type="linear"
+                    xAxisId="timeAxis"
+                    yAxisId="priceAxis"
+                    type="monotone"
                     dataKey="price"
                     stroke="#f97316"
-                    strokeWidth={3}
-                    dot={{ fill: "#f97316", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#f97316", strokeWidth: 2 }}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 3, stroke: "#f97316", strokeWidth: 2 }}
                     connectNulls={false}
                   />
+                  {/* Right-side horizontal profile bars (normalized) */}
+                  {
+                    <Bar
+                      xAxisId="betAxis"
+                      yAxisId="priceAxis"
+                      {...({ data: sideProfile } as any)}
+                      dataKey="bet"
+                      isAnimationActive={false}
+                      barSize={8}
+                      shape={(p: any) => <RightProfileBar {...p} />}
+                      fill="#7aa2ff"
+                      opacity={0.6}
+                    />
+                  }
                   <ReferenceLine
+                    yAxisId="priceAxis"
                     y={clampedPriceRange[1]}
-                    stroke="#dc2626"
+                    stroke="#51D5EB"
                     strokeWidth={2}
                     strokeDasharray="5 5"
                   />
                   <ReferenceLine
+                    yAxisId="priceAxis"
                     y={clampedPriceRange[0]}
-                    stroke="#16a34a"
+                    stroke="#51D5EB"
                     strokeWidth={2}
                     strokeDasharray="5 5"
                   />
-                </LineChart>
+                </ComposedChart>
               </ResponsiveContainer>
 
-              {/* Range Slider Overlay  todo: make align line and slider*/}
-              <div className={styles.rangeSliderOverlay}>
-                <Range
-                  values={clampedPriceRange}
-                  step={rangeStep}
-                  min={domain[0]}
-                  max={domain[1]}
-                  onChange={(values) => {
-                    console.log("Range onChange:", values);
-                    setPriceRange(values as [number, number]);
-                  }}
-                  renderTrack={({ props, children }) => {
-                    const {
-                      key: trackKey,
-                      style,
-                      ...trackProps
-                    } = props as unknown as {
-                      key?: string | number;
-                      style?: React.CSSProperties;
-                      [key: string]: unknown;
-                    };
-
-                    return (
-                      <div
-                        key={trackKey}
-                        {...trackProps}
-                        className={styles.rangeTrack}
-                        style={{
-                          ...style,
-                          height: "100%",
-                          width: "8px",
-                          background:
-                            "linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 100%)",
-                          borderRadius: "4px",
-                          border: "1px solid rgba(81, 213, 235, 0.3)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {children}
-                      </div>
-                    );
-                  }}
-                  renderThumb={({ props, index }) => {
-                    const {
-                      key: thumbKey,
-                      style,
-                      ...thumbProps
-                    } = props as unknown as {
-                      key?: string | number;
-                      style?: React.CSSProperties;
-                      [key: string]: unknown;
-                    };
-
-                    return (
-                      <div
-                        key={thumbKey}
-                        {...thumbProps}
-                        className={`${styles.rangeThumb} ${
-                          index === 0 ? styles.minThumb : styles.maxThumb
-                        }`}
-                        style={{
-                          ...style,
-                          height: "24px",
-                          width: "24px",
-                          borderRadius: "50%",
-                          backgroundColor: index === 0 ? "#16a34a" : "#dc2626",
-                          border: "3px solid #1f2937",
-                          boxShadow: "0 4px 12px rgba(81, 213, 235, 0.4)",
-                          cursor: "grab",
-                          transition:
-                            "transform 0.2s ease, box-shadow 0.2s ease",
-                        }}
-                      />
-                    );
-                  }}
-                  direction={Direction.Up}
-                />
-
-                {/* Range Labels */}
-                <div className={styles.rangeLabels}>
-                  <div
-                    className={styles.rangeLabel}
-                    style={{
-                      position: "absolute",
-                      right: "0px",
-                      top: `${
-                        ((domain[1] - clampedPriceRange[1]) /
-                          (domain[1] - domain[0])) *
-                        100
-                      }%`,
-                      transform: "translateY(-50%)",
-                    }}
+              {/* Right-side overlay chart for horizontal profile, shares the same Y domain */}
+              <div
+                ref={rightOverlayRef}
+                style={{
+                  position: "absolute",
+                  top: `${chartMargin.top}px`,
+                  bottom: `${chartMargin.bottom}px`,
+                  left: `${chartMargin.left}px`,
+                  right: `${chartMargin.right}px`,
+                  pointerEvents: "none",
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart
+                    margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                   >
-                    <span className={styles.rangePrice}>
-                      {currencyFormatter.format(clampedPriceRange[1])}
-                    </span>
-                  </div>
-                  <div
-                    className={styles.rangeLabel}
-                    style={{
-                      position: "absolute",
-                      right: "0px",
-                      top: `${
-                        ((domain[1] - clampedPriceRange[0]) /
-                          (domain[1] - domain[0])) *
-                        100
-                      }%`,
-                      transform: "translateY(-50%)",
-                    }}
-                  >
-                    <span className={styles.rangePrice}>
-                      {currencyFormatter.format(clampedPriceRange[0])}
-                    </span>
-                  </div>
-                </div>
+                    <XAxis
+                      type="number"
+                      dataKey="x"
+                      domain={[0, 1]}
+                      hide
+                      reversed
+                    />
+                    <YAxis type="number" dataKey="y" domain={domain} hide />
+                    <Scatter
+                      data={sideProfile.map((d) => ({ x: d.bet, y: d.price }))}
+                      shape={(p: any) => <RightAnchoredScatterBar {...p} />}
+                    />
+                  </ScatterChart>
+                </ResponsiveContainer>
               </div>
+
+              {/* Live price blinking dot indicator */}
+              {currentLivePrice && isLive && (
+                <BlinkingDot price={currentLivePrice} />
+              )}
             </div>
           </div>
         </div>
@@ -914,9 +1110,11 @@ export default function CoinDetail() {
                 <p>$</p>
                 <input
                   type="text"
-                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
-                  value={dataMinPrice}
-                  onChange={(e) => setDataMinPrice(Number(e.target.value))}
+                  className="flex flex-1 items-end rounded bg-transparent outline-0 ring-0 max-w-[140px]"
+                  value={dataMinPrice || ""}
+                  onChange={handleMinPriceChange}
+                  onBlur={handleMinPriceBlur}
+                  placeholder="0.00"
                 />
                 <div className="flex flex-col ml-2">
                   <button className="text-white hover:text-white/80 text-xs leading-none">
@@ -936,9 +1134,11 @@ export default function CoinDetail() {
                 <p>$</p>
                 <input
                   type="text"
-                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
-                  value={dataMaxPrice}
-                  onChange={(e) => setDataMaxPrice(Number(e.target.value))}
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[140px]"
+                  value={dataMaxPrice || ""}
+                  onChange={handleMaxPriceChange}
+                  onBlur={handleMaxPriceBlur}
+                  placeholder="0.00"
                 />
                 <div className="flex flex-col ml-2">
                   <button className="text-white hover:text-white/80 text-xs leading-none">
@@ -966,8 +1166,7 @@ export default function CoinDetail() {
                 Avg Price
               </span>
               <span className="text-xl leading-none">
-                {/* TODO: set this to the calculated avg price */}
-                {currencyFormatter.format(dataAvgPrice)}
+                {currencyFormatter.format(calculatedDataAverage)}
               </span>
             </div>
           </div>
@@ -981,14 +1180,16 @@ export default function CoinDetail() {
                 <p>$</p>
                 <input
                   type="text"
-                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]"
+                  className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[140px]"
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
                 />
               </div>
               <div className="w-full flex justify-between text-base font-normal  text-[#DEDEDE]">
                 <span className="leading-none">Balance:</span>
-                <span className="leading-none">{userBalance}</span>
+                <span className="leading-none">
+                  ${Number(userBalance).toFixed(2)}
+                </span>
               </div>
             </div>
 
@@ -998,18 +1199,18 @@ export default function CoinDetail() {
               </span>
               <div className="w-full flex gap-0.5 items-center text-xl font-bold">
                 <p>$</p>
-                <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[130px]">
-                  {calculateQuantityFromCost || BigInt(0)}
+                <span className="flex items-end rounded bg-transparent outline-0 ring-0 max-w-[140px]">
+                  {formatUnits(calculateQuantityFromCost || BigInt(0), 6)}
                 </span>
               </div>
               <div className="w-full flex justify-between text-base font-normal text-[#DEDEDE]">
-                <span className="leading-none">x{multiplier}</span>
+                <span className="leading-none">x{multiplier.toFixed(2)}</span>
               </div>
             </div>
           </div>
 
           <button
-            className="py-4 font-bold text-sm text-black rounded-md bg-[#51D5EB] mt-2"
+            className="py-4 font-bold text-sm text-black rounded-md bg-[#51D5EB] disabled:opacity-50 mt-2"
             onClick={handlePlaceBet}
             disabled={!walletAddress || amount <= 0}
           >
