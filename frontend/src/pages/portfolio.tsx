@@ -1,8 +1,7 @@
 import Head from "next/head";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import Layout from "@/components/Layout";
-import { useRouter } from "next/router";
+import PortfolioPositionCard from "@/components/card/PortfolioPositionCard";
 import { useMemo, useState } from "react";
 import styles from "@/styles/Portfolio.module.css";
 import { apiService } from "@/utils/apiService";
@@ -43,33 +42,6 @@ interface PortfolioPosition {
   hedged?: boolean;
 }
 
-const WEI_IN_ETH = 1e18;
-
-const toNumber = (
-  value: string | number | bigint | null | undefined
-): number => {
-  if (value === null || value === undefined) {
-    return 0;
-  }
-
-  if (typeof value === "bigint") {
-    return Number(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return Number.isFinite(value) ? value : 0;
-};
-
-const weiToEth = (
-  value: string | number | bigint | null | undefined
-): number => {
-  return toNumber(value) / WEI_IN_ETH;
-};
-
 const formatCurrency = (value: number): string => {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -77,27 +49,7 @@ const formatCurrency = (value: number): string => {
   });
 };
 
-const formatDate = (value: string | null) => {
-  if (!value) {
-    return "-";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
-  return date.toLocaleDateString();
-};
-
-const computePnL = (position: PortfolioPosition) => {
-  return weiToEth(position.payout) - weiToEth(position.amount);
-};
-
 function PortfolioPage() {
-  const router = useRouter();
-
   const { address } = useAccount();
 
 
@@ -362,205 +314,63 @@ function PortfolioPage() {
                   </div>
 
                   <div className={styles.marketCardsGrid}>
-                    {/* Mocked Open Positions */}
+                    {/* Mock positions for demonstration */}
                     {activeTab === "open" && (
                       <>
-                        {/* Bitcoin Position - Winning */}
-                        <div className={styles.marketCard}>
-                          <div className={styles.cardHeader}>
-                            <div className={styles.cardHeaderLeft}>
-                              <img
-                                src="/logo.svg"
-                                alt="Bitcoin"
-                                width={24}
-                                height={24}
-                                className={styles.cardIcon}
-                              />
-                              <div>
-                                <p className={styles.cardTitle}>
-                                  Bitcoin Closing Price on Sep 21
-                                </p>
-                                <p className={styles.cardDate}>
-                                  Ends 22/09/2025 09:00 AM GMT+9
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Hedged Indicator - Bitcoin is hedged */}
-                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
-                            <Image
-                              src="/hedge-icon.svg"
-                              alt="Hedged"
-                              width={12}
-                              height={12}
-                              className="w-4 h-4"
-                            />
-                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
-                          </div>
-
-                          <div className={styles.cardStats}>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Invested</span>
-                              <span className={styles.cardStatValue}>
-                                $200.00
-                              </span>
-                            </div>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Current Value</span>
-                              <span className={`${styles.cardStatValue} ${styles.valuePositive}`}>
-                                $242.00
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            className={styles.cardSellButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Sell Bitcoin position");
-                            }}
-                          >
-                            Sell
-                          </button>
-                        </div>
-
-                        {/* Ethereum Position - Losing */}
-                        <div className={styles.marketCard}>
-                          <div className={styles.cardHeader}>
-                            <div className={styles.cardHeaderLeft}>
-                              <img
-                                src="/logo.svg"
-                                alt="Ethereum"
-                                width={24}
-                                height={24}
-                                className={styles.cardIcon}
-                              />
-                              <div>
-                                <p className={styles.cardTitle}>
-                                  Ethereum Closing Price on Sep 21
-                                </p>
-                                <p className={styles.cardDate}>
-                                  Ends 22/09/2025 09:00 AM GMT+9
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          {/* No Hedged Indicator - Ethereum is not hedged */}
-
-                          <div className={styles.cardStats}>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Invested</span>
-                              <span className={styles.cardStatValue}>
-                                $150.00
-                              </span>
-                            </div>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Current Value</span>
-                              <span className={`${styles.cardStatValue} ${styles.valueNegative}`}>
-                                $125.00
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            className={styles.cardSellButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Sell Ethereum position");
-                            }}
-                          >
-                            Sell
-                          </button>
-                        </div>
+                        <PortfolioPositionCard
+                          id="mock-bitcoin"
+                          marketId="mock-bitcoin-market"
+                          onChainId="1"
+                          amount={BigInt(200 * 1e18)}
+                          payout={BigInt(242 * 1e18)}
+                          createdAt="2024-01-01T00:00:00.000Z"
+                          updatedAt="2024-01-01T00:00:00.000Z"
+                          market={{
+                            id: "mock-bitcoin-market",
+                            question: "Bitcoin Closing Price on Sep 21",
+                            status: "OPEN" as MarketStatus,
+                            profileImage: "/logo.svg",
+                            slug: "bitcoin-sep-21",
+                            endDate: "2025-09-22T09:00:00Z",
+                          }}
+                          hedged={true}
+                        />
+                        
+                        <PortfolioPositionCard
+                          id="mock-ethereum"
+                          marketId="mock-ethereum-market"
+                          onChainId="2"
+                          amount={BigInt(150 * 1e18)}
+                          payout={BigInt(125 * 1e18)}
+                          createdAt="2024-01-01T00:00:00.000Z"
+                          updatedAt="2024-01-01T00:00:00.000Z"
+                          market={{
+                            id: "mock-ethereum-market",
+                            question: "Ethereum Closing Price on Sep 21",
+                            status: "OPEN" as MarketStatus,
+                            profileImage: "/logo.svg",
+                            slug: "ethereum-sep-21",
+                            endDate: "2025-09-22T09:00:00Z",
+                          }}
+                          hedged={false}
+                        />
                       </>
                     )}
 
-                    {/* Real positions */}
+                    {/* Real positions from API */}
                     {filteredPositions.map((position) => (
-                      <div
+                      <PortfolioPositionCard
                         key={position.id}
-                        className={styles.marketCard}
-                        onClick={() => {
-                          if (position.market?.slug) {
-                            router.push(`/coins/${position.market.slug}`);
-                          }
-                        }}
-                      >
-                        {/* Header with icon, name, and hedged indicator */}
-                        <div className={styles.cardHeader}>
-                          <div className={styles.cardHeaderLeft}>
-                            <img
-                              src={position.market?.profileImage || "/logo.svg"}
-                              alt="Profile"
-                              width={24}
-                              height={24}
-                              className={styles.cardIcon}
-                            />
-                            <p className={styles.cardTitle}>
-                              {position.market?.question ?? "Unknown market"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Date */}
-                        <p className={styles.cardDate}>
-                          Ends {formatDate(
-                            position.market?.status === "OPEN"
-                              ? position.market?.endDate ?? null
-                              : position.updatedAt
-                          )}
-                        </p>
-
-                        {/* Hedged Indicator - Based on position.hedged flag */}
-                        {position.hedged && (
-                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
-                            <Image
-                              src="/hedge-icon.svg"
-                              alt="Hedged"
-                              width={12}
-                              height={12}
-                              className="w-4 h-4"
-                            />
-                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
-                          </div>
-                        )}
-                        {/* Investment Stats */}
-                        <div className={styles.cardStats}>
-                          <div className={styles.cardStatItem}>
-                            <span className={styles.cardStatLabel}>Invested</span>
-                            <span className={styles.cardStatValue}>
-                              ${formatCurrency(weiToEth(position.amount))}
-                            </span>
-                          </div>
-                          <div className={styles.cardStatItem}>
-                            <span className={styles.cardStatLabel}>
-                              {position.market?.status === "OPEN" ? "Current Value" : "Final Value"}
-                            </span>
-                            <span className={`${styles.cardStatValue} ${computePnL(position) >= 0 ? styles.valuePositive : styles.valueNegative
-                              }`}>
-                              ${formatCurrency(
-                                position.market?.status === "OPEN"
-                                  ? weiToEth(position.amount) + computePnL(position)
-                                  : weiToEth(position.payout)
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Sell Button for Open Markets */}
-                        {position.market?.status === "OPEN" && (
-                          <button
-                            className={styles.cardSellButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Sell position:", position.id);
-                            }}
-                          >
-                            Sell
-                          </button>
-                        )}
-                      </div>
+                        id={position.id}
+                        marketId={position.marketId}
+                        onChainId={position.onChainId}
+                        amount={position.amount}
+                        payout={position.payout}
+                        createdAt={position.createdAt}
+                        updatedAt={position.updatedAt}
+                        market={position.market}
+                        hedged={position.hedged}
+                      />
                     ))}
 
                     {/* Show empty state only if no positions AND no mocked positions for open tab */}
