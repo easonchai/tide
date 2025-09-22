@@ -1,14 +1,17 @@
 import Head from "next/head";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import Layout from "@/components/Layout";
-import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
+import PortfolioPositionCard from "@/components/card/PortfolioPositionCard";
+import PnLChart from "@/components/PnLChart";
+import { useMemo, useState, useEffect } from "react";
 import styles from "@/styles/Portfolio.module.css";
 import { apiService } from "@/utils/apiService";
 import { MarketStatus } from "@/types/market";
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
+import HyperliquidService, {
+  UserPortfolioData,
+} from "@/utils/hyperliquidService";
 
 interface PortfolioMarket {
   id: string;
@@ -43,72 +46,24 @@ interface PortfolioPosition {
   hedged?: boolean;
 }
 
-const WEI_IN_ETH = 1e18;
-
-const toNumber = (
-  value: string | number | bigint | null | undefined
-): number => {
-  if (value === null || value === undefined) {
-    return 0;
-  }
-
-  if (typeof value === "bigint") {
-    return Number(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return Number.isFinite(value) ? value : 0;
-};
-
-const weiToEth = (
-  value: string | number | bigint | null | undefined
-): number => {
-  return toNumber(value) / WEI_IN_ETH;
-};
-
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const formatDate = (value: string | null) => {
-  if (!value) {
-    return "-";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
-  return date.toLocaleDateString();
-};
-
-const computePnL = (position: PortfolioPosition) => {
-  return weiToEth(position.payout) - weiToEth(position.amount);
-};
-
 function PortfolioPage() {
-  const router = useRouter();
-
   const { address } = useAccount();
-
-
-  // const [isLoading, setIsLoading] = useState(false);
-  // const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
+  const [hyperliquidData, setHyperliquidData] =
+    useState<UserPortfolioData | null>(null);
+  const [pnlChartData, setPnlChartData] = useState<
+    Array<{ time: string; pnl: number }>
+  >([]);
+  const [isLoadingHyperliquid, setIsLoadingHyperliquid] = useState(false);
 
-  const { data: positionsData, isLoading, error } = useQuery<PortfolioPosition[]>({
+  const {
+    data: positionsData,
+    isLoading,
+    error,
+  } = useQuery<PortfolioPosition[]>({
     queryKey: ["positions", address],
     queryFn: async () => {
-      const response = await apiService.market.getPositionsByUser(address!);
+      const response = await apiService.market.getPositionsByUser(address?.toLowerCase() || "");
       return response.data;
     },
     enabled: Boolean(address),
@@ -117,6 +72,36 @@ function PortfolioPage() {
     () => positionsData ?? [],
     [positionsData]
   );
+
+  // Fetch Hyperliquid data
+  useEffect(() => {
+    if (!address) return;
+
+    const fetchHyperliquidData = async () => {
+      setIsLoadingHyperliquid(true);
+      try {
+        // Get portfolio data
+        const portfolioData = await HyperliquidService.getUserPortfolio(
+          address
+        );
+        setHyperliquidData(portfolioData);
+
+        // Generate chart data (mock for now, or use real portfolio history)
+        if (portfolioData) {
+          const accountValue = parseFloat(portfolioData.accountValue) || 1000;
+          const chartData =
+            HyperliquidService.generateMockPnLData(accountValue);
+          setPnlChartData(chartData);
+        }
+      } catch (error) {
+        console.error("Error fetching Hyperliquid data:", error);
+      } finally {
+        setIsLoadingHyperliquid(false);
+      }
+    };
+
+    fetchHyperliquidData();
+  }, [address]);
 
   // useEffect(() => {
   //   if (!address) {
@@ -200,14 +185,44 @@ function PortfolioPage() {
   }, [activeTab, openPositions, closedPositions]);
 
   const summary = useMemo(() => {
-    // Randomize values for demo purposes on each mount/address change
-    const rng = () => Math.random();
+    if (hyperliquidData) {
+      // Use real Hyperliquid data when available
+      const accountValue = parseFloat(hyperliquidData.accountValue) || 0;
+      const totalNtlPos = parseFloat(hyperliquidData.totalNtlPos) || 0;
+      const totalMarginUsed = parseFloat(hyperliquidData.totalMarginUsed) || 0;
 
-    const totalPnL = (rng() - 0.5) * 2000; // -1000 to +1000
-    const totalVolume = 1000 + rng() * 9000; // 1k to 10k
-    const pnl30d = (rng() - 0.5) * 1000; // -500 to +500
-    const volume30d = 500 + rng() * 4500; // 500 to 5k
-    const marketsTraded = Math.floor(1 + rng() * 10); // 1-10
+      // Calculate some mock metrics based on real data
+      const totalPnL = accountValue - 1000; // Assume starting balance was 1000
+      const pnl30d = totalPnL * 0.3; // 30% of total PnL happened in last 30 days
+      const volume30d = Math.abs(totalNtlPos) * 2; // Mock volume based on position size
+
+      return {
+        totalPnL,
+        totalVolume: Math.abs(totalNtlPos) * 5, // Mock total volume
+        pnl30d,
+        volume30d,
+        marketsTraded:
+          hyperliquidData.balances.length +
+          (hyperliquidData.spotBalances?.length || 0),
+        wins: Math.floor(Math.random() * 5) + 1,
+        losses: Math.floor(Math.random() * 3),
+        winLossRatio: 0.6 + Math.random() * 0.3, // 60-90%
+        accountValue,
+        totalNtlPos,
+        totalMarginUsed,
+        spotBalance:
+          hyperliquidData.spotBalances?.find((b: any) => b.coin === "USDC")
+            ?.total || "0",
+      };
+    }
+
+    // Fallback to randomized data if no Hyperliquid data
+    const rng = () => Math.random();
+    const totalPnL = (rng() - 0.5) * 2000;
+    const totalVolume = 1000 + rng() * 9000;
+    const pnl30d = (rng() - 0.5) * 1000;
+    const volume30d = 500 + rng() * 4500;
+    const marketsTraded = Math.floor(1 + rng() * 10);
     const wins = Math.floor(rng() * marketsTraded);
     const losses = Math.max(marketsTraded - wins, 0);
     const winLossRatio = marketsTraded > 0 ? wins / marketsTraded : 0;
@@ -221,12 +236,14 @@ function PortfolioPage() {
       wins,
       losses,
       winLossRatio,
+      accountValue: 0,
+      totalNtlPos: 0,
+      totalMarginUsed: 0,
+      spotBalance: "0",
     };
-  }, []);
+  }, [hyperliquidData]);
 
   // Removed unused pnlSeries
-
-
 
   return (
     <Layout>
@@ -238,21 +255,18 @@ function PortfolioPage() {
       <div className={styles.container}>
         <main className={styles.main}>
           {/* Section Title - Match index.tsx styling */}
-          <h2 className={styles.sectionTitle}>
-            Portfolio
-          </h2>
+          <h2 className={styles.sectionTitle}>Portfolio</h2>
 
           {!address ? (
             <div className={styles.emptyState}>
               <p>
-                lmao
-                지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
+                lmao 지갑 주소가 없습니다. 마켓 페이지에서 지갑을 연결한 뒤 다시
                 시도해주세요.
               </p>
             </div>
-          ) : isLoading ? (
+          ) : isLoading || isLoadingHyperliquid ? (
             <div className={styles.emptyState}>
-              <p>Loading...</p>
+              <p>Loading portfolio data...</p>
             </div>
           ) : error ? (
             <div className={styles.emptyState}>
@@ -265,9 +279,14 @@ function PortfolioPage() {
                 {/* PNL Card with Modal Link */}
                 <div className={styles.pnlCard}>
                   <span className={styles.topCardTitle}>30 Day PnL</span>
-                  <span className={`${styles.cardValue} ${summary.pnl30d >= 0 ? styles.valuePositive : styles.valueNegative
+                  {/* <span className={`${styles.cardValue} ${summary.pnl30d >= 0 ? styles.valuePositive : styles.valueNegative
                     }`}>
                     {summary.pnl30d >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.pnl30d))}
+                  </span> */}
+                  <span
+                    className={`${styles.cardValue} ${styles.valuePositive}`}
+                  >
+                    $125.43
                   </span>
                   <button
                     className={styles.viewLink}
@@ -280,8 +299,11 @@ function PortfolioPage() {
                 {/* Volume Card with Modal Link */}
                 <div className={styles.volumeCard}>
                   <span className={styles.topCardTitle}>30 Day Volume</span>
-                  <span className={styles.cardValue}>
+                  {/* <span className={styles.cardValue}>
                     ${formatCurrency(summary.volume30d)}
+                  </span> */}
+                  <span className={styles.cardValue}>
+                    $3,247.85
                   </span>
                   <button
                     className={styles.viewLink}
@@ -296,28 +318,45 @@ function PortfolioPage() {
                   <h3 className={styles.topCardTitle}>User Statistics</h3>
                   <div className={styles.statsContent}>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>PNL</span>
-                      <span className={`${styles.statValue} ${summary.totalPnL >= 0 ? styles.valuePositive : styles.valueNegative
-                        }`}>
-                        {summary.totalPnL >= 0 ? "+" : "-"}${formatCurrency(Math.abs(summary.totalPnL))}
+                      <span className={styles.statLabel}>Account Value</span>
+                      {/* <span
+                        className={`${styles.statValue} ${
+                          summary.accountValue >= 1000
+                            ? styles.valuePositive
+                            : styles.valueNegative
+                        }`}
+                      >
+                        ${formatCurrency(summary.accountValue)}
+                      </span> */}
+                      <span className={`${styles.statValue} ${styles.valuePositive}`}>
+                        $847.32
                       </span>
                     </div>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>Volume</span>
+                      <span className={styles.statLabel}>USDC Balance</span>
+                      {/* <span className={styles.statValue}>
+                        ${formatCurrency(parseFloat(summary.spotBalance))}
+                      </span> */}
                       <span className={styles.statValue}>
-                        ${formatCurrency(summary.totalVolume)}
+                        $245.67
                       </span>
                     </div>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>Markets Traded</span>
+                      <span className={styles.statLabel}>Position Size</span>
+                      {/* <span className={styles.statValue}>
+                        ${formatCurrency(Math.abs(summary.totalNtlPos))}
+                      </span> */}
                       <span className={styles.statValue}>
-                        {summary.marketsTraded}
+                        $450.00
                       </span>
                     </div>
                     <div className={styles.statRow}>
-                      <span className={styles.statLabel}>Win/Loss Ratio</span>
+                      <span className={styles.statLabel}>Margin Used</span>
+                      {/* <span className={styles.statValue}>
+                        ${formatCurrency(summary.totalMarginUsed)}
+                      </span> */}
                       <span className={styles.statValue}>
-                        {summary.winLossRatio.toFixed(2)}
+                        $151.65
                       </span>
                     </div>
                   </div>
@@ -325,18 +364,9 @@ function PortfolioPage() {
 
                 {/* Performance Graph */}
                 <div className={styles.performanceCard}>
-                  <h3 className={styles.topCardTitle}>PNL</h3>
-                  <div className={styles.graphPlaceholder}>
-                    <svg width="100%" height="120" viewBox="0 0 300 120">
-                      <path
-                        d="M20,80 Q60,40 100,60 T180,50 Q220,30 280,40"
-                        stroke="#51D5EB"
-                        strokeWidth="2"
-                        fill="none"
-                      />
-                      <circle cx="280" cy="40" r="3" fill="#51D5EB" />
-                    </svg>
-                    <span className={styles.graphLabel}>Mock Performance Chart</span>
+                  <h3 className={styles.topCardTitle}>PnL</h3>
+                  <div className="flex-1 -ml-14 px-4">
+                    <PnLChart className="h-full w-full min-h-[120px]" />
                   </div>
                 </div>
               </div>
@@ -346,15 +376,17 @@ function PortfolioPage() {
                 <div className={styles.tabContainer}>
                   <div className={styles.tabHeader}>
                     <button
-                      className={`${styles.tabButton} ${activeTab === "open" ? styles.tabActive : ""
-                        }`}
+                      className={`${styles.tabButton} ${
+                        activeTab === "open" ? styles.tabActive : ""
+                      }`}
                       onClick={() => setActiveTab("open")}
                     >
                       Open
                     </button>
                     <button
-                      className={`${styles.tabButton} ${activeTab === "closed" ? styles.tabActive : ""
-                        }`}
+                      className={`${styles.tabButton} ${
+                        activeTab === "closed" ? styles.tabActive : ""
+                      }`}
                       onClick={() => setActiveTab("closed")}
                     >
                       Closed
@@ -362,209 +394,25 @@ function PortfolioPage() {
                   </div>
 
                   <div className={styles.marketCardsGrid}>
-                    {/* Mocked Open Positions */}
-                    {activeTab === "open" && (
-                      <>
-                        {/* Bitcoin Position - Winning */}
-                        <div className={styles.marketCard}>
-                          <div className={styles.cardHeader}>
-                            <div className={styles.cardHeaderLeft}>
-                              <img
-                                src="/logo.svg"
-                                alt="Bitcoin"
-                                width={24}
-                                height={24}
-                                className={styles.cardIcon}
-                              />
-                              <div>
-                                <p className={styles.cardTitle}>
-                                  Bitcoin Closing Price on Sep 21
-                                </p>
-                                <p className={styles.cardDate}>
-                                  Ends 22/09/2025 09:00 AM GMT+9
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Hedged Indicator - Bitcoin is hedged */}
-                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
-                            <Image
-                              src="/hedge-icon.svg"
-                              alt="Hedged"
-                              width={12}
-                              height={12}
-                              className="w-4 h-4"
-                            />
-                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
-                          </div>
-
-                          <div className={styles.cardStats}>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Invested</span>
-                              <span className={styles.cardStatValue}>
-                                $200.00
-                              </span>
-                            </div>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Current Value</span>
-                              <span className={`${styles.cardStatValue} ${styles.valuePositive}`}>
-                                $242.00
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            className={styles.cardSellButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Sell Bitcoin position");
-                            }}
-                          >
-                            Sell
-                          </button>
-                        </div>
-
-                        {/* Ethereum Position - Losing */}
-                        <div className={styles.marketCard}>
-                          <div className={styles.cardHeader}>
-                            <div className={styles.cardHeaderLeft}>
-                              <img
-                                src="/logo.svg"
-                                alt="Ethereum"
-                                width={24}
-                                height={24}
-                                className={styles.cardIcon}
-                              />
-                              <div>
-                                <p className={styles.cardTitle}>
-                                  Ethereum Closing Price on Sep 21
-                                </p>
-                                <p className={styles.cardDate}>
-                                  Ends 22/09/2025 09:00 AM GMT+9
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          {/* No Hedged Indicator - Ethereum is not hedged */}
-
-                          <div className={styles.cardStats}>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Invested</span>
-                              <span className={styles.cardStatValue}>
-                                $150.00
-                              </span>
-                            </div>
-                            <div className={styles.cardStatItem}>
-                              <span className={styles.cardStatLabel}>Current Value</span>
-                              <span className={`${styles.cardStatValue} ${styles.valueNegative}`}>
-                                $125.00
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            className={styles.cardSellButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Sell Ethereum position");
-                            }}
-                          >
-                            Sell
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Real positions */}
+                    {/* Real positions from API */}
                     {filteredPositions.map((position) => (
-                      <div
+                      <PortfolioPositionCard
                         key={position.id}
-                        className={styles.marketCard}
-                        onClick={() => {
-                          if (position.market?.slug) {
-                            router.push(`/coins/${position.market.slug}`);
-                          }
-                        }}
-                      >
-                        {/* Header with icon, name, and hedged indicator */}
-                        <div className={styles.cardHeader}>
-                          <div className={styles.cardHeaderLeft}>
-                            <img
-                              src={position.market?.profileImage || "/logo.svg"}
-                              alt="Profile"
-                              width={24}
-                              height={24}
-                              className={styles.cardIcon}
-                            />
-                            <p className={styles.cardTitle}>
-                              {position.market?.question ?? "Unknown market"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Date */}
-                        <p className={styles.cardDate}>
-                          Ends {formatDate(
-                            position.market?.status === "OPEN"
-                              ? position.market?.endDate ?? null
-                              : position.updatedAt
-                          )}
-                        </p>
-
-                        {/* Hedged Indicator - Based on position.hedged flag */}
-                        {position.hedged && (
-                          <div className="flex items-center w-fit gap-1.5 p-2 bg-[#0E1B24] border border-[#51D5EB33] rounded-lg mb-4">
-                            <Image
-                              src="/hedge-icon.svg"
-                              alt="Hedged"
-                              width={12}
-                              height={12}
-                              className="w-4 h-4"
-                            />
-                            <span className="text-[#51D5EB] text-sm font-medium">Hedged</span>
-                          </div>
-                        )}
-                        {/* Investment Stats */}
-                        <div className={styles.cardStats}>
-                          <div className={styles.cardStatItem}>
-                            <span className={styles.cardStatLabel}>Invested</span>
-                            <span className={styles.cardStatValue}>
-                              ${formatCurrency(weiToEth(position.amount))}
-                            </span>
-                          </div>
-                          <div className={styles.cardStatItem}>
-                            <span className={styles.cardStatLabel}>
-                              {position.market?.status === "OPEN" ? "Current Value" : "Final Value"}
-                            </span>
-                            <span className={`${styles.cardStatValue} ${computePnL(position) >= 0 ? styles.valuePositive : styles.valueNegative
-                              }`}>
-                              ${formatCurrency(
-                                position.market?.status === "OPEN"
-                                  ? weiToEth(position.amount) + computePnL(position)
-                                  : weiToEth(position.payout)
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Sell Button for Open Markets */}
-                        {position.market?.status === "OPEN" && (
-                          <button
-                            className={styles.cardSellButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Sell position:", position.id);
-                            }}
-                          >
-                            Sell
-                          </button>
-                        )}
-                      </div>
+                        id={position.id}
+                        marketId={position.marketId}
+                        onChainId={position.onChainId}
+                        amount={position.amount}
+                        payout={position.payout}
+                        createdAt={position.createdAt}
+                        updatedAt={position.updatedAt}
+                        deletedAt={position.deletedAt}
+                        market={position.market}
+                        hedged={false}
+                      />
                     ))}
 
-                    {/* Show empty state only if no positions AND no mocked positions for open tab */}
-                    {filteredPositions.length === 0 && activeTab === "closed" && (
+                    {/* Show empty state if no positions */}
+                    {filteredPositions.length === 0 && (
                       <div className={styles.emptyMarkets}>
                         <p>No {activeTab} positions found.</p>
                       </div>
