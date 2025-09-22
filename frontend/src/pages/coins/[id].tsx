@@ -27,8 +27,12 @@ import toast from "react-hot-toast";
 import { collateralContract, config, marketContract } from "@/config/config";
 import { cLMSRMarketCoreABI } from "@/abi/CLMSRMarketCore";
 import { MarketResponseDTO } from "@/types/market";
-import { parseUnits, maxUint256 } from "viem";
-import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { parseUnits, maxUint256, decodeEventLog } from "viem";
+import {
+  readContract,
+  waitForTransactionReceipt,
+  writeContract,
+} from "wagmi/actions";
 import { erc20ABI } from "@/abi/ERC20";
 
 // const shortenAddress = (address: string) =>
@@ -393,7 +397,7 @@ export default function CoinDetail() {
   // console.log("onChainId", marketData?.onChainId);
   // console.log("Price Range 0", priceRange[0]);
   // console.log("Price Range 1", priceRange[1]);
-  console.log("amountInput", {amountInput, calculateQuantityFromCost});
+  console.log("amountInput", { amountInput, calculateQuantityFromCost });
 
   // Ensure Range never mounts with out-of-bounds values
   const rangeStep = useMemo(
@@ -548,12 +552,12 @@ export default function CoinDetail() {
       const maxCost = parseUnits(amountInput, 6);
 
       // Check current allowance
-      const currentAllowance = await readContract(config, {
+      const currentAllowance = (await readContract(config, {
         address: collateralContract,
         abi: erc20ABI,
         functionName: "allowance",
         args: [walletAddress, marketContract],
-      }) as bigint;
+      })) as bigint;
 
       console.log("allowance: ", currentAllowance);
 
@@ -594,13 +598,42 @@ export default function CoinDetail() {
         return;
       }
 
+      // Extract position ID from PositionOpened event
+      let positionId: bigint | undefined;
+      if (receipt.logs) {
+        for (const log of receipt.logs) {
+          try {
+            // Decode the PositionOpened event
+            const decoded = decodeEventLog({
+              abi: cLMSRMarketCoreABI,
+              data: log.data,
+              topics: log.topics,
+            });
+
+            if (decoded.eventName === "PositionOpened" && decoded.args) {
+              positionId = (decoded.args as any).positionId as bigint;
+              break;
+            }
+          } catch (e) {
+            // Skip logs that don't match our event
+            continue;
+          }
+        }
+      }
+
+      if (!positionId) {
+        toast.error("Failed to extract position ID from transaction");
+        return;
+      }
+
       try {
         await apiService.market.createPosition({
           marketSlug: String(id),
           userAddress: walletAddress.toLowerCase(),
-          amount: amountParsed as bigint,
+          amount: parseUnits(amountInput, 6),
           lowerBound: BigInt(lowerTick),
           upperBound: BigInt(upperTick),
+          onChainId: positionId.toString(),
         });
       } catch (err) {
         console.error("Failed to persist position:", err);
